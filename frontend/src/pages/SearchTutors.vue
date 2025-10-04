@@ -1557,9 +1557,7 @@ export default {
     font-size: 1.5rem;
   }
   
-  .floating-icon {
-    font-size: 1.5rem;
-  }
+  /* Removed unused floating-icon styles */
   
   .cyberpunk-tutor-card .card-body {
     padding: 1.5rem !important;
