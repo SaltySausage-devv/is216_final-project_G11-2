@@ -317,7 +317,7 @@
               :ref="`tutorCard${index}`"
               class="col-lg-6"
             >
-              <div class="cyberpunk-tutor-card border-0 shadow-sm h-100">
+              <div class="cyberpunk-tutor-card h-100">
                 <div class="card-body p-4">
                   <div class="d-flex align-items-start mb-3">
                     <div class="cyberpunk-tutor-avatar me-3">
@@ -1279,7 +1279,7 @@ export default {
 .world-globe {
   width: 100%;
   height: 100%;
-  opacity: 0.4;
+  opacity: 0.3;
   filter: drop-shadow(0 0 20px rgba(200, 200, 200, 0.1));
 }
 
@@ -1321,13 +1321,10 @@ export default {
 
 /* Cyberpunk Search Card */
 .cyberpunk-search-card {
-  background: rgba(26, 26, 26, 0.98);
-  border: 2px solid var(--cyber-orange);
-  border-radius: 20px;
-  box-shadow: 
-    0 0 30px rgba(255, 140, 66, 0.3),
-    0 0 60px rgba(255, 140, 66, 0.1),
-    inset 0 0 20px rgba(255, 140, 66, 0.1);
+  background: rgba(26, 26, 26, 1) !important;
+  border: 1px solid var(--cyber-orange);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 10;
   overflow: hidden;
@@ -1365,26 +1362,27 @@ export default {
 /* Cyberpunk Text Elements */
 .cyberpunk-search-title {
   color: var(--cyber-text);
-  font-weight: 700;
-  font-size: 2.5rem;
-  text-shadow: 0 0 20px rgba(255, 140, 66, 0.5);
-  letter-spacing: 2px;
-  margin-bottom: 1rem;
+  font-weight: 600;
+  font-size: 2rem;
+  text-shadow: none;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.5rem;
 }
 
 .cyberpunk-search-subtitle {
-  color: var(--cyber-text);
-  font-size: 1.1rem;
-  font-weight: 500;
-  text-shadow: 0 0 15px rgba(255, 140, 66, 0.5);
-  letter-spacing: 1px;
+  color: var(--cyber-text-muted);
+  font-size: 1rem;
+  font-weight: 400;
+  text-shadow: none;
+  letter-spacing: 0;
 }
 
 .cyberpunk-label {
   color: var(--cyber-text);
-  font-weight: 600;
-  text-shadow: 0 0 5px rgba(255, 140, 66, 0.3);
-  letter-spacing: 1px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-shadow: none;
+  letter-spacing: 0;
   margin-bottom: 0.5rem;
 }
 
@@ -1407,7 +1405,7 @@ export default {
 
 .cyberpunk-input-group:focus-within {
   border-color: var(--cyber-orange);
-  box-shadow: 0 0 15px rgba(255, 140, 66, 0.3);
+  box-shadow: none;
 }
 
 .cyberpunk-input-icon {
@@ -1430,6 +1428,25 @@ export default {
 
 .cyberpunk-input::placeholder {
   color: var(--cyber-text-dim);
+}
+
+/* Style select dropdowns */
+select.cyberpunk-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23ff8c42' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 12px;
+  padding-right: 3rem;
+  cursor: pointer;
+}
+
+select.cyberpunk-input option {
+  background: #2a2a2a;
+  color: var(--cyber-text);
+  padding: 0.5rem;
 }
 
 /* Cyberpunk Buttons */
@@ -1505,13 +1522,10 @@ export default {
 
 /* Cyberpunk Filters Card */
 .cyberpunk-filters-card {
-  background: rgba(26, 26, 26, 0.85);
-  border: 2px solid var(--cyber-orange);
-  border-radius: 15px;
-  box-shadow: 
-    0 0 20px rgba(255, 140, 66, 0.2),
-    0 0 40px rgba(255, 140, 66, 0.1),
-    inset 0 0 20px rgba(255, 140, 66, 0.05);
+  background: rgba(26, 26, 26, 1) !important;
+  border: 1px solid var(--cyber-grey-light);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   backdrop-filter: blur(10px);
   position: relative;
@@ -1526,16 +1540,18 @@ export default {
 
 .cyberpunk-filter-title {
   color: var(--cyber-text);
-  font-weight: 700;
-  text-shadow: 0 0 10px rgba(255, 140, 66, 0.5);
-  letter-spacing: 1px;
+  font-weight: 600;
+  font-size: 1.125rem;
+  text-shadow: none;
+  letter-spacing: -0.25px;
 }
 
 .cyberpunk-filter-label {
   color: var(--cyber-text);
-  font-weight: 600;
-  text-shadow: 0 0 5px rgba(255, 140, 66, 0.3);
-  letter-spacing: 1px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-shadow: none;
+  letter-spacing: 0;
 }
 
 /* Cyberpunk Checkbox */
@@ -1602,24 +1618,20 @@ export default {
 
 /* Cyberpunk Tutor Cards */
 .cyberpunk-tutor-card {
-  background: rgba(26, 26, 26, 0.85);
-  border: 2px solid var(--cyber-grey-light);
-  border-radius: 15px;
-  box-shadow: 
-    0 0 15px rgba(255, 140, 66, 0.1),
-    0 0 30px rgba(255, 140, 66, 0.05),
-    inset 0 0 15px rgba(255, 140, 66, 0.03);
+  background: rgba(26, 26, 26, 1) !important;
+  border: 1px solid var(--cyber-grey-light);
+  border-radius: 12px;
+  box-shadow: none !important;
   transition: all 0.3s ease;
   overflow: hidden;
-  backdrop-filter: blur(8px);
   position: relative;
   z-index: 10;
 }
 
 .cyberpunk-tutor-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-2px);
   border-color: var(--cyber-orange);
-  box-shadow: 0 0 25px rgba(255, 140, 66, 0.3);
+  box-shadow: none !important;
 }
 
 .cyberpunk-tutor-avatar {
@@ -1644,45 +1656,47 @@ export default {
 }
 
 .cyberpunk-tutor-card:hover .cyberpunk-tutor-avatar {
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(255, 140, 66, 0.3);
+  transform: scale(1.05);
+  box-shadow: none;
 }
 
 .cyberpunk-tutor-name {
   color: var(--cyber-text);
-  font-weight: 700;
-  text-shadow: 0 0 5px rgba(255, 140, 66, 0.3);
+  font-weight: 600;
+  font-size: 1.125rem;
+  text-shadow: none;
 }
 
 .cyberpunk-tutor-rate {
   color: var(--cyber-orange);
-  font-weight: 700;
-  text-shadow: 0 0 10px rgba(255, 140, 66, 0.5);
+  font-weight: 600;
+  font-size: 1.25rem;
+  text-shadow: none;
 }
 
 .cyberpunk-badge {
   background: rgba(255, 140, 66, 0.1);
   color: var(--cyber-orange);
-  border: 1px solid var(--cyber-orange);
+  border: 1px solid rgba(255, 140, 66, 0.3);
   padding: 0.25rem 0.5rem;
-  border-radius: 5px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .cyberpunk-favorite-btn {
   background: transparent;
-  border: 2px solid var(--cyber-grey-light);
+  border: 1px solid var(--cyber-grey-light);
   color: var(--cyber-text);
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: all 0.3s ease;
 }
 
 .cyberpunk-favorite-btn:hover {
   border-color: var(--cyber-orange);
   color: var(--cyber-orange);
-  box-shadow: 0 0 10px rgba(255, 140, 66, 0.3);
+  box-shadow: none;
 }
 
 .cyberpunk-view-btn {
