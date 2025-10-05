@@ -11,6 +11,7 @@ import Register from './pages/Register.vue'
 import Dashboard from './pages/Dashboard.vue'
 import SearchTutors from './pages/SearchTutors.vue'
 import TutorProfile from './pages/TutorProfile.vue'
+import Chat from './pages/Chat.vue'
 import Booking from './pages/Booking.vue'
 import Messages from './pages/Messages.vue'
 import Analytics from './pages/Analytics.vue'
@@ -28,6 +29,7 @@ const routes = [
   { path: '/dashboard', name: 'Dashboard', component: Dashboard },
   { path: '/search', name: 'SearchTutors', component: SearchTutors },
   { path: '/tutor/:id', name: 'TutorProfile', component: TutorProfile },
+  { path: '/chat/:tutorId', name: 'Chat', component: Chat },
   { path: '/booking/:id', name: 'Booking', component: Booking },
   { path: '/messages', name: 'Messages', component: Messages },
   { path: '/analytics', name: 'Analytics', component: Analytics },
