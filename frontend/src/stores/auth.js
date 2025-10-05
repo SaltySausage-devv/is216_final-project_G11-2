@@ -16,7 +16,8 @@ export const useAuthStore = defineStore('auth', () => {
       const mockToken = 'mock-jwt-token-' + Date.now()
       const mockUser = {
         id: 1,
-        name: 'Demo User',
+        firstName: 'Demo',
+        lastName: 'User',
         email: email,
         userType: 'student'
       }
@@ -44,7 +45,8 @@ export const useAuthStore = defineStore('auth', () => {
       const mockToken = 'mock-jwt-token-' + Date.now()
       const mockUser = {
         id: 2,
-        name: userData.name || 'New User',
+        firstName: userData.firstName || 'New',
+        lastName: userData.lastName || 'User',
         email: userData.email,
         userType: userData.userType || 'student'
       }
@@ -77,7 +79,8 @@ export const useAuthStore = defineStore('auth', () => {
       // Set a mock user for development
       user.value = {
         id: 1,
-        name: 'Demo User',
+        firstName: 'Demo',
+        lastName: 'User',
         email: 'demo@example.com',
         userType: 'student'
       }

@@ -228,7 +228,7 @@
                       <div class="cyberpunk-rating me-2">
                         <i v-for="i in 5" :key="i" :class="i <= rating ? 'fas fa-star cyberpunk-star' : 'far fa-star cyberpunk-star-empty'"></i>
                     </div>
-                      <span class="cyberpunk-text-muted">({{ Math.random() * 50 + 10 | Math.floor }})</span>
+                      <span class="cyberpunk-text-muted">({{ Math.floor(Math.random() * 50 + 10) }})</span>
                   </label>
                   </div>
                 </div>
@@ -386,7 +386,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, nextTick, watch } from 'vue'
 import { createTimeline, animate, createAnimatable, utils, svg } from 'animejs'
 
 export default {
@@ -734,14 +734,14 @@ export default {
 
     const searchTutors = async () => {
       isLoading.value = true
-      
+
       // Advanced loading animation for button
       if (searchButton.value) {
         const loadingTimeline = createTimeline({
           loop: true,
           playbackRate: 1.5
         })
-        
+
         loadingTimeline
           .add(searchButton.value, {
             scale: [1, 0.95, 1],
@@ -756,21 +756,24 @@ export default {
             y: [0, -2, 0]
           }, 0)
       }
-      
-      // Simulate API call
+
+      // Simulate API call with filtering
       setTimeout(() => {
-        tutors.value = [
+        // All available tutors
+        const allTutors = [
           {
             id: 1,
             name: 'Dr. Sarah Chen',
             subjects: ['Mathematics', 'Additional Mathematics'],
             levels: ['Secondary', 'JC'],
-            rating: 4.9,
+            rating: 5,
             reviews: 127,
             hourlyRate: 80,
+            experience: '5+',
             bio: 'Experienced mathematics tutor with 8 years of experience. Specializes in O-Level and A-Level mathematics.',
             location: 'Orchard, Singapore',
             teachingMode: 'online',
+            availability: ['now', 'week'],
             avatar: 'https://i.pravatar.cc/400?img=3'
           },
           {
@@ -778,12 +781,14 @@ export default {
             name: 'Mr. David Lim',
             subjects: ['Physics', 'Chemistry'],
             levels: ['Secondary', 'JC'],
-            rating: 4.7,
+            rating: 5,
             reviews: 89,
             hourlyRate: 70,
+            experience: '5+',
             bio: 'Former MOE teacher with 10 years of experience. Excellent track record with students.',
             location: 'Marina Bay, Singapore',
             teachingMode: 'in-person',
+            availability: ['week', 'weekend'],
             avatar: 'https://i.pravatar.cc/400?img=5'
           },
           {
@@ -791,17 +796,173 @@ export default {
             name: 'Ms. Emily Wong',
             subjects: ['English', 'Literature'],
             levels: ['Primary', 'Secondary'],
-            rating: 4.8,
+            rating: 5,
             reviews: 156,
             hourlyRate: 60,
+            experience: '5+',
             bio: 'Passionate English tutor with a focus on creative writing and comprehension skills.',
             location: 'Tampines, Singapore',
             teachingMode: 'both',
+            availability: ['now', 'weekend'],
             avatar: 'https://i.pravatar.cc/400?img=7'
+          },
+          {
+            id: 4,
+            name: 'Prof. Michael Tan',
+            subjects: ['Biology', 'Chemistry'],
+            levels: ['Secondary', 'JC', 'IB'],
+            rating: 4,
+            reviews: 203,
+            hourlyRate: 95,
+            experience: '5+',
+            bio: 'University professor with expertise in life sciences. Published researcher and experienced tutor.',
+            location: 'Bukit Timah, Singapore',
+            teachingMode: 'online',
+            availability: ['week'],
+            avatar: 'https://i.pravatar.cc/400?img=8'
+          },
+          {
+            id: 5,
+            name: 'Ms. Rachel Goh',
+            subjects: ['Mathematics', 'Science'],
+            levels: ['Primary'],
+            rating: 4,
+            reviews: 78,
+            hourlyRate: 45,
+            experience: '3-5',
+            bio: 'Patient and nurturing tutor specializing in primary school students. Focus on building strong foundations.',
+            location: 'Jurong West, Singapore',
+            teachingMode: 'in-person',
+            availability: ['now', 'weekend'],
+            avatar: 'https://i.pravatar.cc/400?img=9'
+          },
+          {
+            id: 6,
+            name: 'Mr. Jason Koh',
+            subjects: ['English', 'Mathematics'],
+            levels: ['Primary', 'Secondary'],
+            rating: 3,
+            reviews: 42,
+            hourlyRate: 50,
+            experience: '3-5',
+            bio: 'Energetic and creative tutor who makes learning fun. Strong focus on exam techniques.',
+            location: 'Bedok, Singapore',
+            teachingMode: 'both',
+            availability: ['now', 'week'],
+            avatar: 'https://i.pravatar.cc/400?img=12'
+          },
+          {
+            id: 7,
+            name: 'Dr. Amanda Lee',
+            subjects: ['Additional Mathematics', 'Physics'],
+            levels: ['Secondary', 'JC', 'IGCSE'],
+            rating: 2,
+            reviews: 167,
+            hourlyRate: 85,
+            experience: '5+',
+            bio: 'PhD holder with passion for teaching. Specializes in helping students overcome math anxiety.',
+            location: 'Clementi, Singapore',
+            teachingMode: 'online',
+            availability: ['week', 'weekend'],
+            avatar: 'https://i.pravatar.cc/400?img=10'
+          },
+          {
+            id: 8,
+            name: 'Mr. Benjamin Ng',
+            subjects: ['Mathematics', 'Physics', 'Chemistry'],
+            levels: ['JC', 'IB'],
+            rating: 1,
+            reviews: 94,
+            hourlyRate: 75,
+            experience: '3-5',
+            bio: 'Former scholarship holder with strong academic background. Results-oriented teaching approach.',
+            location: 'Yishun, Singapore',
+            teachingMode: 'in-person',
+            availability: ['now'],
+            avatar: 'https://i.pravatar.cc/400?img=13'
           }
         ]
+
+        // Apply filters
+        let filtered = allTutors
+
+        // Subject filter
+        if (filters.subject) {
+          filtered = filtered.filter(tutor =>
+            tutor.subjects.includes(filters.subject)
+          )
+        }
+
+        // Level filter
+        if (filters.level) {
+          filtered = filtered.filter(tutor =>
+            tutor.levels.includes(filters.level)
+          )
+        }
+
+        // Teaching mode filter
+        if (filters.teachingMode) {
+          filtered = filtered.filter(tutor =>
+            tutor.teachingMode === filters.teachingMode || tutor.teachingMode === 'both'
+          )
+        }
+
+        // Location filter (simple contains check)
+        if (filters.location) {
+          filtered = filtered.filter(tutor =>
+            tutor.location.toLowerCase().includes(filters.location.toLowerCase())
+          )
+        }
+
+        // Rate range filter
+        if (filters.minRate) {
+          filtered = filtered.filter(tutor =>
+            tutor.hourlyRate >= parseInt(filters.minRate)
+          )
+        }
+        if (filters.maxRate) {
+          filtered = filtered.filter(tutor =>
+            tutor.hourlyRate <= parseInt(filters.maxRate)
+          )
+        }
+
+        // Rating filter
+        if (filters.ratings.length > 0) {
+          filtered = filtered.filter(tutor =>
+            filters.ratings.includes(tutor.rating)
+          )
+        }
+
+        // Experience filter
+        if (filters.experience.length > 0) {
+          filtered = filtered.filter(tutor =>
+            filters.experience.includes(tutor.experience)
+          )
+        }
+
+        // Availability filter
+        if (filters.availability.length > 0) {
+          filtered = filtered.filter(tutor =>
+            filters.availability.some(avail => tutor.availability.includes(avail))
+          )
+        }
+
+        // Apply sorting
+        if (sortBy.value === 'rating') {
+          filtered.sort((a, b) => b.rating - a.rating)
+        } else if (sortBy.value === 'price-low') {
+          filtered.sort((a, b) => a.hourlyRate - b.hourlyRate)
+        } else if (sortBy.value === 'price-high') {
+          filtered.sort((a, b) => b.hourlyRate - a.hourlyRate)
+        } else if (sortBy.value === 'experience') {
+          const expOrder = { '5+': 3, '3-5': 2, '1-2': 1 }
+          filtered.sort((a, b) => expOrder[b.experience] - expOrder[a.experience])
+        }
+
+        tutors.value = filtered
+        console.log(`Found ${filtered.length} tutors after filtering`)
         isLoading.value = false
-        
+
         // Animate tutor cards entrance
         animateTutorCards()
       }, 1000)
@@ -959,16 +1120,27 @@ export default {
       }
     }
 
+    // Watch filters and sortBy to trigger automatic search
+    let searchTimeout = null
+    watch([filters, sortBy], () => {
+      // Debounce search to avoid too many calls
+      if (searchTimeout) clearTimeout(searchTimeout)
+      searchTimeout = setTimeout(() => {
+        console.log('Filters changed, searching...', filters)
+        searchTutors()
+      }, 300)
+    }, { deep: true })
+
     onMounted(() => {
       initSearchAnimations()
-      
+
       // Add keyboard event listener for speed control
       document.addEventListener('keydown', handleKeyPress)
-      
+
       // Add mouse event listeners for interactive animations
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseleave', handleMouseLeave)
-      
+
       searchTutors()
     })
 
