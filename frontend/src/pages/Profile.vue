@@ -237,6 +237,7 @@ export default {
     
     const userTypeLabels = {
       student: 'Student',
+      parent: 'Parents',
       tutor: 'Tutor',
       centre: 'Tuition Centre',
       admin: 'Administrator'
@@ -297,9 +298,9 @@ export default {
       loadProfile()
     }
 
-    const logout = () => {
-      authStore.logout()
-      router.push('/login')
+    const logout = async () => {
+      await authStore.logout()
+      router.push('/')
     }
 
     onMounted(() => {

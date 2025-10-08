@@ -124,8 +124,7 @@
                     >
                       <option value="">Select your role</option>
                       <option value="student">Student</option>
-                      <option value="tutor">Tutor</option>
-                      <option value="centre">Tuition Centre</option>
+                      <option value="parent">Parents</option>
                     </select>
                   </div>
                   <div v-if="errors.userType" class="cyberpunk-error-message">

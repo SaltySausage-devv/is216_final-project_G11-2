@@ -96,6 +96,7 @@
 
 <script>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { animate, stagger, spring } from 'animejs'
 
@@ -103,14 +104,16 @@ export default {
   name: 'Navbar',
   setup() {
     const authStore = useAuthStore()
+    const router = useRouter()
     const isNavbarExpanded = ref(false)
 
     const isAuthenticated = computed(() => authStore.isAuthenticated)
     const user = computed(() => authStore.user)
     const userType = computed(() => authStore.userType)
 
-    const logout = () => {
-      authStore.logout()
+    const logout = async () => {
+      await authStore.logout()
+      router.push('/')
     }
 
     // Custom toggle function as fallback
