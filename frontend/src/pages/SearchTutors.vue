@@ -228,7 +228,7 @@
                       <div class="cyberpunk-rating me-2">
                         <i v-for="i in 5" :key="i" :class="i <= rating ? 'fas fa-star cyberpunk-star' : 'far fa-star cyberpunk-star-empty'"></i>
                     </div>
-                      <span class="cyberpunk-text-muted">({{ Math.floor(Math.random() * 50 + 10) }})</span>
+                      <span class="cyberpunk-text-muted">({{ getRatingCount(rating) }})</span>
                   </label>
                   </div>
                 </div>
@@ -370,14 +370,19 @@
 
           <!-- Load More Button -->
           <div v-if="tutors.length > 0" class="text-center mt-5">
-            <button 
+            <button
+              v-if="hasMoreTutors"
               ref="loadMoreButton"
-              class="cyberpunk-load-more-btn" 
+              class="cyberpunk-load-more-btn"
               @click="loadMore"
             >
               <i class="fas fa-plus me-2"></i>
               Load More Tutors
             </button>
+            <div v-else class="cyberpunk-end-message">
+              <i class="fas fa-check-circle me-2"></i>
+              You've reached the end of the results
+            </div>
           </div>
         </div>
       </div>
@@ -386,7 +391,7 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, nextTick, watch } from 'vue'
+import { ref, reactive, onMounted, nextTick, watch, computed } from 'vue'
 import { createTimeline, animate, createAnimatable, utils, svg } from 'animejs'
 
 export default {
@@ -435,7 +440,16 @@ export default {
 
     const sortBy = ref('rating')
     const tutors = ref([])
+    const allTutors = ref([])
     const isLoading = ref(false)
+    const currentPage = ref(1)
+    const tutorsPerPage = 8
+    const totalFilteredTutors = ref(0)
+
+    // Computed property to check if there are more tutors to load
+    const hasMoreTutors = computed(() => {
+      return tutors.value.length < totalFilteredTutors.value
+    })
 
     // Advanced Anime.js v4 Search Page Animations
     const initSearchAnimations = async () => {
@@ -734,6 +748,7 @@ export default {
 
     const searchTutors = async () => {
       isLoading.value = true
+      currentPage.value = 1
 
       // Advanced loading animation for button
       if (searchButton.value) {
@@ -759,8 +774,8 @@ export default {
 
       // Simulate API call with filtering
       setTimeout(() => {
-        // All available tutors
-        const allTutors = [
+        // All available tutors - expanded dataset
+        const baseTutors = [
           {
             id: 1,
             name: 'Dr. Sarah Chen',
@@ -883,8 +898,21 @@ export default {
           }
         ]
 
+        // Generate additional tutors for pagination
+        allTutors.value = [...baseTutors]
+        for (let i = 0; i < 20; i++) {
+          const template = baseTutors[i % baseTutors.length]
+          allTutors.value.push({
+            ...template,
+            id: baseTutors.length + i + 1,
+            name: `${template.name.split(' ')[0]}. ${['Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Martinez', 'Anderson', 'Taylor'][i % 10]} ${String.fromCharCode(65 + (i % 26))}`,
+            reviews: Math.floor(Math.random() * 200) + 20,
+            avatar: `https://i.pravatar.cc/400?img=${(i % 70) + 1}`
+          })
+        }
+
         // Apply filters
-        let filtered = allTutors
+        let filtered = allTutors.value
 
         // Subject filter
         if (filters.subject) {
@@ -959,13 +987,20 @@ export default {
           filtered.sort((a, b) => expOrder[b.experience] - expOrder[a.experience])
         }
 
-        tutors.value = filtered
-        console.log(`Found ${filtered.length} tutors after filtering`)
+        // Paginate results
+        totalFilteredTutors.value = filtered.length
+        tutors.value = filtered.slice(0, tutorsPerPage)
+        console.log(`Found ${filtered.length} tutors after filtering, showing ${tutors.value.length}`)
         isLoading.value = false
 
         // Animate tutor cards entrance
         animateTutorCards()
       }, 1000)
+    }
+
+    // Get dynamic count of tutors by rating
+    const getRatingCount = (rating) => {
+      return allTutors.value.filter(tutor => tutor.rating === rating).length
     }
 
     // Animate tutor cards entrance
@@ -1005,9 +1040,58 @@ export default {
     }
 
     const loadMore = () => {
-      // Add more tutors to the list
-      tutors.value.push(...tutors.value.slice(0, 3))
-      
+      // Get filtered results
+      let filtered = allTutors.value
+
+      // Apply all current filters
+      if (filters.subject) {
+        filtered = filtered.filter(tutor => tutor.subjects.includes(filters.subject))
+      }
+      if (filters.level) {
+        filtered = filtered.filter(tutor => tutor.levels.includes(filters.level))
+      }
+      if (filters.teachingMode) {
+        filtered = filtered.filter(tutor => tutor.teachingMode === filters.teachingMode || tutor.teachingMode === 'both')
+      }
+      if (filters.location) {
+        filtered = filtered.filter(tutor => tutor.location.toLowerCase().includes(filters.location.toLowerCase()))
+      }
+      if (filters.minRate) {
+        filtered = filtered.filter(tutor => tutor.hourlyRate >= parseInt(filters.minRate))
+      }
+      if (filters.maxRate) {
+        filtered = filtered.filter(tutor => tutor.hourlyRate <= parseInt(filters.maxRate))
+      }
+      if (filters.ratings.length > 0) {
+        filtered = filtered.filter(tutor => filters.ratings.includes(tutor.rating))
+      }
+      if (filters.experience.length > 0) {
+        filtered = filtered.filter(tutor => filters.experience.includes(tutor.experience))
+      }
+      if (filters.availability.length > 0) {
+        filtered = filtered.filter(tutor => filters.availability.some(avail => tutor.availability.includes(avail)))
+      }
+
+      // Apply sorting
+      if (sortBy.value === 'rating') {
+        filtered.sort((a, b) => b.rating - a.rating)
+      } else if (sortBy.value === 'price-low') {
+        filtered.sort((a, b) => a.hourlyRate - b.hourlyRate)
+      } else if (sortBy.value === 'price-high') {
+        filtered.sort((a, b) => b.hourlyRate - a.hourlyRate)
+      } else if (sortBy.value === 'experience') {
+        const expOrder = { '5+': 3, '3-5': 2, '1-2': 1 }
+        filtered.sort((a, b) => expOrder[b.experience] - expOrder[a.experience])
+      }
+
+      // Load next page
+      currentPage.value++
+      const startIndex = (currentPage.value - 1) * tutorsPerPage
+      const endIndex = currentPage.value * tutorsPerPage
+      const newTutors = filtered.slice(startIndex, endIndex)
+
+      tutors.value.push(...newTutors)
+
       // Animate new tutor cards
       setTimeout(() => {
         animateTutorCards()
@@ -1177,9 +1261,11 @@ export default {
       sortBy,
       tutors,
       isLoading,
+      hasMoreTutors,
       searchTutors,
       clearFilters,
-      loadMore
+      loadMore,
+      getRatingCount
     }
   }
 }
@@ -1518,6 +1604,24 @@ select.cyberpunk-input option {
 .cyberpunk-load-more-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 0 30px rgba(255, 140, 66, 0.5);
+}
+
+/* Cyberpunk End Message */
+.cyberpunk-end-message {
+  color: var(--cyber-text-muted);
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 1rem 2rem;
+  border: 1px solid var(--cyber-grey-light);
+  border-radius: 10px;
+  background: rgba(42, 42, 42, 0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cyberpunk-end-message i {
+  color: var(--cyber-orange);
 }
 
 /* Cyberpunk Filters Card */
