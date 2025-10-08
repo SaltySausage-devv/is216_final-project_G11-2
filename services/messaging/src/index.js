@@ -146,17 +146,20 @@ const activeConnections = new Map();
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
+  console.log(`User ${socket.userId} connected to Socket.io`)
   activeConnections.set(socket.userId, socket);
 
   // Join conversation room
   socket.on('join_conversation', (data) => {
     const { conversationId } = data;
+    console.log(`User ${socket.userId} joining conversation room: conversation_${conversationId}`);
     socket.join(`conversation_${conversationId}`);
   });
 
   // Leave conversation room
   socket.on('leave_conversation', (data) => {
     const { conversationId } = data;
+    console.log(`User ${socket.userId} leaving conversation room: conversation_${conversationId}`);
     socket.leave(`conversation_${conversationId}`);
   });
 
@@ -164,6 +167,22 @@ io.on('connection', (socket) => {
   socket.on('send_message', async (data) => {
     try {
       const { conversationId, content, messageType = 'text' } = data;
+
+      // First, verify the conversation exists and user is a participant
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('participant1_id, participant2_id')
+        .eq('id', conversationId)
+        .single();
+
+      if (convError || !conversation) {
+        throw new Error('Conversation not found');
+      }
+
+      // Verify user is a participant in this conversation
+      if (conversation.participant1_id !== socket.userId && conversation.participant2_id !== socket.userId) {
+        throw new Error('Unauthorized: Not a participant in this conversation');
+      }
 
       // Sanitize message content
       const sanitizedContent = sanitizeInput(content);
@@ -178,7 +197,14 @@ io.on('connection', (socket) => {
           message_type: messageType,
           created_at: new Date().toISOString()
         })
-        .select()
+        .select(`
+          *,
+          sender:sender_id (
+            first_name,
+            last_name,
+            user_type
+          )
+        `)
         .single();
 
       if (error) {
@@ -186,6 +212,8 @@ io.on('connection', (socket) => {
       }
 
       // Broadcast message to conversation room
+      console.log(`Broadcasting message to room: conversation_${conversationId}`);
+      console.log('Message data:', message);
       io.to(`conversation_${conversationId}`).emit('new_message', message);
 
       // Update conversation last message
@@ -399,7 +427,30 @@ app.get('/messaging/conversations', verifyToken, async (req, res) => {
       throw error;
     }
 
-    res.json({ conversations });
+    // Add unread count for each conversation
+    const conversationsWithUnreadCount = await Promise.all(
+      conversations.map(async (conversation) => {
+        // Count unread messages for this conversation
+        const { count: unreadCount, error: countError } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', conversation.id)
+          .neq('sender_id', req.user.userId)
+          .is('read_at', null)
+          .is('deleted_at', null);
+
+        if (countError) {
+          console.error('Error counting unread messages:', countError);
+        }
+
+        return {
+          ...conversation,
+          unreadCount: unreadCount || 0
+        };
+      })
+    );
+
+    res.json({ conversations: conversationsWithUnreadCount });
   } catch (error) {
     console.error('Conversations fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });

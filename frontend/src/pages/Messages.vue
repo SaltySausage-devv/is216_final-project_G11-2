@@ -52,17 +52,25 @@
                         <div class="conversation-avatar bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 spring-smooth" style="width: 45px; height: 45px;">
                           <i class="fas fa-user text-primary"></i>
                         </div>
-                        <div class="flex-grow-1">
-                          <h6 class="fw-bold mb-1">{{ conversation.participant.name }}</h6>
-                          <p class="text-muted mb-1 small">{{ conversation.lastMessage }}</p>
+                        <div class="flex-grow-1 d-flex flex-column">
+                          <!-- Top row: Name and Time -->
+                          <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0">{{ conversation.participant.name }}</h6>
                           <small class="text-muted">{{ formatTime(conversation.lastMessageAt) }}</small>
                         </div>
-                        <div v-if="conversation.unreadCount > 0" class="badge bg-primary rounded-pill">
+                          <!-- Bottom row: Last Message and Unread Count -->
+                          <div class="d-flex justify-content-between align-items-center mt-1">
+                            <p class="text-muted mb-0 small text-truncate" style="max-width: 70%;" :class="{ 'fw-bold': conversation.unreadCount > 0 }">
+                              {{ conversation.lastMessage }}
+                            </p>
+                            <div v-if="conversation.unreadCount > 0" class="badge bg-danger rounded-pill" style="font-size: 0.7rem;">
                           {{ conversation.unreadCount }}
                         </div>
                       </div>
                   </div>
                 </div>
+              </div>
+            </div>
               </div>
             </div>
             </div>
@@ -220,7 +228,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import messagingService from '../services/messaging.js'
 
@@ -283,7 +291,7 @@ export default {
             },
             lastMessage: conv.last_message_content || 'No messages yet',
             lastMessageAt: conv.last_message_at || conv.created_at,
-            unreadCount: 0 // Will be calculated by backend
+            unreadCount: conv.unreadCount || 0
           }
         })
       } catch (error) {
@@ -312,19 +320,19 @@ export default {
       try {
         isLoading.value = true
         const response = await messagingService.getMessages(conversationId)
-      messages.value = response.messages.map(msg => ({
-        id: msg.id,
-        senderId: msg.sender_id,
-        content: msg.content,
-        messageType: msg.message_type,
-        createdAt: msg.created_at,
-        readAt: msg.read_at,
-        deliveredAt: msg.delivered_at,
-        sender: msg.sender ? {
-          name: `${msg.sender.first_name} ${msg.sender.last_name}`,
-          type: msg.sender.user_type
-        } : null
-      }))
+        messages.value = response.messages.map(msg => ({
+          id: msg.id,
+          senderId: msg.sender_id,
+          content: msg.content,
+          messageType: msg.message_type,
+          createdAt: msg.created_at,
+          readAt: msg.read_at,
+          deliveredAt: msg.delivered_at,
+          sender: msg.sender ? {
+            name: `${msg.sender.first_name} ${msg.sender.last_name}`,
+            type: msg.sender.user_type
+          } : null
+        }))
         
         // Mark messages as read and update status
         await messagingService.markAsRead(conversationId)
@@ -335,6 +343,12 @@ export default {
             msg.readAt = new Date().toISOString()
           }
         })
+        
+        // Clear unread count for this conversation
+        const conversationIndex = conversations.value.findIndex(conv => conv.id === conversationId)
+        if (conversationIndex !== -1) {
+          conversations.value[conversationIndex].unreadCount = 0
+        }
       } catch (error) {
         console.error('Error loading messages:', error)
         messages.value = []
@@ -352,6 +366,9 @@ export default {
       const messageContent = newMessage.value.trim()
       const conversationId = selectedConversation.value.id
       
+      console.log('Sending message to conversation:', conversationId)
+      console.log('Selected conversation:', selectedConversation.value)
+
       isLoading.value = true
       
       try {
@@ -373,8 +390,31 @@ export default {
         
         messages.value.push(tempMessage)
         
-        // If this is the first message, add conversation to the conversations list
-        if (isFirstMessage) {
+        // Update conversation in the list immediately
+        const conversationIndex = conversations.value.findIndex(conv => conv.id === conversationId)
+        console.log('Looking for conversation in list:', conversationId)
+        console.log('Current conversations:', conversations.value.map(c => ({ id: c.id, participant: c.participant.name })))
+        console.log('Found conversation index:', conversationIndex)
+        
+        if (conversationIndex !== -1) {
+          // Update existing conversation with proper reactivity
+          const updatedConversations = [...conversations.value]
+          const conversation = updatedConversations[conversationIndex]
+          
+          conversation.lastMessage = messageContent
+          conversation.lastMessageAt = new Date().toISOString()
+          
+          // Move to top of list
+          updatedConversations.splice(conversationIndex, 1)
+          updatedConversations.unshift(conversation)
+          
+          conversations.value = updatedConversations
+          
+          // Force Vue to update the UI
+          await nextTick()
+        } else {
+          // Add new conversation to the list (first message)
+          console.log('Conversation not found in list, adding new conversation')
           const conversationToAdd = {
             id: selectedConversation.value.id,
             participant: selectedConversation.value.participant,
@@ -382,7 +422,18 @@ export default {
             lastMessageAt: new Date().toISOString(),
             unreadCount: 0
           }
-          conversations.value.unshift(conversationToAdd)
+          
+          console.log('Adding conversation to list:', conversationToAdd)
+          
+          // Create new array to trigger Vue reactivity
+          const updatedConversations = [...conversations.value]
+          updatedConversations.unshift(conversationToAdd)
+          conversations.value = updatedConversations
+          
+          console.log('Updated conversations list:', conversations.value.length)
+          
+          // Force Vue to update the UI
+          await nextTick()
         }
         
         // Clear input immediately
@@ -445,7 +496,9 @@ export default {
         }
         
         // Create or get existing conversation via API
+        console.log('Creating conversation with participant:', participantId)
         const response = await messagingService.createConversation(participantId)
+        console.log('Conversation creation response:', response)
         
         // Check if it's an existing conversation or new one
         if (response.message === 'Using existing conversation') {
@@ -494,8 +547,22 @@ export default {
             unreadCount: 0
           }
           
-          // Select the conversation immediately but don't add to conversations list yet
+          // Add the conversation to the list immediately so it can be updated by Socket.io
+          console.log('Adding new conversation to list:', mappedConversation.id)
+          const updatedConversations = [...conversations.value]
+          updatedConversations.unshift(mappedConversation)
+          conversations.value = updatedConversations
+          
+          console.log('Conversation added, total conversations:', conversations.value.length)
+          
+          // Force Vue to update the UI
+          await nextTick()
+          
+          // Select the conversation immediately
           await selectConversationWithRoom(mappedConversation)
+          
+          // Join the new conversation room for real-time updates
+          messagingService.joinConversation(mappedConversation.id)
         }
       } catch (error) {
         console.error('Error creating conversation:', error)
@@ -574,13 +641,19 @@ export default {
     // Set up Socket.io connection and message handling
     const setupMessaging = () => {
       if (authStore.session?.access_token) {
+        console.log('Setting up messaging with token:', authStore.session.access_token.substring(0, 20) + '...')
         // Connect to messaging service
         messagingService.connect(authStore.session.access_token)
         
         // Handle new messages
-        messagingService.on('new_message', (message) => {
-          // Only add message if it's for the current conversation
+        messagingService.on('new_message', async (message) => {
+          console.log('Received new message:', message)
+          console.log('Current selected conversation:', selectedConversation.value?.id)
+          console.log('Message conversation ID:', message.conversation_id)
+          
+          // Add message to current conversation if it's the one being viewed
           if (selectedConversation.value && message.conversation_id === selectedConversation.value.id) {
+            console.log('Adding message to current conversation')
             // Check if this is replacing a temporary message
             const tempMessageIndex = messages.value.findIndex(msg => 
               msg.id.startsWith('temp_') && 
@@ -611,15 +684,41 @@ export default {
             }
           }
           
-          // Update conversation in list or add if it doesn't exist
+          // ALWAYS update conversation list for ALL messages (this is the key fix!)
+          console.log('Updating conversation list for message')
           const conversationIndex = conversations.value.findIndex(conv => 
             conv.id === message.conversation_id
           )
+          console.log('Found conversation index:', conversationIndex)
           
           if (conversationIndex !== -1) {
-            // Update existing conversation
-            conversations.value[conversationIndex].lastMessage = message.content
-            conversations.value[conversationIndex].lastMessageAt = message.created_at
+            console.log('Updating existing conversation in list')
+            
+            // Create a new array to trigger Vue reactivity
+            const updatedConversations = [...conversations.value]
+            const conversation = updatedConversations[conversationIndex]
+            
+            // Update conversation properties
+            conversation.lastMessage = message.content
+            conversation.lastMessageAt = message.created_at
+            
+            // If message is from someone else and not in current conversation, increment unread count
+            if (message.sender_id !== currentUserId.value && 
+                (!selectedConversation.value || selectedConversation.value.id !== message.conversation_id)) {
+              conversation.unreadCount = (conversation.unreadCount || 0) + 1
+            }
+            
+            // Remove from current position and add to top
+            updatedConversations.splice(conversationIndex, 1)
+            updatedConversations.unshift(conversation)
+            
+            // Update the reactive array
+            conversations.value = updatedConversations
+            
+            // Force Vue to update the UI
+            await nextTick()
+            
+            console.log('Conversation list updated:', conversations.value.length)
           } else {
             // This is a new conversation that needs to be added to the list
             // This happens when someone else sends the first message to you
@@ -633,14 +732,31 @@ export default {
               },
               lastMessage: message.content,
               lastMessageAt: message.created_at,
-              unreadCount: 1
+              unreadCount: message.sender_id !== currentUserId.value ? 1 : 0
             }
-            conversations.value.unshift(conversationToAdd)
+            // Create new array to trigger Vue reactivity
+            const updatedConversations = [...conversations.value]
+            updatedConversations.unshift(conversationToAdd)
+            conversations.value = updatedConversations
+            
+            // Force Vue to update the UI
+            await nextTick()
+            
+            console.log('New conversation added to list:', conversationToAdd.id)
+            
+            // Join the new conversation room for real-time updates
+            messagingService.joinConversation(conversationToAdd.id)
           }
         })
 
-        // Handle reconnection - rejoin conversation room if one is selected
+        // Handle reconnection - rejoin all conversation rooms
         messagingService.on('connect', () => {
+          console.log('Socket.io reconnected, rejoining conversation rooms')
+          // Rejoin all existing conversation rooms
+          conversations.value.forEach(conv => {
+            messagingService.joinConversation(conv.id)
+          })
+          // Also rejoin current conversation if selected
           if (selectedConversation.value) {
             messagingService.joinConversation(selectedConversation.value.id)
           }
@@ -685,6 +801,13 @@ export default {
       
       loadConversations()
       setupMessaging()
+      
+      // Join all existing conversation rooms for real-time updates
+      setTimeout(() => {
+        conversations.value.forEach(conv => {
+          messagingService.joinConversation(conv.id)
+        })
+      }, 1000)
     })
 
     onUnmounted(() => {

@@ -47,10 +47,12 @@ class MessagingService {
           })
 
           this.socket.on('connect', () => {
+            console.log('Socket.io connected successfully')
             this.isConnected = true
           })
 
           this.socket.on('disconnect', () => {
+            console.log('Socket.io disconnected')
             this.isConnected = false
           })
 
@@ -83,9 +85,13 @@ class MessagingService {
   // Set up Socket.io event handlers
   setupMessageHandlers() {
     this.socket.on('new_message', (message) => {
+      console.log('Socket.io received new_message:', message)
       const handler = this.messageHandlers.get('new_message')
       if (handler) {
+        console.log('Calling new_message handler')
         handler(message)
+      } else {
+        console.log('No new_message handler registered')
       }
     })
 
@@ -117,7 +123,10 @@ class MessagingService {
   // Join a conversation room
   joinConversation(conversationId) {
     if (this.socket && this.isConnected) {
+      console.log('Joining conversation room:', conversationId)
       this.socket.emit('join_conversation', { conversationId })
+    } else {
+      console.log('Cannot join room - socket not connected:', { socket: !!this.socket, connected: this.isConnected })
     }
   }
 
@@ -131,11 +140,14 @@ class MessagingService {
   // Send a message via Socket.io
   sendMessage(conversationId, content, messageType = 'text') {
     if (this.socket && this.isConnected) {
+      console.log('Sending message via Socket.io:', { conversationId, content, messageType })
       this.socket.emit('send_message', {
         conversationId,
         content,
         messageType
       })
+    } else {
+      console.log('Cannot send message - socket not connected:', { socket: !!this.socket, connected: this.isConnected })
     }
   }
 
