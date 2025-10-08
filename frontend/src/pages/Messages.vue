@@ -173,27 +173,40 @@
       </div>
     </div>
 
-    <!-- Tutor Selection Modal -->
-    <div v-if="showTutorSelection" class="modal-overlay" @click="showTutorSelection = false">
+    <!-- Participant Selection Modal -->
+    <div v-if="showParticipantSelection" class="modal-overlay" @click="showParticipantSelection = false">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Select a Tutor</h3>
-          <button @click="showTutorSelection = false" class="close-btn">&times;</button>
+          <h3>{{ authStore.userType === 'student' ? 'Select a Tutor' : 'Select a Student' }}</h3>
+          <button @click="showParticipantSelection = false" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
-          <div v-if="availableTutors.length === 0" class="no-tutors">
-            <p>No available tutors found.</p>
+          <!-- Search input for participants -->
+          <div class="participant-search">
+            <input 
+              v-model="participantSearchQuery"
+              type="text" 
+              :placeholder="`Search ${authStore.userType === 'student' ? 'tutors' : 'students'}...`"
+              class="search-input"
+            />
+          </div>
+          
+          <div v-if="availableParticipants.length === 0" class="no-tutors">
+            <p>No available {{ authStore.userType === 'student' ? 'tutors' : 'students' }} found.</p>
+          </div>
+          <div v-else-if="filteredParticipants.length === 0" class="no-tutors">
+            <p>No {{ authStore.userType === 'student' ? 'tutors' : 'students' }} match your search.</p>
           </div>
           <div v-else class="tutor-list">
             <div 
-              v-for="tutor in availableTutors" 
-              :key="tutor.id"
+              v-for="participant in filteredParticipants" 
+              :key="participant.id"
               class="tutor-item"
-              @click="createConversationWithTutor(tutor.id)"
+              @click="createConversationWithParticipant(participant.id)"
             >
               <div class="tutor-info">
-                <h4>{{ tutor.first_name }} {{ tutor.last_name }}</h4>
-                <p>{{ tutor.email }}</p>
+                <h4>{{ participant.first_name }} {{ participant.last_name }}</h4>
+                <p>{{ participant.email }}</p>
               </div>
               <div class="tutor-actions">
                 <button class="btn btn-primary">Start Chat</button>
@@ -228,6 +241,14 @@ export default {
       if (!searchQuery.value) return conversations.value
       return conversations.value.filter(conv => 
         conv.participant.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+      )
+    })
+
+    const filteredParticipants = computed(() => {
+      if (!participantSearchQuery.value) return availableParticipants.value
+      return availableParticipants.value.filter(participant => 
+        `${participant.first_name} ${participant.last_name}`.toLowerCase().includes(participantSearchQuery.value.toLowerCase()) ||
+        participant.email.toLowerCase().includes(participantSearchQuery.value.toLowerCase())
       )
     })
 
@@ -268,8 +289,15 @@ export default {
       } catch (error) {
         console.error('Error loading conversations:', error)
         conversations.value = []
-        // Show user-friendly error message
-        alert('Failed to load conversations. Please refresh the page and try again.')
+        
+        // Handle different error types
+        if (error.response?.status === 429) {
+          alert('Too many requests. Please wait a moment and try again.')
+        } else if (error.response?.status === 401) {
+          alert('Authentication error. Please log in again.')
+        } else {
+          alert('Failed to load conversations. Please refresh the page and try again.')
+        }
       } finally {
         isLoading.value = false
       }
@@ -323,10 +351,13 @@ export default {
 
       const messageContent = newMessage.value.trim()
       const conversationId = selectedConversation.value.id
-
+      
       isLoading.value = true
       
       try {
+        // Check if this is the first message in this conversation
+        const isFirstMessage = messages.value.length === 0
+        
         // Add message to local state immediately for better UX
         const tempMessage = {
           id: `temp_${Date.now()}`,
@@ -341,6 +372,18 @@ export default {
         }
         
         messages.value.push(tempMessage)
+        
+        // If this is the first message, add conversation to the conversations list
+        if (isFirstMessage) {
+          const conversationToAdd = {
+            id: selectedConversation.value.id,
+            participant: selectedConversation.value.participant,
+            lastMessage: messageContent,
+            lastMessageAt: new Date().toISOString(),
+            unreadCount: 0
+          }
+          conversations.value.unshift(conversationToAdd)
+        }
         
         // Clear input immediately
         newMessage.value = ''
@@ -358,48 +401,51 @@ export default {
       }
     }
 
-    const availableTutors = ref([])
-    const showTutorSelection = ref(false)
-    const selectedTutorId = ref(null)
+    const availableParticipants = ref([])
+    const showParticipantSelection = ref(false)
+    const selectedParticipantId = ref(null)
+    const participantSearchQuery = ref('')
 
-    const loadAvailableTutors = async () => {
+    const loadAvailableParticipants = async () => {
       try {
-        const response = await messagingService.getAvailableTutors()
-        availableTutors.value = response.tutors || []
+        const response = await messagingService.getAvailableParticipants()
+        availableParticipants.value = response.participants || []
       } catch (error) {
-        console.error('Error loading tutors:', error)
-        availableTutors.value = []
+        console.error('Error loading participants:', error)
+        availableParticipants.value = []
       }
     }
 
     const startNewConversation = async () => {
       try {
-        // Load available tutors first
-        await loadAvailableTutors()
-        showTutorSelection.value = true
+        // Clear search query
+        participantSearchQuery.value = ''
+        // Load available participants first
+        await loadAvailableParticipants()
+        showParticipantSelection.value = true
       } catch (error) {
-        console.error('Error loading tutors:', error)
-        alert('Failed to load available tutors: ' + error.message)
+        console.error('Error loading participants:', error)
+        alert('Failed to load available participants: ' + error.message)
       }
     }
 
-    const createConversationWithTutor = async (tutorId) => {
+    const createConversationWithParticipant = async (participantId) => {
       try {
-        showTutorSelection.value = false
+        showParticipantSelection.value = false
         
         // First try to find existing conversation in current list
         const existingConversation = conversations.value.find(conv => 
-          conv.participant.id === tutorId
+          conv.participant.id === participantId
         )
         
         if (existingConversation) {
           // Use existing conversation
-          await selectConversation(existingConversation)
+          await selectConversationWithRoom(existingConversation)
           return
         }
         
         // Create or get existing conversation via API
-        const response = await messagingService.createConversation(tutorId)
+        const response = await messagingService.createConversation(participantId)
         
         // Check if it's an existing conversation or new one
         if (response.message === 'Using existing conversation') {
@@ -427,17 +473,29 @@ export default {
           await selectConversationWithRoom(mappedConversation)
           
         } else {
-          // New conversation created, reload and select
-          await loadConversations()
+          // New conversation created, but don't add to list until first message is sent
+          const backendConversation = response.conversation
           
-          // Find the newly created conversation
-          const newConversation = conversations.value.find(conv => 
-            conv.participant.id === tutorId
-          )
+          // Determine the other participant
+          const otherParticipant = backendConversation.participant1_id === currentUserId.value 
+            ? backendConversation.participant2 
+            : backendConversation.participant1
           
-          if (newConversation) {
-            await selectConversationWithRoom(newConversation)
+          // Map it to the frontend format
+          const mappedConversation = {
+            id: backendConversation.id,
+            participant: {
+              id: otherParticipant.id,
+              name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
+              type: otherParticipant.user_type
+            },
+            lastMessage: 'No messages yet',
+            lastMessageAt: backendConversation.created_at,
+            unreadCount: 0
           }
+          
+          // Select the conversation immediately but don't add to conversations list yet
+          await selectConversationWithRoom(mappedConversation)
         }
       } catch (error) {
         console.error('Error creating conversation:', error)
@@ -530,19 +588,19 @@ export default {
               msg.content === message.content
             )
             
-          const newMessage = {
-            id: message.id,
-            senderId: message.sender_id,
-            content: message.content,
-            messageType: message.message_type,
-            createdAt: message.created_at,
-            readAt: message.read_at,
-            deliveredAt: message.delivered_at,
-            sender: message.sender ? {
-              name: `${message.sender.first_name} ${message.sender.last_name}`,
-              type: message.sender.user_type
-            } : null
-          }
+            const newMessage = {
+              id: message.id,
+              senderId: message.sender_id,
+              content: message.content,
+              messageType: message.message_type,
+              createdAt: message.created_at,
+              readAt: message.read_at,
+              deliveredAt: message.delivered_at,
+              sender: message.sender ? {
+                name: `${message.sender.first_name} ${message.sender.last_name}`,
+                type: message.sender.user_type
+              } : null
+            }
             
             if (tempMessageIndex !== -1) {
               // Replace temporary message with real one
@@ -553,13 +611,31 @@ export default {
             }
           }
           
-          // Update conversation in list instead of full reload
+          // Update conversation in list or add if it doesn't exist
           const conversationIndex = conversations.value.findIndex(conv => 
             conv.id === message.conversation_id
           )
+          
           if (conversationIndex !== -1) {
+            // Update existing conversation
             conversations.value[conversationIndex].lastMessage = message.content
             conversations.value[conversationIndex].lastMessageAt = message.created_at
+          } else {
+            // This is a new conversation that needs to be added to the list
+            // This happens when someone else sends the first message to you
+            const otherParticipant = message.sender
+            const conversationToAdd = {
+              id: message.conversation_id,
+              participant: {
+                id: otherParticipant.id,
+                name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
+                type: otherParticipant.user_type
+              },
+              lastMessage: message.content,
+              lastMessageAt: message.created_at,
+              unreadCount: 1
+            }
+            conversations.value.unshift(conversationToAdd)
           }
         })
 
@@ -623,6 +699,7 @@ export default {
     })
 
     return {
+      authStore,
       currentUserId,
       searchQuery,
       selectedConversation,
@@ -636,10 +713,12 @@ export default {
       sendMessage,
       startNewConversation,
       attachFile,
-      availableTutors,
-      showTutorSelection,
-      selectedTutorId,
-      createConversationWithTutor
+      availableParticipants,
+      showParticipantSelection,
+      selectedParticipantId,
+      participantSearchQuery,
+      filteredParticipants,
+      createConversationWithParticipant
     }
   }
 }
@@ -996,7 +1075,7 @@ i.text-primary {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1004,13 +1083,14 @@ i.text-primary {
 }
 
 .modal-content {
-  background: white;
-  border-radius: 8px;
+  background: #242424;
+  border-radius: 12px;
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid #424242;
 }
 
 .modal-header {
@@ -1018,12 +1098,15 @@ i.text-primary {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #424242;
+  background: #2c2c2c;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: #333;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .close-btn {
@@ -1031,29 +1114,58 @@ i.text-primary {
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: #a0aec0;
   padding: 0;
   width: 30px;
   height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
 .close-btn:hover {
-  color: #333;
+  color: #ffffff;
+  background: #424242;
 }
 
 .modal-body {
   padding: 20px;
   max-height: 60vh;
   overflow-y: auto;
+  background: #242424;
+}
+
+.participant-search {
+  margin-bottom: 16px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: #2c2c2c;
+  border: 1px solid #424242;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #ff6b35;
+  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
+}
+
+.search-input::placeholder {
+  color: #a0aec0;
 }
 
 .no-tutors {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
+  color: #a0aec0;
 }
 
 .tutor-list {
@@ -1067,31 +1179,48 @@ i.text-primary {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #424242;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  background: #2c2c2c;
 }
 
 .tutor-item:hover {
-  border-color: #007bff;
-  background-color: #f8f9fa;
+  border-color: #ff6b35;
+  background: #242424;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);
 }
 
 .tutor-info h4 {
   margin: 0 0 4px 0;
-  color: #333;
+  color: #ffffff;
   font-size: 16px;
+  font-weight: 500;
 }
 
 .tutor-info p {
   margin: 0;
-  color: #666;
+  color: #a0aec0;
   font-size: 14px;
 }
 
 .tutor-actions .btn {
   padding: 8px 16px;
   font-size: 14px;
+  background: #ff6b35;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tutor-actions .btn:hover {
+  background: #e55a2b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 </style>

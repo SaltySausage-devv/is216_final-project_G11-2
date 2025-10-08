@@ -166,13 +166,13 @@ class MessagingService {
     }
   }
 
-        // Get available tutors
-        async getAvailableTutors() {
+        // Get available participants based on user type
+        async getAvailableParticipants() {
           try {
-            const response = await messagingApi.get('/messaging/tutors')
+            const response = await messagingApi.get('/messaging/participants')
             return response.data
           } catch (error) {
-            console.error('Error fetching tutors:', error)
+            console.error('Error fetching participants:', error)
             throw error
           }
         }

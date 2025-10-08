@@ -61,10 +61,15 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Rate limiting
+// Rate limiting - More generous for development
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Increased from 100 to 1000 requests per window
+  message: {
+    error: 'Too many requests, please try again later'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
 });
 app.use(limiter);
 
@@ -240,8 +245,8 @@ const sendMessageSchema = Joi.object({
 
 // Routes
 
-// Get available tutors for messaging
-app.get('/messaging/tutors', verifyToken, async (req, res) => {
+// Get available participants for messaging based on user type
+app.get('/messaging/participants', verifyToken, async (req, res) => {
   try {
     const { data: allUsers, error: allUsersError } = await supabase
       .from('users')
@@ -252,15 +257,25 @@ app.get('/messaging/tutors', verifyToken, async (req, res) => {
       throw allUsersError;
     }
     
-    // Filter tutors
-    const tutors = allUsers?.filter(user => 
-      user.user_type === 'tutor' && user.id !== req.user.userId
-    ) || [];
+    // Apply messaging rules based on current user type
+    let participants = [];
+    
+    if (req.user.userType === 'student') {
+      // Students can only message tutors
+      participants = allUsers?.filter(user => 
+        user.user_type === 'tutor' && user.id !== req.user.userId
+      ) || [];
+    } else if (req.user.userType === 'tutor') {
+      // Tutors can only message students
+      participants = allUsers?.filter(user => 
+        user.user_type === 'student' && user.id !== req.user.userId
+      ) || [];
+    }
 
-    res.json({ tutors });
+    res.json({ participants });
   } catch (error) {
-    console.error('Error fetching tutors:', error);
-    res.status(500).json({ error: 'Failed to fetch tutors' });
+    console.error('Error fetching participants:', error);
+    res.status(500).json({ error: 'Failed to fetch participants' });
   }
 });
 
