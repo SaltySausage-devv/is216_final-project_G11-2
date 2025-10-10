@@ -1,17 +1,5 @@
 <template>
   <div class="login-page min-vh-100 d-flex align-items-center position-relative" style="background: #1a1a1a !important;">
-    <!-- Animated Background Elements -->
-    <div class="login-background-elements">
-      <div class="floating-icon floating-icon-1">📚</div>
-      <div class="floating-icon floating-icon-2">✏️</div>
-      <div class="floating-icon floating-icon-3">🧮</div>
-      <div class="floating-icon floating-icon-4">📝</div>
-      <div class="floating-icon floating-icon-5">🎓</div>
-      <div class="floating-icon floating-icon-6">💡</div>
-      <div class="floating-icon floating-icon-7">🔬</div>
-      <div class="floating-icon floating-icon-8">📖</div>
-    </div>
-
     <div class="container">
       <div class="row justify-content-center">
         <div class="col-lg-5 col-md-7">
@@ -82,19 +70,30 @@
                   </div>
                 </div>
 
-                <!-- Remember Me with Animation -->
+                <!-- Remember Me and Forgot Password with Animation -->
                 <div ref="rememberField" class="mb-4">
-                  <div class="cyberpunk-checkbox-group">
-                    <input
-                      type="checkbox"
-                      id="remember"
-                      v-model="form.remember"
-                      class="cyberpunk-checkbox"
-                    />
-                    <label for="remember" class="cyberpunk-checkbox-label">
-                      Remember me
-                    </label>
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="cyberpunk-checkbox-group">
+                      <input
+                        type="checkbox"
+                        id="remember"
+                        v-model="form.remember"
+                        class="cyberpunk-checkbox"
+                      />
+                      <label for="remember" class="cyberpunk-checkbox-label">
+                        Remember me
+                      </label>
+                    </div>
+                    <router-link to="/forgot-password" class="cyberpunk-link">
+                      Forgot password?
+                    </router-link>
                   </div>
+                </div>
+
+                <!-- Success Alert -->
+                <div v-if="successMessage" class="cyberpunk-success-alert mb-4">
+                  <i class="fas fa-check-circle me-2"></i>
+                  {{ successMessage }}
                 </div>
 
                 <!-- Error Alert with Animation -->
@@ -168,6 +167,7 @@ export default {
     const error = ref('')
     const isLoading = ref(false)
     const showPassword = ref(false)
+    const successMessage = ref('')
 
     // Advanced Anime.js v4 Login Page Animations
     const initLoginAnimations = async () => {
@@ -223,33 +223,7 @@ export default {
         }
       })
 
-      // Background floating elements with advanced animations
-      const floatingElements = document.querySelectorAll('.floating-icon')
-      floatingElements.forEach((element, index) => {
-        // Create individual timeline for each floating element
-        const elementTimeline = createTimeline({
-          loop: true,
-          alternate: true,
-          playbackRate: 0.5 + (index * 0.1),
-          onLoop: (self) => {
-            // Add subtle color variation on each loop
-            element.style.color = `hsl(${(index * 45) % 360}, 70%, 60%)`
-          }
-        })
-        
-        elementTimeline
-          .add(element, {
-            y: [0, -30, 0],
-            rotate: [0, 10, -10, 0],
-            opacity: [0.4, 1, 0.4],
-            scale: [1, 1.2, 1],
-            filter: ['blur(0px)', 'blur(2px)', 'blur(0px)']
-          }, 0)
-          .add(element, {
-            x: [0, 20, 0],
-            rotateZ: [0, 360, 0]
-          }, 0)
-      })
+      // Floating elements removed
 
       // Login card entrance with 3D effects
       if (loginCard.value) {
@@ -501,17 +475,7 @@ export default {
         })
       }
 
-      // Create animatable instances for floating elements
-      const floatingElementsForAnimatable = document.querySelectorAll('.floating-icon')
-      floatingElementsForAnimatable.forEach((element, index) => {
-        const animatable = createAnimatable(element, {
-          x: { duration: 200 + (index * 50), ease: 'out(2)' },
-          y: { duration: 200 + (index * 50), ease: 'out(2)' },
-          scale: { duration: 150, ease: 'out(3)' },
-          rotate: { duration: 300, ease: 'out(2)' }
-        })
-        floatingAnimatables.push(animatable)
-      })
+      // Floating elements animatable removed
     }
 
     // Advanced Error animation with timeline
@@ -590,52 +554,10 @@ export default {
 
       try {
         const result = await authStore.login(form.email, form.password)
-        
+
         if (result.success) {
-          // Advanced success animation with promise-based chaining
-          if (loginCard.value) {
-            const successTimeline = createTimeline({
-              defaults: { duration: 300, ease: 'out(3)' },
-              onBegin: (self) => {
-                console.log('Success animation started', self.id)
-                // Add success visual feedback
-                loginCard.value.style.borderColor = 'var(--cyber-yellow)'
-              },
-              onComplete: (self) => {
-                console.log('Success animation completed', self.id)
-                // Reset visual feedback
-                loginCard.value.style.borderColor = 'var(--cyber-orange)'
-              }
-            })
-            
-            successTimeline
-              .add(loginCard.value, {
-                scale: [1, 1.1, 0.7],
-                opacity: [1, 1, 0],
-                rotateY: [0, 15, 90],
-                rotateX: [0, 10, 45],
-                filter: ['blur(0px)', 'blur(2px)', 'blur(10px)'],
-                boxShadow: [
-                  '0 0 30px rgba(255, 140, 66, 0.3)',
-                  '0 0 50px rgba(255, 140, 66, 0.8)',
-                  '0 0 0 rgba(255, 140, 66, 0)'
-                ]
-              }, 0)
-              .add(loginCard.value, {
-                y: [0, -20, 50]
-              }, 0)
-            
-            // Use promise-based chaining for navigation
-            successTimeline.then(() => {
-              console.log('Success animation promise resolved')
-              router.push('/dashboard')
-            })
-          } else {
-            // Fallback if no login card
-            setTimeout(() => {
-              router.push('/dashboard')
-            }, 800)
-          }
+          // Navigate directly to dashboard without animation
+          router.push('/dashboard')
         } else {
           error.value = result.error
           animateError()
@@ -714,16 +636,7 @@ export default {
         cardAnimatable.x(cardX).y(cardY).rotateX(cardRotateX).rotateY(cardRotateY).scale(cardScale)
       }
       
-      // Floating elements interactive animation
-      floatingAnimatables.forEach((animatable, index) => {
-        const intensity = 0.5 + (index * 0.1)
-        const elementX = mouseX * (10 + index * 2)
-        const elementY = mouseY * (8 + index * 1.5)
-        const elementScale = 1 + (Math.abs(mouseX) + Math.abs(mouseY)) * (0.05 + index * 0.01)
-        const elementRotate = mouseX * (3 + index)
-        
-        animatable.x(elementX).y(elementY).scale(elementScale).rotate(elementRotate)
-      })
+      // Floating elements removed
     }
 
     // Mouse leave handler to reset animations
@@ -734,12 +647,18 @@ export default {
       if (cardAnimatable) {
         cardAnimatable.x(0).y(0).rotateX(0).rotateY(0).scale(1)
       }
-      floatingAnimatables.forEach(animatable => {
-        animatable.x(0).y(0).scale(1).rotate(0)
-      })
+      // Floating elements removed
     }
 
     onMounted(() => {
+      // Check if redirected from password reset
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('reset') === 'success') {
+        successMessage.value = 'Password reset successful! Please log in with your new password.'
+        // Clear the URL parameter
+        window.history.replaceState({}, '', '/login')
+      }
+
       initLoginAnimations()
 
       // Add keyboard event listener for speed control
@@ -763,20 +682,6 @@ export default {
       document.removeEventListener('keydown', handleKeyPress)
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseleave', handleMouseLeave)
-      
-      // Clean up floating elements
-      const floatingElements = document.querySelectorAll('.floating-icon')
-      floatingElements.forEach(element => {
-        if (element.parentNode) {
-          element.parentNode.removeChild(element)
-        }
-      })
-      
-      // Clean up background elements
-      const backgroundElements = document.querySelector('.login-background-elements')
-      if (backgroundElements && backgroundElements.parentNode) {
-        backgroundElements.parentNode.removeChild(backgroundElements)
-      }
     })
 
     return {
@@ -798,6 +703,7 @@ export default {
       error,
       isLoading,
       showPassword,
+      successMessage,
       handleLogin
     }
   }

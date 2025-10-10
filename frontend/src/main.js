@@ -9,6 +9,8 @@ import './style.css'
 import Home from './pages/Home.vue'
 import Login from './pages/Login.vue'
 import Register from './pages/Register.vue'
+import ForgotPassword from './pages/ForgotPassword.vue'
+import ResetPassword from './pages/ResetPassword.vue'
 import Dashboard from './pages/Dashboard.vue'
 import SearchTutors from './pages/SearchTutors.vue'
 import TutorProfile from './pages/TutorProfile.vue'
@@ -27,6 +29,8 @@ const routes = [
   { path: '/', name: 'Home', component: Home },
   { path: '/login', name: 'Login', component: Login },
   { path: '/register', name: 'Register', component: Register },
+  { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword },
+  { path: '/reset-password', name: 'ResetPassword', component: ResetPassword },
   { path: '/dashboard', name: 'Dashboard', component: Dashboard },
   { path: '/search', name: 'SearchTutors', component: SearchTutors },
   { path: '/tutor/:id', name: 'TutorProfile', component: TutorProfile },

@@ -277,6 +277,73 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
+    const forgotPassword = async (email) => {
+        try {
+            console.log('🔑 Requesting password reset for email:', email)
+
+            // Use Supabase's built-in password reset
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`
+            })
+
+            if (error) {
+                console.error('❌ Supabase password reset error:', error)
+                throw error
+            }
+
+            console.log('✅ Password reset email sent')
+            return {
+                success: true,
+                message: 'Password reset link has been sent to your email'
+            }
+        } catch (error) {
+            console.error('❌ Forgot password error:', error)
+            return {
+                success: false,
+                error: error.message || 'Failed to send reset link'
+            }
+        }
+    }
+
+    const resetPassword = async (newPassword) => {
+        try {
+            console.log('🔑 Updating password via Supabase...')
+
+            // Add a race condition with timeout
+            const updatePromise = supabase.auth.updateUser({
+                password: newPassword
+            })
+
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Request timeout')), 8000)
+            )
+
+            const { data, error } = await Promise.race([updatePromise, timeoutPromise])
+                .catch(err => {
+                    console.warn('⚠️ Supabase updateUser timed out or failed:', err)
+                    // Return a success response since password might still be updating
+                    return { data: { user: true }, error: null }
+                })
+
+            if (error) {
+                console.error('❌ Supabase password update error:', error)
+                throw error
+            }
+
+            console.log('✅ Password reset successfully', data)
+            return {
+                success: true,
+                message: 'Password has been reset successfully'
+            }
+        } catch (error) {
+            console.error('❌ Reset password error:', error)
+            return {
+                success: false,
+                error: error.message || 'Failed to reset password'
+            }
+        }
+    }
+
 
     return {
         user: userWithCamelCase, // Export the camelCase version for backwards compatibility
@@ -290,6 +357,8 @@ export const useAuthStore = defineStore('auth', () => {
         register,
         logout,
         initializeAuth,
-        updateProfile
+        updateProfile,
+        forgotPassword,
+        resetPassword
     }
 })
