@@ -529,6 +529,7 @@ export default {
 
       isLoading.value = true
       error.value = ''
+      successMessage.value = '' // Clear success message when attempting login
 
       // Advanced loading animation for button
       if (submitButton.value) {

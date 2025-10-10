@@ -167,6 +167,11 @@ export default {
       // Set a timeout to handle cases where Supabase doesn't respond quickly
       const timeoutId = setTimeout(() => {
         console.log('⏰ Password reset timeout - redirecting to login')
+
+        // Clear all Supabase storage before redirect
+        localStorage.clear()
+        sessionStorage.clear()
+
         // Hard refresh to login page after 5 seconds with success indicator
         window.location.href = '/login?reset=success'
       }, 5000) // 5 second timeout
