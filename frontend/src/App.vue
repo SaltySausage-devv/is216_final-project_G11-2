@@ -9,7 +9,7 @@
 </template>
 
 <script>
-import { onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, onUnmounted, watch, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 
@@ -64,7 +64,7 @@ export default {
     onMounted(() => {
       // Initialize auth state from localStorage
       authStore.initializeAuth()
-      
+
       // Clean up any existing background elements on app start
       // But only if we're not on the Home page
       if (route.name !== 'Home') {
@@ -82,7 +82,7 @@ export default {
           cleanupAnimatedBackgrounds()
         }, 100)
       }
-      
+
       // Additional cleanup for specific page transitions
       // Remove emojis from pages that shouldn't have them
       if (to.name === 'Dashboard' || to.name === 'Messages' || to.name === 'SearchTutors') {

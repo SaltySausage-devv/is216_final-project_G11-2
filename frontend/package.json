@@ -8,7 +8,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@emailjs/browser": "^4.4.1",
     "@supabase/supabase-js": "^2.74.0",
     "@vueuse/core": "^10.5.0",
     "@vueuse/motion": "^3.0.3",

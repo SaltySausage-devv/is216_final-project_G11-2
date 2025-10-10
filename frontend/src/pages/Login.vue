@@ -115,13 +115,6 @@
                   {{ isLoading ? 'Signing In...' : 'SIGN IN' }}
                 </button>
 
-                <!-- Forgot Password Link -->
-                <div ref="forgotPasswordLink" class="text-center mt-3">
-                  <router-link to="/forgot-password" class="cyberpunk-link">
-                    Forgot your password?
-                  </router-link>
-                </div>
-
                 <!-- Sign Up Link with Animation -->
                 <div ref="signupLink" class="text-center mt-4">
                   <p class="cyberpunk-signup-text">
@@ -162,7 +155,6 @@ export default {
     const passwordField = ref(null)
     const rememberField = ref(null)
     const submitButton = ref(null)
-    const forgotPasswordLink = ref(null)
     const signupLink = ref(null)
     const errorAlert = ref(null)
 
@@ -358,16 +350,6 @@ export default {
               '0 0 0 rgba(255, 140, 66, 0)',
               '0 0 30px rgba(255, 140, 66, 0.4)'
             ]
-          }, 'form-animation += 600')
-      }
-
-      if (forgotPasswordLink.value) {
-        loginTimeline
-          .add(forgotPasswordLink.value, {
-            y: [30, 0],
-            opacity: [0, 1],
-            scale: [0.95, 1],
-            rotateX: [10, 0]
           }, 'form-animation += 600')
       }
 
@@ -759,14 +741,14 @@ export default {
 
     onMounted(() => {
       initLoginAnimations()
-      
+
       // Add keyboard event listener for speed control
       document.addEventListener('keydown', handleKeyPress)
-      
+
       // Add mouse event listeners for interactive animations
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseleave', handleMouseLeave)
-      
+
       // Add speed control instructions
       console.log('Animation Speed Controls:')
       console.log('Press 1 for slow (0.5x)')
@@ -808,7 +790,6 @@ export default {
       passwordField,
       rememberField,
       submitButton,
-      forgotPasswordLink,
       signupLink,
       errorAlert,
       // Form data
@@ -1166,6 +1147,30 @@ body, html {
   opacity: 0.7;
   transform: none;
   cursor: not-allowed;
+}
+
+/* Cyberpunk Success Alert */
+.cyberpunk-success-alert {
+  background: rgba(34, 197, 94, 0.1);
+  border: 2px solid #22c55e;
+  color: #22c55e;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-shadow: 0 0 5px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Cyberpunk Alert */
