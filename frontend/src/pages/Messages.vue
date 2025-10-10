@@ -1,7 +1,7 @@
 <template>
   <div class="messages-page">
     <div class="container py-5">
-      <div class="row g-4" style="min-height: 80vh;">
+      <div class="row g-4" style="min-height: 80vh">
         <!-- Conversations Sidebar -->
         <div class="col-lg-4 d-flex">
           <div class="card border-0 shadow-sm w-100 d-flex flex-column">
@@ -11,7 +11,10 @@
                   <i class="fas fa-comments me-2 text-primary"></i>
                   Messages
                 </h5>
-                <button class="btn btn-primary btn-sm" @click="startNewConversation">
+                <button
+                  class="btn btn-primary btn-sm"
+                  @click="startNewConversation"
+                >
                   <i class="fas fa-plus me-1"></i>
                   New
                 </button>
@@ -35,7 +38,10 @@
 
               <!-- Conversations List -->
               <div class="conversations-list flex-grow-1 overflow-auto">
-                <div v-if="filteredConversations.length === 0" class="text-center py-4">
+                <div
+                  v-if="filteredConversations.length === 0"
+                  class="text-center py-4"
+                >
                   <i class="fas fa-inbox text-muted fs-1 mb-3"></i>
                   <p class="text-muted">No conversations yet</p>
                 </div>
@@ -44,45 +50,86 @@
                     v-for="(conversation, index) in filteredConversations"
                     :key="conversation.id"
                     class="conversation-item p-3 border-bottom cursor-pointer"
-                    :class="{ 'active': selectedConversation?.id === conversation.id }"
+                    :class="{
+                      active: selectedConversation?.id === conversation.id,
+                    }"
                     @click="selectConversation(conversation)"
                   >
                     <div>
                       <div class="d-flex align-items-start">
-                        <div class="conversation-avatar bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 spring-smooth" style="width: 45px; height: 45px;">
+                        <div
+                          class="conversation-avatar bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 spring-smooth"
+                          style="width: 45px; height: 45px"
+                        >
                           <i class="fas fa-user text-primary"></i>
                         </div>
                         <div class="flex-grow-1 d-flex flex-column">
                           <!-- Top row: Name and Time -->
-                          <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold mb-0">{{ conversation.participant.name }}</h6>
-                          <small class="text-muted">{{ formatTime(conversation.lastMessageAt) }}</small>
-                        </div>
+                          <div
+                            class="d-flex justify-content-between align-items-center"
+                          >
+                            <h6 class="fw-bold mb-0">
+                              {{ conversation.participant.name }}
+                            </h6>
+                            <small class="text-muted">{{
+                              formatTime(conversation.lastMessageAt)
+                            }}</small>
+                          </div>
                           <!-- Bottom row: Last Message and Unread Count -->
-                          <div class="d-flex justify-content-between align-items-center mt-1">
-                            <div class="d-flex align-items-center" style="max-width: 70%;">
-                              <div v-if="isImageMessage(conversation.lastMessage)" class="d-flex align-items-center">
-                                <img 
-                                  :src="conversation.lastMessage" 
+                          <div
+                            class="d-flex justify-content-between align-items-center mt-1"
+                          >
+                            <div
+                              class="d-flex align-items-center"
+                              style="max-width: 70%"
+                            >
+                              <div
+                                v-if="isImageMessage(conversation.lastMessage)"
+                                class="d-flex align-items-center"
+                              >
+                                <img
+                                  :src="conversation.lastMessage"
                                   alt="Image"
-                                  style="width: 20px; height: 20px; border-radius: 4px; margin-right: 6px; object-fit: cover;"
+                                  style="
+                                    width: 20px;
+                                    height: 20px;
+                                    border-radius: 4px;
+                                    margin-right: 6px;
+                                    object-fit: cover;
+                                  "
                                 />
-                                <span class="text-muted small" :class="{ 'fw-bold': conversation.unreadCount > 0 }">Image</span>
+                                <span
+                                  class="text-muted small"
+                                  :class="{
+                                    'fw-bold': conversation.unreadCount > 0,
+                                  }"
+                                  >Image</span
+                                >
                               </div>
-                              <p v-else class="text-muted mb-0 small text-truncate" :class="{ 'fw-bold': conversation.unreadCount > 0 }">
-                              {{ conversation.lastMessage }}
-                            </p>
+                              <p
+                                v-else
+                                class="text-muted mb-0 small text-truncate"
+                                :class="{
+                                  'fw-bold': conversation.unreadCount > 0,
+                                }"
+                              >
+                                {{ conversation.lastMessage }}
+                              </p>
                             </div>
-                            <div v-if="conversation.unreadCount > 0" class="badge bg-danger rounded-pill" style="font-size: 0.7rem;">
-                          {{ conversation.unreadCount }}
+                            <div
+                              v-if="conversation.unreadCount > 0"
+                              class="badge bg-danger rounded-pill"
+                              style="font-size: 0.7rem"
+                            >
+                              {{ conversation.unreadCount }}
+                            </div>
+                          </div>
                         </div>
                       </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-              </div>
-            </div>
             </div>
           </div>
         </div>
@@ -94,18 +141,28 @@
             :animate="{ opacity: 1, x: 0 }"
             :transition="{ duration: 0.6, delay: 0.1 }"
             class="card border-0 shadow-sm w-100 d-flex flex-column"
-            style="height: 800px; max-height: 800px;"
+            style="height: 800px; max-height: 800px"
           >
             <!-- Chat Header -->
-            <div class="card-header bg-white border-bottom" v-if="selectedConversation">
+            <div
+              class="card-header bg-white border-bottom"
+              v-if="selectedConversation"
+            >
               <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
-                  <div class="chat-avatar bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                  <div
+                    class="chat-avatar bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3"
+                    style="width: 40px; height: 40px"
+                  >
                     <i class="fas fa-user text-primary"></i>
                   </div>
                   <div>
-                    <h6 class="fw-bold mb-0">{{ selectedConversation.participant.name }}</h6>
-                    <small class="text-muted">{{ selectedConversation.participant.type }}</small>
+                    <h6 class="fw-bold mb-0">
+                      {{ selectedConversation.participant.name }}
+                    </h6>
+                    <small class="text-muted">{{
+                      selectedConversation.participant.type
+                    }}</small>
                   </div>
                 </div>
               </div>
@@ -113,19 +170,29 @@
 
             <!-- Messages Area -->
             <div class="card-body p-0 d-flex flex-column flex-grow-1">
-              <div v-if="!selectedConversation" class="d-flex align-items-center justify-content-center h-100">
+              <div
+                v-if="!selectedConversation"
+                class="d-flex align-items-center justify-content-center h-100"
+              >
                 <div class="text-center">
                   <i class="fas fa-comments text-muted fs-1 mb-3"></i>
                   <h5 class="text-muted">Select a conversation</h5>
-                  <p class="text-muted">Choose a conversation from the sidebar to start messaging</p>
+                  <p class="text-muted">
+                    Choose a conversation from the sidebar to start messaging
+                  </p>
                 </div>
               </div>
 
-              <div v-else class="messages-container flex-grow-1 p-3 overflow-auto">
+              <div
+                v-else
+                class="messages-container flex-grow-1 p-3 overflow-auto"
+              >
                 <div v-if="messages.length === 0" class="text-center py-4">
                   <i class="fas fa-comment-dots text-muted fs-1 mb-3"></i>
                   <p class="text-muted">No messages yet</p>
-                  <p class="text-muted small">Start the conversation by sending a message</p>
+                  <p class="text-muted small">
+                    Start the conversation by sending a message
+                  </p>
                 </div>
                 <div v-else>
                   <div
@@ -135,45 +202,98 @@
                     :animate="{ opacity: 1, y: 0 }"
                     :transition="{ duration: 0.4, delay: index * 0.05 }"
                     class="message-item mb-3"
-                    :class="{ 'sent': message.senderId === currentUserId, 'received': message.senderId !== currentUserId }"
+                    :class="{
+                      sent: message.senderId === currentUserId,
+                      received: message.senderId !== currentUserId,
+                    }"
                   >
-                    <div class="d-flex" :class="{ 'justify-content-end': message.senderId === currentUserId }">
-                      <div class="message-bubble" :class="{ 
-                        'sent': message.senderId === currentUserId, 
-                        'received': message.senderId !== currentUserId,
-                        'image-message-bubble': message.messageType === 'image'
+                    <div
+                      class="d-flex"
+                      :class="{
+                        'justify-content-end':
+                          message.senderId === currentUserId,
                       }"
-                           :style="{ cursor: message.senderId === currentUserId ? 'context-menu' : 'default' }"
-                           @contextmenu.prevent="message.senderId === currentUserId ? showMessageContextMenu($event, message) : null">
-                        <div v-if="message.messageType === 'text'" class="message-content">
-                          {{ message.content || 'Empty message' }}
+                    >
+                      <div
+                        class="message-bubble"
+                        :class="{
+                          sent: message.senderId === currentUserId,
+                          received: message.senderId !== currentUserId,
+                          'image-message-bubble':
+                            message.messageType === 'image',
+                        }"
+                        :style="{
+                          cursor:
+                            message.senderId === currentUserId
+                              ? 'context-menu'
+                              : 'default',
+                        }"
+                        @contextmenu.prevent="
+                          message.senderId === currentUserId
+                            ? showMessageContextMenu($event, message)
+                            : null
+                        "
+                      >
+                        <div
+                          v-if="message.messageType === 'text'"
+                          class="message-content"
+                        >
+                          {{ message.content || "Empty message" }}
                         </div>
-                        <div v-else-if="message.messageType === 'image'" class="message-content image-message">
-                          <img 
-                            v-if="message.content" 
-                            :src="message.content" 
+                        <div
+                          v-else-if="message.messageType === 'image'"
+                          class="message-content image-message"
+                        >
+                          <img
+                            v-if="message.content"
+                            :src="message.content"
                             :alt="message.fileName || 'Image'"
-                            style="max-width: 300px; max-height: 300px; border-radius: 8px; cursor: pointer;"
-                            @click.stop="handleImageClick(message.content, $event)"
+                            style="
+                              max-width: 300px;
+                              max-height: 300px;
+                              border-radius: 8px;
+                              cursor: pointer;
+                            "
+                            @click.stop="
+                              handleImageClick(message.content, $event)
+                            "
                           />
                           <div v-else class="text-muted">Loading image...</div>
                         </div>
-                        <div v-else-if="message.messageType === 'file'" class="message-content">
+                        <div
+                          v-else-if="message.messageType === 'file'"
+                          class="message-content"
+                        >
                           <div class="d-flex align-items-center">
                             <i class="fas fa-file me-2"></i>
                             <span>{{ message.fileName }}</span>
                           </div>
                         </div>
                         <div class="message-footer">
-                        <div class="message-time">
-                          {{ formatTime(message.createdAt) }}
+                          <div class="message-time">
+                            {{ formatTime(message.createdAt) }}
+                          </div>
+                          <div
+                            class="message-status"
+                            v-if="message.senderId === currentUserId"
+                          >
+                            <span
+                              v-if="message.readAt"
+                              class="status-read"
+                              title="Read"
+                              >✓✓</span
+                            >
+                            <span
+                              v-else-if="message.deliveredAt"
+                              class="status-delivered"
+                              title="Delivered"
+                              >✓✓</span
+                            >
+                            <span v-else class="status-sent" title="Sent"
+                              >✓</span
+                            >
+                          </div>
                         </div>
-                          <div class="message-status" v-if="message.senderId === currentUserId">
-                            <span v-if="message.readAt" class="status-read" title="Read">✓✓</span>
-                            <span v-else-if="message.deliveredAt" class="status-delivered" title="Delivered">✓✓</span>
-                            <span v-else class="status-sent" title="Sent">✓</span>
-                      </div>
-                    </div>
                       </div>
                     </div>
                   </div>
@@ -181,7 +301,10 @@
               </div>
 
               <!-- Message Input -->
-              <div v-if="selectedConversation" class="message-input p-3 border-top">
+              <div
+                v-if="selectedConversation"
+                class="message-input p-3 border-top"
+              >
                 <form @submit.prevent="sendMessage" class="d-flex gap-2">
                   <div class="flex-grow-1">
                     <input
@@ -193,17 +316,26 @@
                     />
                   </div>
                   <!-- Hidden file input for images only -->
-                  <input 
+                  <input
                     ref="fileInput"
-                    type="file" 
+                    type="file"
                     accept="image/*"
                     style="display: none"
                     @change="handleFileSelect"
                   />
-                  <button type="button" class="btn btn-outline-secondary" @click="attachFile" :disabled="isLoading">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    @click="attachFile"
+                    :disabled="isLoading"
+                  >
                     <i class="fas fa-paperclip"></i>
                   </button>
-                  <button type="submit" class="btn btn-primary" :disabled="!newMessage.trim() || isLoading">
+                  <button
+                    type="submit"
+                    class="btn btn-primary"
+                    :disabled="!newMessage.trim() || isLoading"
+                  >
                     <span v-if="isLoading" class="spinner me-1"></span>
                     <i v-else class="fas fa-paper-plane"></i>
                   </button>
@@ -216,38 +348,62 @@
     </div>
 
     <!-- Participant Selection Modal -->
-    <div v-if="showParticipantSelection" class="modal-overlay" @click="showParticipantSelection = false">
+    <div
+      v-if="showParticipantSelection"
+      class="modal-overlay"
+      @click="showParticipantSelection = false"
+    >
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>{{ authStore.userType === 'student' ? 'Select a Tutor' : 'Select a Student' }}</h3>
-          <button @click="showParticipantSelection = false" class="close-btn">&times;</button>
+          <h3>
+            {{
+              authStore.userType === "student"
+                ? "Select a Tutor"
+                : "Select a Student"
+            }}
+          </h3>
+          <button @click="showParticipantSelection = false" class="close-btn">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <!-- Search input for participants -->
           <div class="participant-search">
-            <input 
+            <input
               v-model="participantSearchQuery"
-              type="text" 
-              :placeholder="`Search ${authStore.userType === 'student' ? 'tutors' : 'students'}...`"
+              type="text"
+              :placeholder="`Search ${
+                authStore.userType === 'student' ? 'tutors' : 'students'
+              }...`"
               class="search-input"
             />
           </div>
-          
+
           <div v-if="availableParticipants.length === 0" class="no-tutors">
-            <p>No available {{ authStore.userType === 'student' ? 'tutors' : 'students' }} found.</p>
+            <p>
+              No available
+              {{ authStore.userType === "student" ? "tutors" : "students" }}
+              found.
+            </p>
           </div>
           <div v-else-if="filteredParticipants.length === 0" class="no-tutors">
-            <p>No {{ authStore.userType === 'student' ? 'tutors' : 'students' }} match your search.</p>
+            <p>
+              No
+              {{ authStore.userType === "student" ? "tutors" : "students" }}
+              match your search.
+            </p>
           </div>
           <div v-else class="tutor-list">
-            <div 
-              v-for="participant in filteredParticipants" 
+            <div
+              v-for="participant in filteredParticipants"
               :key="participant.id"
               class="tutor-item"
               @click="createConversationWithParticipant(participant.id)"
             >
               <div class="tutor-info">
-                <h4>{{ participant.first_name }} {{ participant.last_name }}</h4>
+                <h4>
+                  {{ participant.first_name }} {{ participant.last_name }}
+                </h4>
                 <p>{{ participant.email }}</p>
               </div>
               <div class="tutor-actions">
@@ -270,24 +426,51 @@
           <button @click="cancelDelete" class="close-btn">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="mb-3 text-white">Are you sure you want to delete this message?</p>
-          <div class="message-preview p-3 mb-3" style="background: rgba(255, 140, 66, 0.1); border: 1px solid var(--cyber-orange); border-radius: 8px;">
+          <p class="mb-3 text-white">
+            Are you sure you want to delete this message?
+          </p>
+          <div
+            class="message-preview p-3 mb-3"
+            style="
+              background: rgba(255, 140, 66, 0.1);
+              border: 1px solid var(--cyber-orange);
+              border-radius: 8px;
+            "
+          >
             <div class="text-muted small mb-1">Message preview:</div>
             <div class="text-white">{{ messageToDelete?.content }}</div>
           </div>
-          <div class="alert-warning p-3" style="background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; border-radius: 8px; color: #ffc107;">
+          <div
+            class="alert-warning p-3"
+            style="
+              background: rgba(255, 193, 7, 0.1);
+              border: 1px solid #ffc107;
+              border-radius: 8px;
+              color: #ffc107;
+            "
+          >
             <i class="fas fa-info-circle me-2"></i>
-            This action cannot be undone. The message will be removed for both you and the recipient.
+            This action cannot be undone. The message will be removed for both
+            you and the recipient.
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary me-2" @click="cancelDelete">
+          <button
+            type="button"
+            class="btn btn-secondary me-2"
+            @click="cancelDelete"
+          >
             <i class="fas fa-times me-2"></i>Cancel
           </button>
-          <button type="button" class="btn btn-danger" @click="confirmDelete" :disabled="isDeleting">
+          <button
+            type="button"
+            class="btn btn-danger"
+            @click="confirmDelete"
+            :disabled="isDeleting"
+          >
             <i class="fas fa-trash me-2" v-if="!isDeleting"></i>
             <i class="fas fa-spinner fa-spin me-2" v-if="isDeleting"></i>
-            {{ isDeleting ? 'Deleting...' : 'Delete Message' }}
+            {{ isDeleting ? "Deleting..." : "Delete Message" }}
           </button>
         </div>
       </div>
@@ -296,123 +479,137 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useAuthStore } from '../stores/auth'
-import messagingService from '../services/messaging.js'
-import axios from 'axios'
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { useAuthStore } from "../stores/auth";
+import messagingService from "../services/messaging.js";
+import { useNotifications } from "../composables/useNotifications";
+import axios from "axios";
 
 export default {
-  name: 'Messages',
+  name: "Messages",
   setup() {
-    const authStore = useAuthStore()
-    
-    const currentUserId = computed(() => authStore.user?.id)
-    const searchQuery = ref('')
-    const selectedConversation = ref(null)
-    const conversations = ref([])
-    const messages = ref([])
-    const newMessage = ref('')
-    const isLoading = ref(false)
-    
+    const authStore = useAuthStore();
+    const { showMessageNotification } = useNotifications();
+
+    const currentUserId = computed(() => authStore.user?.id);
+    const searchQuery = ref("");
+    const selectedConversation = ref(null);
+    const conversations = ref([]);
+    const messages = ref([]);
+    const newMessage = ref("");
+    const isLoading = ref(false);
+
     // Delete modal variables
-    const showDeleteModal = ref(false)
-    const messageToDelete = ref(null)
-    const isDeleting = ref(false)
+    const showDeleteModal = ref(false);
+    const messageToDelete = ref(null);
+    const isDeleting = ref(false);
 
     const filteredConversations = computed(() => {
-      if (!searchQuery.value) return conversations.value
-      return conversations.value.filter(conv => 
-        conv.participant.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-      )
-    })
+      if (!searchQuery.value) return conversations.value;
+      return conversations.value.filter((conv) =>
+        conv.participant.name
+          .toLowerCase()
+          .includes(searchQuery.value.toLowerCase())
+      );
+    });
 
     const filteredParticipants = computed(() => {
-      if (!participantSearchQuery.value) return availableParticipants.value
-      return availableParticipants.value.filter(participant => 
-        `${participant.first_name} ${participant.last_name}`.toLowerCase().includes(participantSearchQuery.value.toLowerCase()) ||
-        participant.email.toLowerCase().includes(participantSearchQuery.value.toLowerCase())
-      )
-    })
+      if (!participantSearchQuery.value) return availableParticipants.value;
+      return availableParticipants.value.filter(
+        (participant) =>
+          `${participant.first_name} ${participant.last_name}`
+            .toLowerCase()
+            .includes(participantSearchQuery.value.toLowerCase()) ||
+          participant.email
+            .toLowerCase()
+            .includes(participantSearchQuery.value.toLowerCase())
+      );
+    });
 
     const formatTime = (dateString) => {
-      if (!dateString) return 'Just now'
-      
-      const date = new Date(dateString)
-      if (isNaN(date.getTime())) return 'Just now'
-      
-      const now = new Date()
-      const diff = now - date
-      
-      if (diff < 60000) return 'Just now'
-      if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-      if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-      return date.toLocaleDateString()
-    }
+      if (!dateString) return "Just now";
+
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Just now";
+
+      const now = new Date();
+      const diff = now - date;
+
+      if (diff < 60000) return "Just now";
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+      return date.toLocaleDateString();
+    };
 
     const scrollToBottom = () => {
-      const messagesContainer = document.querySelector('.messages-container')
+      const messagesContainer = document.querySelector(".messages-container");
       if (messagesContainer) {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
-    }
+    };
 
     const isImageMessage = (messageContent) => {
-      if (!messageContent) return false
+      if (!messageContent) return false;
       // Check if it's a Supabase storage URL or any image URL
-      return messageContent.includes('supabase.co/storage') || 
-             messageContent.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i)
-    }
+      return (
+        messageContent.includes("supabase.co/storage") ||
+        messageContent.match(/\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i)
+      );
+    };
 
     const loadConversations = async () => {
       try {
-        isLoading.value = true
-        const response = await messagingService.getConversations()
-        
-        conversations.value = response.conversations.map(conv => {
+        isLoading.value = true;
+        const response = await messagingService.getConversations();
+
+        conversations.value = response.conversations.map((conv) => {
           // Determine the other participant
-          const otherParticipant = conv.participant1_id === currentUserId.value 
-            ? conv.participant2 
-            : conv.participant1
-          
+          const otherParticipant =
+            conv.participant1_id === currentUserId.value
+              ? conv.participant2
+              : conv.participant1;
+
           return {
             id: conv.id,
             participant: {
               id: otherParticipant.id,
               name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
-              type: otherParticipant.user_type
+              type: otherParticipant.user_type,
             },
-            lastMessage: conv.last_message_content || 'No messages yet',
+            lastMessage: conv.last_message_content || "No messages yet",
             lastMessageAt: conv.last_message_at || conv.created_at,
-            unreadCount: conv.unreadCount || 0
-          }
-        })
+            unreadCount: conv.unreadCount || 0,
+          };
+        });
       } catch (error) {
-        console.error('Error loading conversations:', error)
-        conversations.value = []
-        
+        console.error("Error loading conversations:", error);
+        conversations.value = [];
+
         // Handle different error types
         if (error.response?.status === 429) {
-          alert('Too many requests. Please wait a moment and try again.')
+          alert("Too many requests. Please wait a moment and try again.");
         } else if (error.response?.status === 401) {
-          alert('Authentication error. Please log in again.')
+          alert("Authentication error. Please log in again.");
         } else {
-          alert('Failed to load conversations. Please refresh the page and try again.')
+          alert(
+            "Failed to load conversations. Please refresh the page and try again."
+          );
         }
       } finally {
-        isLoading.value = false
+        isLoading.value = false;
       }
-    }
+    };
 
     const selectConversation = async (conversation) => {
-      selectedConversation.value = conversation
-      await loadMessages(conversation.id)
-    }
+      selectedConversation.value = conversation;
+      await loadMessages(conversation.id);
+    };
 
     const loadMessages = async (conversationId) => {
       try {
-        isLoading.value = true
-        const response = await messagingService.getMessages(conversationId)
-        messages.value = response.messages.map(msg => ({
+        isLoading.value = true;
+        const response = await messagingService.getMessages(conversationId);
+        messages.value = response.messages.map((msg) => ({
           id: msg.id,
           senderId: msg.sender_id,
           content: msg.content,
@@ -420,280 +617,313 @@ export default {
           createdAt: msg.created_at,
           readAt: msg.read_at,
           deliveredAt: msg.delivered_at,
-          sender: msg.sender ? {
-            name: `${msg.sender.first_name} ${msg.sender.last_name}`,
-            type: msg.sender.user_type
-          } : null
-        }))
-        
+          sender: msg.sender
+            ? {
+                name: `${msg.sender.first_name} ${msg.sender.last_name}`,
+                type: msg.sender.user_type,
+              }
+            : null,
+        }));
+
         // Mark messages as read and update status
-        await messagingService.markAsRead(conversationId)
-        
+        await messagingService.markAsRead(conversationId);
+
         // Update message status in local state
-        messages.value.forEach(msg => {
+        messages.value.forEach((msg) => {
           if (msg.senderId !== currentUserId.value && !msg.readAt) {
-            msg.readAt = new Date().toISOString()
+            msg.readAt = new Date().toISOString();
           }
-        })
-        
+        });
+
         // Clear unread count for this conversation
-        const conversationIndex = conversations.value.findIndex(conv => conv.id === conversationId)
+        const conversationIndex = conversations.value.findIndex(
+          (conv) => conv.id === conversationId
+        );
         if (conversationIndex !== -1) {
-          conversations.value[conversationIndex].unreadCount = 0
+          conversations.value[conversationIndex].unreadCount = 0;
         }
       } catch (error) {
-        console.error('Error loading messages:', error)
-        messages.value = []
-        alert('Failed to load messages. Please try again.')
+        console.error("Error loading messages:", error);
+        messages.value = [];
+        alert("Failed to load messages. Please try again.");
       } finally {
-        isLoading.value = false
+        isLoading.value = false;
       }
-    }
+    };
 
     const sendMessage = async () => {
       if (!newMessage.value.trim() || !selectedConversation.value) {
-        return
+        return;
       }
 
-      const messageContent = newMessage.value.trim()
-      const conversationId = selectedConversation.value.id
-      
-      console.log('Sending message to conversation:', conversationId)
-      console.log('Selected conversation:', selectedConversation.value)
+      const messageContent = newMessage.value.trim();
+      const conversationId = selectedConversation.value.id;
 
-      isLoading.value = true
-      
+      console.log("Sending message to conversation:", conversationId);
+      console.log("Selected conversation:", selectedConversation.value);
+
+      isLoading.value = true;
+
       try {
         // Check if this is the first message in this conversation
-        const isFirstMessage = messages.value.length === 0
-        
+        const isFirstMessage = messages.value.length === 0;
+
         // Add message to local state immediately for better UX
         const tempMessage = {
           id: `temp_${Date.now()}`,
           senderId: currentUserId.value,
           content: messageContent,
-          messageType: 'text',
+          messageType: "text",
           createdAt: new Date().toISOString(),
           sender: {
             name: `${authStore.user?.first_name} ${authStore.user?.last_name}`,
-            type: authStore.user?.user_type
-          }
-        }
-        
-        messages.value.push(tempMessage)
-        
+            type: authStore.user?.user_type,
+          },
+        };
+
+        messages.value.push(tempMessage);
+
         // Update conversation in the list immediately
-        const conversationIndex = conversations.value.findIndex(conv => conv.id === conversationId)
-        console.log('Looking for conversation in list:', conversationId)
-        console.log('Current conversations:', conversations.value.map(c => ({ id: c.id, participant: c.participant.name })))
-        console.log('Found conversation index:', conversationIndex)
-        
+        const conversationIndex = conversations.value.findIndex(
+          (conv) => conv.id === conversationId
+        );
+        console.log("Looking for conversation in list:", conversationId);
+        console.log(
+          "Current conversations:",
+          conversations.value.map((c) => ({
+            id: c.id,
+            participant: c.participant.name,
+          }))
+        );
+        console.log("Found conversation index:", conversationIndex);
+
         if (conversationIndex !== -1) {
           // Update existing conversation with proper reactivity
-          const updatedConversations = [...conversations.value]
-          const conversation = updatedConversations[conversationIndex]
-          
-          conversation.lastMessage = messageContent
-          conversation.lastMessageAt = new Date().toISOString()
-          
+          const updatedConversations = [...conversations.value];
+          const conversation = updatedConversations[conversationIndex];
+
+          conversation.lastMessage = messageContent;
+          conversation.lastMessageAt = new Date().toISOString();
+
           // Move to top of list
-          updatedConversations.splice(conversationIndex, 1)
-          updatedConversations.unshift(conversation)
-          
-          conversations.value = updatedConversations
-          
+          updatedConversations.splice(conversationIndex, 1);
+          updatedConversations.unshift(conversation);
+
+          conversations.value = updatedConversations;
+
           // Force Vue to update the UI
-          await nextTick()
+          await nextTick();
         } else {
           // Add new conversation to the list (first message)
-          console.log('Conversation not found in list, adding new conversation')
+          console.log(
+            "Conversation not found in list, adding new conversation"
+          );
           const conversationToAdd = {
             id: selectedConversation.value.id,
             participant: selectedConversation.value.participant,
             lastMessage: messageContent,
             lastMessageAt: new Date().toISOString(),
-            unreadCount: 0
-          }
-          
-          console.log('Adding conversation to list:', conversationToAdd)
-          
-          // Create new array to trigger Vue reactivity
-          const updatedConversations = [...conversations.value]
-          updatedConversations.unshift(conversationToAdd)
-          conversations.value = updatedConversations
-          
-          console.log('Updated conversations list:', conversations.value.length)
-          
-          // Force Vue to update the UI
-          await nextTick()
-        }
-        
-        // Clear input immediately
-        newMessage.value = ''
-        
-        // Send message via Socket.io (real-time)
-        messagingService.sendMessage(conversationId, messageContent, 'text')
-        
-      } catch (error) {
-        console.error('Send message error:', error)
-        // Remove the temp message if sending failed
-        messages.value = messages.value.filter(msg => msg.id !== `temp_${Date.now()}`)
-        alert('Failed to send message. Please try again.')
-      } finally {
-        isLoading.value = false
-      }
-    }
+            unreadCount: 0,
+          };
 
-    const availableParticipants = ref([])
-    const showParticipantSelection = ref(false)
-    const selectedParticipantId = ref(null)
-    const participantSearchQuery = ref('')
+          console.log("Adding conversation to list:", conversationToAdd);
+
+          // Create new array to trigger Vue reactivity
+          const updatedConversations = [...conversations.value];
+          updatedConversations.unshift(conversationToAdd);
+          conversations.value = updatedConversations;
+
+          console.log(
+            "Updated conversations list:",
+            conversations.value.length
+          );
+
+          // Force Vue to update the UI
+          await nextTick();
+        }
+
+        // Clear input immediately
+        newMessage.value = "";
+
+        // Send message via Socket.io (real-time)
+        messagingService.sendMessage(conversationId, messageContent, "text");
+      } catch (error) {
+        console.error("Send message error:", error);
+        // Remove the temp message if sending failed
+        messages.value = messages.value.filter(
+          (msg) => msg.id !== `temp_${Date.now()}`
+        );
+        alert("Failed to send message. Please try again.");
+      } finally {
+        isLoading.value = false;
+      }
+    };
+
+    const availableParticipants = ref([]);
+    const showParticipantSelection = ref(false);
+    const selectedParticipantId = ref(null);
+    const participantSearchQuery = ref("");
 
     const loadAvailableParticipants = async () => {
       try {
-        const response = await messagingService.getAvailableParticipants()
-        availableParticipants.value = response.participants || []
+        const response = await messagingService.getAvailableParticipants();
+        availableParticipants.value = response.participants || [];
       } catch (error) {
-        console.error('Error loading participants:', error)
-        availableParticipants.value = []
+        console.error("Error loading participants:", error);
+        availableParticipants.value = [];
       }
-    }
+    };
 
     const startNewConversation = async () => {
       try {
         // Clear search query
-        participantSearchQuery.value = ''
+        participantSearchQuery.value = "";
         // Load available participants first
-        await loadAvailableParticipants()
-        showParticipantSelection.value = true
+        await loadAvailableParticipants();
+        showParticipantSelection.value = true;
       } catch (error) {
-        console.error('Error loading participants:', error)
-        alert('Failed to load available participants: ' + error.message)
+        console.error("Error loading participants:", error);
+        alert("Failed to load available participants: " + error.message);
       }
-    }
+    };
 
     const createConversationWithParticipant = async (participantId) => {
       try {
-        showParticipantSelection.value = false
-        
+        showParticipantSelection.value = false;
+
         // First try to find existing conversation in current list
-        const existingConversation = conversations.value.find(conv => 
-          conv.participant.id === participantId
-        )
-        
+        const existingConversation = conversations.value.find(
+          (conv) => conv.participant.id === participantId
+        );
+
         if (existingConversation) {
           // Use existing conversation
-          await selectConversationWithRoom(existingConversation)
-          return
+          await selectConversationWithRoom(existingConversation);
+          return;
         }
-        
+
         // Create or get existing conversation via API
-        console.log('Creating conversation with participant:', participantId)
-        const response = await messagingService.createConversation(participantId)
-        console.log('Conversation creation response:', response)
-        
+        console.log("Creating conversation with participant:", participantId);
+        const response = await messagingService.createConversation(
+          participantId
+        );
+        console.log("Conversation creation response:", response);
+
         // Check if it's an existing conversation or new one
-        if (response.message === 'Using existing conversation') {
+        if (response.message === "Using existing conversation") {
           // Use the conversation directly from the backend response
-          const backendConversation = response.conversation
-          
+          const backendConversation = response.conversation;
+
           // Determine the other participant
-          const otherParticipant = backendConversation.participant1_id === currentUserId.value 
-            ? backendConversation.participant2 
-            : backendConversation.participant1
-          
+          const otherParticipant =
+            backendConversation.participant1_id === currentUserId.value
+              ? backendConversation.participant2
+              : backendConversation.participant1;
+
           // Map it to the frontend format
           const mappedConversation = {
             id: backendConversation.id,
             participant: {
               id: otherParticipant.id,
               name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
-              type: otherParticipant.user_type
+              type: otherParticipant.user_type,
             },
-            lastMessage: backendConversation.last_message_content || 'No messages yet',
-            lastMessageAt: backendConversation.last_message_at || backendConversation.created_at,
-            unreadCount: 0
-          }
-          
-          await selectConversationWithRoom(mappedConversation)
-          
+            lastMessage:
+              backendConversation.last_message_content || "No messages yet",
+            lastMessageAt:
+              backendConversation.last_message_at ||
+              backendConversation.created_at,
+            unreadCount: 0,
+          };
+
+          await selectConversationWithRoom(mappedConversation);
         } else {
           // New conversation created, but don't add to list until first message is sent
-          const backendConversation = response.conversation
-          
+          const backendConversation = response.conversation;
+
           // Determine the other participant
-          const otherParticipant = backendConversation.participant1_id === currentUserId.value 
-            ? backendConversation.participant2 
-            : backendConversation.participant1
-          
+          const otherParticipant =
+            backendConversation.participant1_id === currentUserId.value
+              ? backendConversation.participant2
+              : backendConversation.participant1;
+
           // Map it to the frontend format
           const mappedConversation = {
             id: backendConversation.id,
             participant: {
               id: otherParticipant.id,
               name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
-              type: otherParticipant.user_type
+              type: otherParticipant.user_type,
             },
-            lastMessage: 'No messages yet',
+            lastMessage: "No messages yet",
             lastMessageAt: backendConversation.created_at,
-            unreadCount: 0
-          }
-          
+            unreadCount: 0,
+          };
+
           // DON'T add conversation to list yet - only add when first message is sent
-          console.log('Conversation created but NOT added to list yet:', mappedConversation.id)
-          
+          console.log(
+            "Conversation created but NOT added to list yet:",
+            mappedConversation.id
+          );
+
           // Select the conversation immediately (this will show the chat interface)
-          await selectConversationWithRoom(mappedConversation)
-          
+          await selectConversationWithRoom(mappedConversation);
+
           // Join the new conversation room for real-time updates
-          messagingService.joinConversation(mappedConversation.id)
+          messagingService.joinConversation(mappedConversation.id);
         }
       } catch (error) {
-        console.error('Error creating conversation:', error)
-        alert('Failed to create conversation: ' + error.message)
+        console.error("Error creating conversation:", error);
+        alert("Failed to create conversation: " + error.message);
       }
-    }
+    };
 
-    const fileInput = ref(null)
+    const fileInput = ref(null);
 
     const attachFile = () => {
       // Trigger file input click
       if (fileInput.value) {
-        fileInput.value.click()
+        fileInput.value.click();
       }
-    }
+    };
 
     const handleFileSelect = async (event) => {
-      const file = event.target.files?.[0]
-      if (!file) return
+      const file = event.target.files?.[0];
+      if (!file) return;
 
       // Validate file type - only images
-      const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+      const validImageTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
       if (!validImageTypes.includes(file.type)) {
         // Show themed error message
-        showImageErrorModal()
+        showImageErrorModal();
         // Reset file input
-        event.target.value = ''
-        return
+        event.target.value = "";
+        return;
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('Image is too large. Maximum size is 5MB.')
-        event.target.value = ''
-        return
+        alert("Image is too large. Maximum size is 5MB.");
+        event.target.value = "";
+        return;
       }
 
       // Upload the image
-      await uploadImage(file)
-      
+      await uploadImage(file);
+
       // Reset file input
-      event.target.value = ''
-    }
+      event.target.value = "";
+    };
 
     const showImageErrorModal = () => {
       // Create themed modal overlay
-      const modal = document.createElement('div')
+      const modal = document.createElement("div");
       modal.style.cssText = `
         position: fixed;
         top: 0;
@@ -706,9 +936,9 @@ export default {
         justify-content: center;
         z-index: 10000;
         backdrop-filter: blur(5px);
-      `
+      `;
 
-      const modalContent = document.createElement('div')
+      const modalContent = document.createElement("div");
       modalContent.style.cssText = `
         background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
         border: 2px solid #ff8c42;
@@ -717,7 +947,7 @@ export default {
         max-width: 400px;
         box-shadow: 0 10px 40px rgba(255, 140, 66, 0.3);
         text-align: center;
-      `
+      `;
 
       modalContent.innerHTML = `
         <div style="color: #ff8c42; font-size: 48px; margin-bottom: 16px;">
@@ -742,76 +972,79 @@ export default {
         ">
           Got It
         </button>
-      `
+      `;
 
-      modal.appendChild(modalContent)
-      document.body.appendChild(modal)
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
 
       // Add hover effect to button
-      const closeButton = modalContent.querySelector('#closeModal')
-      closeButton.addEventListener('mouseenter', () => {
-        closeButton.style.transform = 'scale(1.05)'
-      })
-      closeButton.addEventListener('mouseleave', () => {
-        closeButton.style.transform = 'scale(1)'
-      })
+      const closeButton = modalContent.querySelector("#closeModal");
+      closeButton.addEventListener("mouseenter", () => {
+        closeButton.style.transform = "scale(1.05)";
+      });
+      closeButton.addEventListener("mouseleave", () => {
+        closeButton.style.transform = "scale(1)";
+      });
 
       // Close modal on button click
-      closeButton.addEventListener('click', () => {
-        modal.remove()
-      })
+      closeButton.addEventListener("click", () => {
+        modal.remove();
+      });
 
       // Close modal on overlay click
-      modal.addEventListener('click', (e) => {
+      modal.addEventListener("click", (e) => {
         if (e.target === modal) {
-          modal.remove()
+          modal.remove();
         }
-      })
-    }
+      });
+    };
 
     const uploadImage = async (file) => {
-      if (!selectedConversation.value) return
+      if (!selectedConversation.value) return;
 
-      console.log('Starting image upload:', {
+      console.log("Starting image upload:", {
         conversationId: selectedConversation.value.id,
         fileName: file.name,
         fileSize: file.size,
-        hasToken: !!authStore.token
-      })
+        hasToken: !!authStore.token,
+      });
 
-      isLoading.value = true
+      isLoading.value = true;
       try {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('messageType', 'image')
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("messageType", "image");
 
-        console.log('Making upload request to:', `/api/messaging/conversations/${selectedConversation.value.id}/upload`)
+        console.log(
+          "Making upload request to:",
+          `/api/messaging/conversations/${selectedConversation.value.id}/upload`
+        );
 
         const response = await axios.post(
           `/api/messaging/conversations/${selectedConversation.value.id}/upload`,
           formData,
           {
             headers: {
-              'Content-Type': 'multipart/form-data',
-              Authorization: `Bearer ${authStore.token}`
-            }
+              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${authStore.token}`,
+            },
           }
-        )
+        );
 
-        console.log('Upload response:', response.data)
+        console.log("Upload response:", response.data);
 
         if (response.data && response.data.data) {
           // Don't add the message here - it will be added via Socket.io
-          console.log('✅ Upload successful, waiting for Socket.io message')
-          
+          console.log("✅ Upload successful, waiting for Socket.io message");
+
           // Scroll to bottom
           nextTick(() => {
-            scrollToBottom()
-          })
+            scrollToBottom();
+          });
         }
       } catch (error) {
-        console.error('Error uploading image:', error)
-        console.error('Error details:', {
+        console.error("Error uploading image:", error);
+        console.error("Error details:", {
           message: error.message,
           status: error.response?.status,
           statusText: error.response?.statusText,
@@ -819,53 +1052,53 @@ export default {
           config: {
             url: error.config?.url,
             method: error.config?.method,
-            headers: error.config?.headers
-          }
-        })
-        
+            headers: error.config?.headers,
+          },
+        });
+
         if (error.response?.data?.message) {
-          alert(error.response.data.message)
+          alert(error.response.data.message);
         } else if (error.response?.data?.error) {
-          alert(error.response.data.error)
+          alert(error.response.data.error);
         } else {
-          alert('Failed to upload image. Please try again.')
+          alert("Failed to upload image. Please try again.");
         }
       } finally {
-        isLoading.value = false
+        isLoading.value = false;
       }
-    }
+    };
 
     const handleImageClick = (imageUrl, event) => {
-      console.log('🖼️ handleImageClick called with:', imageUrl)
-      console.log('🖼️ Event details:', event)
-      
+      console.log("🖼️ handleImageClick called with:", imageUrl);
+      console.log("🖼️ Event details:", event);
+
       // Call the fullscreen function
-      openImageFullscreen(imageUrl, event)
-    }
+      openImageFullscreen(imageUrl, event);
+    };
 
     const openImageFullscreen = (imageUrl, event) => {
-      console.log('🖼️ openImageFullscreen called with:', imageUrl)
-      console.log('🖼️ Event:', event)
-      
+      console.log("🖼️ openImageFullscreen called with:", imageUrl);
+      console.log("🖼️ Event:", event);
+
       // Prevent any default behavior and stop propagation
       if (event) {
-        event.preventDefault()
-        event.stopPropagation()
-        event.stopImmediatePropagation()
-        console.log('🖼️ Event prevented and stopped')
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        console.log("🖼️ Event prevented and stopped");
       }
-      
+
       // Validate image URL
-      if (!imageUrl || typeof imageUrl !== 'string') {
-        console.error('❌ Invalid image URL:', imageUrl)
-        alert('Invalid image URL')
-        return
+      if (!imageUrl || typeof imageUrl !== "string") {
+        console.error("❌ Invalid image URL:", imageUrl);
+        alert("Invalid image URL");
+        return;
       }
-      
-      console.log('✅ Image URL is valid, creating overlay...')
+
+      console.log("✅ Image URL is valid, creating overlay...");
 
       // Create fullscreen overlay
-      const overlay = document.createElement('div')
+      const overlay = document.createElement("div");
       overlay.style.cssText = `
         position: fixed;
         top: 0;
@@ -878,10 +1111,10 @@ export default {
         justify-content: center;
         z-index: 10001;
         cursor: zoom-out;
-      `
+      `;
 
-      const img = document.createElement('img')
-      img.src = imageUrl
+      const img = document.createElement("img");
+      img.src = imageUrl;
       img.style.cssText = `
         width: 600px;
         max-width: 90vw;
@@ -889,11 +1122,11 @@ export default {
         object-fit: contain;
         border-radius: 8px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-      `
+      `;
 
       // Add error handling for image loading
       img.onerror = () => {
-        console.error('❌ Failed to load image:', imageUrl)
+        console.error("❌ Failed to load image:", imageUrl);
         overlay.innerHTML = `
           <div style="color: white; text-align: center;">
             <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
@@ -901,46 +1134,46 @@ export default {
             <p>URL: ${imageUrl}</p>
             <button onclick="this.parentElement.parentElement.remove()" style="padding: 8px 16px; background: #ff6b35; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
           </div>
-        `
-      }
+        `;
+      };
 
       img.onload = () => {
-        console.log('✅ Image loaded successfully:', imageUrl)
-      }
-      
-      console.log('🖼️ Setting image src and adding to DOM...')
+        console.log("✅ Image loaded successfully:", imageUrl);
+      };
 
-      overlay.appendChild(img)
-      document.body.appendChild(overlay)
+      console.log("🖼️ Setting image src and adding to DOM...");
+
+      overlay.appendChild(img);
+      document.body.appendChild(overlay);
 
       // Close on click
-      overlay.addEventListener('click', (e) => {
+      overlay.addEventListener("click", (e) => {
         if (e.target === overlay) {
-          overlay.remove()
+          overlay.remove();
         }
-      })
+      });
 
       // Close on ESC key
       const closeOnEsc = (e) => {
-        if (e.key === 'Escape') {
-          overlay.remove()
-          document.removeEventListener('keydown', closeOnEsc)
+        if (e.key === "Escape") {
+          overlay.remove();
+          document.removeEventListener("keydown", closeOnEsc);
         }
-      }
-      document.addEventListener('keydown', closeOnEsc)
-    }
+      };
+      document.addEventListener("keydown", closeOnEsc);
+    };
 
     // Message context menu
     const showMessageContextMenu = (event, message) => {
       // Remove any existing context menu
-      const existingMenu = document.querySelector('.context-menu')
+      const existingMenu = document.querySelector(".context-menu");
       if (existingMenu) {
-        existingMenu.remove()
+        existingMenu.remove();
       }
 
       // Create context menu
-      const contextMenu = document.createElement('div')
-      contextMenu.className = 'context-menu'
+      const contextMenu = document.createElement("div");
+      contextMenu.className = "context-menu";
       contextMenu.style.cssText = `
         position: fixed;
         left: ${event.clientX}px;
@@ -953,11 +1186,11 @@ export default {
         min-width: 150px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(10px);
-      `
-      
+      `;
+
       // Create delete option
-      const deleteOption = document.createElement('div')
-      deleteOption.className = 'context-menu-item'
+      const deleteOption = document.createElement("div");
+      deleteOption.className = "context-menu-item";
       deleteOption.style.cssText = `
         padding: 8px 16px;
         cursor: pointer;
@@ -966,22 +1199,22 @@ export default {
         align-items: center;
         gap: 8px;
         transition: background-color 0.2s;
-      `
-      deleteOption.innerHTML = '<i class="fas fa-trash"></i> Delete Message'
-      deleteOption.addEventListener('click', () => {
-        deleteMessage(message.id)
-        contextMenu.remove()
-      })
-      deleteOption.addEventListener('mouseenter', () => {
-        deleteOption.style.backgroundColor = 'rgba(255, 140, 66, 0.2)'
-      })
-      deleteOption.addEventListener('mouseleave', () => {
-        deleteOption.style.backgroundColor = 'transparent'
-      })
-      
+      `;
+      deleteOption.innerHTML = '<i class="fas fa-trash"></i> Delete Message';
+      deleteOption.addEventListener("click", () => {
+        deleteMessage(message.id);
+        contextMenu.remove();
+      });
+      deleteOption.addEventListener("mouseenter", () => {
+        deleteOption.style.backgroundColor = "rgba(255, 140, 66, 0.2)";
+      });
+      deleteOption.addEventListener("mouseleave", () => {
+        deleteOption.style.backgroundColor = "transparent";
+      });
+
       // Create copy option
-      const copyOption = document.createElement('div')
-      copyOption.className = 'context-menu-item'
+      const copyOption = document.createElement("div");
+      copyOption.className = "context-menu-item";
       copyOption.style.cssText = `
         padding: 8px 16px;
         cursor: pointer;
@@ -990,137 +1223,181 @@ export default {
         align-items: center;
         gap: 8px;
         transition: background-color 0.2s;
-      `
-      copyOption.innerHTML = '<i class="fas fa-copy"></i> Copy Text'
-      copyOption.addEventListener('click', () => {
-        copyMessage(message.content)
-        contextMenu.remove()
-      })
-      copyOption.addEventListener('mouseenter', () => {
-        copyOption.style.backgroundColor = 'rgba(255, 140, 66, 0.2)'
-      })
-      copyOption.addEventListener('mouseleave', () => {
-        copyOption.style.backgroundColor = 'transparent'
-      })
-      
-      contextMenu.appendChild(deleteOption)
-      contextMenu.appendChild(copyOption)
-      
+      `;
+      copyOption.innerHTML = '<i class="fas fa-copy"></i> Copy Text';
+      copyOption.addEventListener("click", () => {
+        copyMessage(message.content);
+        contextMenu.remove();
+      });
+      copyOption.addEventListener("mouseenter", () => {
+        copyOption.style.backgroundColor = "rgba(255, 140, 66, 0.2)";
+      });
+      copyOption.addEventListener("mouseleave", () => {
+        copyOption.style.backgroundColor = "transparent";
+      });
+
+      contextMenu.appendChild(deleteOption);
+      contextMenu.appendChild(copyOption);
+
       // Add to DOM
-      document.body.appendChild(contextMenu)
-      
+      document.body.appendChild(contextMenu);
+
       // Remove on click outside
       const removeMenu = (e) => {
         if (!contextMenu.contains(e.target)) {
-          contextMenu.remove()
-          document.removeEventListener('click', removeMenu)
+          contextMenu.remove();
+          document.removeEventListener("click", removeMenu);
         }
-      }
-      
+      };
+
       setTimeout(() => {
-        document.addEventListener('click', removeMenu)
-      }, 100)
-    }
+        document.addEventListener("click", removeMenu);
+      }, 100);
+    };
 
     // Delete message function - shows modal instead of browser confirm
     const deleteMessage = (messageId) => {
-      const message = messages.value.find(msg => msg.id === messageId)
+      const message = messages.value.find((msg) => msg.id === messageId);
       if (message) {
-        messageToDelete.value = message
-        showDeleteModal.value = true
+        messageToDelete.value = message;
+        showDeleteModal.value = true;
       }
-    }
+    };
 
     // Confirm delete function
     const confirmDelete = async () => {
-      if (!messageToDelete.value) return
-      
-      isDeleting.value = true
+      if (!messageToDelete.value) return;
+
+      isDeleting.value = true;
       try {
-        await messagingService.deleteMessage(messageToDelete.value.id)
+        await messagingService.deleteMessage(messageToDelete.value.id);
         // Remove from local state
-        messages.value = messages.value.filter(msg => msg.id !== messageToDelete.value.id)
+        messages.value = messages.value.filter(
+          (msg) => msg.id !== messageToDelete.value.id
+        );
         // Close modal
-        showDeleteModal.value = false
-        messageToDelete.value = null
+        showDeleteModal.value = false;
+        messageToDelete.value = null;
       } catch (error) {
-        console.error('Error deleting message:', error)
-        alert('Failed to delete message')
+        console.error("Error deleting message:", error);
+        alert("Failed to delete message");
       } finally {
-        isDeleting.value = false
+        isDeleting.value = false;
       }
-    }
+    };
 
     // Cancel delete function
     const cancelDelete = () => {
-      showDeleteModal.value = false
-      messageToDelete.value = null
-      isDeleting.value = false
-    }
+      showDeleteModal.value = false;
+      messageToDelete.value = null;
+      isDeleting.value = false;
+    };
 
     // Copy message function
     const copyMessage = (content) => {
       navigator.clipboard.writeText(content).then(() => {
         // Show brief feedback
-        const toast = document.createElement('div')
-        toast.textContent = 'Message copied!'
-        toast.className = 'copy-toast'
-        document.body.appendChild(toast)
-        setTimeout(() => document.body.removeChild(toast), 2000)
-      })
-    }
+        const toast = document.createElement("div");
+        toast.textContent = "Message copied!";
+        toast.className = "copy-toast";
+        document.body.appendChild(toast);
+        setTimeout(() => document.body.removeChild(toast), 2000);
+      });
+    };
 
     // Make functions globally available for context menu
-    window.deleteMessage = deleteMessage
-    window.copyMessage = copyMessage
+    window.deleteMessage = deleteMessage;
+    window.copyMessage = copyMessage;
+
+    // Store handler references for cleanup
+    const messageHandlers = {
+      newMessage: null,
+      userTyping: null,
+      messageError: null,
+      messageDeleted: null,
+      messagesRead: null,
+      reconnect: null,
+    };
 
     // Set up Socket.io connection and message handling
     const setupMessaging = () => {
       if (authStore.session?.access_token) {
-        console.log('🔌 RECEIVER: Setting up messaging with token:', authStore.session.access_token.substring(0, 20) + '...')
-        console.log('🔌 RECEIVER: Current user ID:', currentUserId.value)
-        // Connect to messaging service
-        messagingService.connect(authStore.session.access_token)
-        
-        // Handle new messages
-        messagingService.on('new_message', async (message) => {
-          console.log('🔔 RECEIVER: Received new message via Socket.io:', message)
-          console.log('🔔 RECEIVER: Message content:', message.content)
-          console.log('🔔 RECEIVER: Message type:', message.message_type)
-          console.log('🔔 RECEIVER: Message created_at:', message.created_at)
-          console.log('🔔 RECEIVER: Current selected conversation:', selectedConversation.value?.id)
-          console.log('🔔 RECEIVER: Message conversation ID:', message.conversation_id)
-          console.log('🔔 RECEIVER: Current user ID:', currentUserId.value)
-          console.log('🔔 RECEIVER: Message sender ID:', message.sender_id)
-          
+        console.log(
+          "🔌 RECEIVER: Setting up messaging with token:",
+          authStore.session.access_token.substring(0, 20) + "..."
+        );
+        console.log("🔌 RECEIVER: Current user ID:", currentUserId.value);
+        // Connect to messaging service only if not already connected
+        if (!messagingService.isConnected) {
+          console.log("🔌 RECEIVER: Connecting to messaging service...");
+          messagingService.connect(authStore.session.access_token);
+        } else {
+          console.log("🔌 RECEIVER: Already connected to messaging service");
+        }
+
+        // Handle new messages - store reference
+        messageHandlers.newMessage = async (message) => {
+          console.log(
+            "🔔 RECEIVER: Received new message via Socket.io:",
+            message
+          );
+          console.log("🔔 RECEIVER: Message content:", message.content);
+          console.log("🔔 RECEIVER: Message type:", message.message_type);
+          console.log("🔔 RECEIVER: Message created_at:", message.created_at);
+          console.log(
+            "🔔 RECEIVER: Current selected conversation:",
+            selectedConversation.value?.id
+          );
+          console.log(
+            "🔔 RECEIVER: Message conversation ID:",
+            message.conversation_id
+          );
+          console.log("🔔 RECEIVER: Current user ID:", currentUserId.value);
+          console.log("🔔 RECEIVER: Message sender ID:", message.sender_id);
+
           // Add message to current conversation if it's the one being viewed
-          if (selectedConversation.value && message.conversation_id === selectedConversation.value.id) {
-            console.log('Adding message to current conversation')
-            
+          if (
+            selectedConversation.value &&
+            message.conversation_id === selectedConversation.value.id
+          ) {
+            console.log("Adding message to current conversation");
+
             // Validate message data
-            if (!message.content && message.message_type !== 'image') {
-              console.warn('⚠️ RECEIVER: Received message with empty content:', message)
-              return
+            if (!message.content && message.message_type !== "image") {
+              console.warn(
+                "⚠️ RECEIVER: Received message with empty content:",
+                message
+              );
+              return;
             }
-            
+
             if (!message.id) {
-              console.warn('⚠️ RECEIVER: Received message without ID:', message)
-              return
+              console.warn(
+                "⚠️ RECEIVER: Received message without ID:",
+                message
+              );
+              return;
             }
             // Check if this message already exists (prevent duplicates)
-            const existingMessageIndex = messages.value.findIndex(msg => msg.id === message.id)
+            const existingMessageIndex = messages.value.findIndex(
+              (msg) => msg.id === message.id
+            );
             if (existingMessageIndex !== -1) {
-              console.log('⚠️ RECEIVER: Message already exists, skipping duplicate:', message.id)
-              return
+              console.log(
+                "⚠️ RECEIVER: Message already exists, skipping duplicate:",
+                message.id
+              );
+              return;
             }
-            
+
             // Check if this is replacing a temporary message
-            const tempMessageIndex = messages.value.findIndex(msg => 
-              msg.id.startsWith('temp_') && 
-              msg.senderId === message.sender_id && 
-              msg.content === message.content
-            )
-            
+            const tempMessageIndex = messages.value.findIndex(
+              (msg) =>
+                msg.id.startsWith("temp_") &&
+                msg.senderId === message.sender_id &&
+                msg.content === message.content
+            );
+
             const newMessage = {
               id: message.id,
               senderId: message.sender_id,
@@ -1129,203 +1406,279 @@ export default {
               createdAt: message.created_at,
               readAt: message.read_at,
               deliveredAt: message.delivered_at,
-              sender: message.sender ? {
-                name: `${message.sender.first_name} ${message.sender.last_name}`,
-                type: message.sender.user_type
-              } : null
-            }
-            
-            console.log('🔔 RECEIVER: Creating new message object:', newMessage)
-            console.log('🔔 RECEIVER: Message type check:', {
+              sender: message.sender
+                ? {
+                    name: `${message.sender.first_name} ${message.sender.last_name}`,
+                    type: message.sender.user_type,
+                  }
+                : null,
+            };
+
+            console.log(
+              "🔔 RECEIVER: Creating new message object:",
+              newMessage
+            );
+            console.log("🔔 RECEIVER: Message type check:", {
               messageType: newMessage.messageType,
-              isImage: newMessage.messageType === 'image',
-              content: newMessage.content
-            })
-            
+              isImage: newMessage.messageType === "image",
+              content: newMessage.content,
+            });
+
             if (tempMessageIndex !== -1) {
               // Replace temporary message with real one
-              messages.value[tempMessageIndex] = newMessage
+              messages.value[tempMessageIndex] = newMessage;
             } else {
               // Add new message
-              messages.value.push(newMessage)
+              messages.value.push(newMessage);
             }
-            
+
             // Auto-mark messages as read when user is actively viewing the conversation
             if (message.sender_id !== currentUserId.value) {
-              console.log('🔔 RECEIVER: Auto-marking messages as read since user is viewing conversation')
+              console.log(
+                "🔔 RECEIVER: Auto-marking messages as read since user is viewing conversation"
+              );
               try {
-                await messagingService.markAsRead(message.conversation_id)
-                console.log('✅ RECEIVER: Messages marked as read successfully')
+                await messagingService.markAsRead(message.conversation_id);
+                console.log(
+                  "✅ RECEIVER: Messages marked as read successfully"
+                );
               } catch (error) {
-                console.error('❌ RECEIVER: Error auto-marking messages as read:', error)
+                console.error(
+                  "❌ RECEIVER: Error auto-marking messages as read:",
+                  error
+                );
               }
             }
-          }
-          
-          // ALWAYS update conversation list for ALL messages (this is the key fix!)
-          console.log('🔔 RECEIVER: Updating conversation list for message')
-          console.log('🔔 RECEIVER: Current conversations list:', conversations.value.map(c => ({ id: c.id, participant: c.participant.name })))
-          const conversationIndex = conversations.value.findIndex(conv => 
-            conv.id === message.conversation_id
-          )
-          console.log('🔔 RECEIVER: Found conversation index:', conversationIndex)
-          
-          if (conversationIndex !== -1) {
-            console.log('Updating existing conversation in list')
-            
-            // Create a new array to trigger Vue reactivity
-            const updatedConversations = [...conversations.value]
-            const conversation = updatedConversations[conversationIndex]
-            
-            // Update conversation properties
-            conversation.lastMessage = message.content
-            conversation.lastMessageAt = message.created_at
-            
-            // If message is from someone else and not in current conversation, increment unread count
-            if (message.sender_id !== currentUserId.value && 
-                (!selectedConversation.value || selectedConversation.value.id !== message.conversation_id)) {
-              conversation.unreadCount = (conversation.unreadCount || 0) + 1
+          } else {
+            // Show notification if message is not in the currently viewed conversation
+            // and message is from another user
+            if (message.sender_id !== currentUserId.value && message.sender) {
+              const senderName = `${message.sender.first_name} ${message.sender.last_name}`;
+              const messagePreview =
+                message.message_type === "image"
+                  ? "📷 Sent an image"
+                  : message.content;
+
+              showMessageNotification({
+                senderName,
+                message: messagePreview,
+                conversationId: message.conversation_id,
+              });
             }
-            
+          }
+
+          // ALWAYS update conversation list for ALL messages (this is the key fix!)
+          console.log("🔔 RECEIVER: Updating conversation list for message");
+          console.log(
+            "🔔 RECEIVER: Current conversations list:",
+            conversations.value.map((c) => ({
+              id: c.id,
+              participant: c.participant.name,
+            }))
+          );
+          const conversationIndex = conversations.value.findIndex(
+            (conv) => conv.id === message.conversation_id
+          );
+          console.log(
+            "🔔 RECEIVER: Found conversation index:",
+            conversationIndex
+          );
+
+          if (conversationIndex !== -1) {
+            console.log("Updating existing conversation in list");
+
+            // Create a new array to trigger Vue reactivity
+            const updatedConversations = [...conversations.value];
+            const conversation = updatedConversations[conversationIndex];
+
+            // Update conversation properties
+            conversation.lastMessage = message.content;
+            conversation.lastMessageAt = message.created_at;
+
+            // If message is from someone else and not in current conversation, increment unread count
+            if (
+              message.sender_id !== currentUserId.value &&
+              (!selectedConversation.value ||
+                selectedConversation.value.id !== message.conversation_id)
+            ) {
+              conversation.unreadCount = (conversation.unreadCount || 0) + 1;
+            }
+
             // Remove from current position and add to top
-            updatedConversations.splice(conversationIndex, 1)
-            updatedConversations.unshift(conversation)
-            
+            updatedConversations.splice(conversationIndex, 1);
+            updatedConversations.unshift(conversation);
+
             // Update the reactive array
-            conversations.value = updatedConversations
-            
+            conversations.value = updatedConversations;
+
             // Force Vue to update the UI
-            await nextTick()
-            
-            console.log('Conversation list updated:', conversations.value.length)
+            await nextTick();
+
+            console.log(
+              "Conversation list updated:",
+              conversations.value.length
+            );
           } else {
             // This is a new conversation that needs to be added to the list
             // This happens when someone else sends the first message to you
-            console.log('🔔 RECEIVER: Conversation not found in list, adding new conversation')
-            const otherParticipant = message.sender
+            console.log(
+              "🔔 RECEIVER: Conversation not found in list, adding new conversation"
+            );
+            const otherParticipant = message.sender;
             const conversationToAdd = {
               id: message.conversation_id,
               participant: {
                 id: otherParticipant.id,
                 name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
-                type: otherParticipant.user_type
+                type: otherParticipant.user_type,
               },
               lastMessage: message.content,
               lastMessageAt: message.created_at,
-              unreadCount: message.sender_id !== currentUserId.value ? 1 : 0
-            }
+              unreadCount: message.sender_id !== currentUserId.value ? 1 : 0,
+            };
             // Create new array to trigger Vue reactivity
-            const updatedConversations = [...conversations.value]
-            updatedConversations.unshift(conversationToAdd)
-            conversations.value = updatedConversations
-            
+            const updatedConversations = [...conversations.value];
+            updatedConversations.unshift(conversationToAdd);
+            conversations.value = updatedConversations;
+
             // Force Vue to update the UI
-            await nextTick()
-            
-            console.log('New conversation added to list:', conversationToAdd.id)
-            
+            await nextTick();
+
+            console.log(
+              "New conversation added to list:",
+              conversationToAdd.id
+            );
+
             // Join the new conversation room for real-time updates
-            messagingService.joinConversation(conversationToAdd.id)
+            messagingService.joinConversation(conversationToAdd.id);
           }
-        })
+        };
+
+        // Register the new_message handler
+        messagingService.on("new_message", messageHandlers.newMessage);
 
         // Handle reconnection - rejoin all conversation rooms
-        messagingService.on('connect', () => {
-          console.log('Socket.io reconnected, rejoining conversation rooms')
+        messageHandlers.reconnect = () => {
+          console.log("Socket.io reconnected, rejoining conversation rooms");
           // Rejoin all existing conversation rooms
-          conversations.value.forEach(conv => {
-            messagingService.joinConversation(conv.id)
-          })
+          conversations.value.forEach((conv) => {
+            messagingService.joinConversation(conv.id);
+          });
           // Also rejoin current conversation if selected
           if (selectedConversation.value) {
-            messagingService.joinConversation(selectedConversation.value.id)
+            messagingService.joinConversation(selectedConversation.value.id);
           }
-        })
-        
+        };
+        messagingService.on("connect", messageHandlers.reconnect);
+
         // Handle typing indicators
-        messagingService.on('user_typing', (data) => {
+        messageHandlers.userTyping = (data) => {
           // TODO: Implement typing indicator UI
-        })
-        
+        };
+        messagingService.on("user_typing", messageHandlers.userTyping);
+
         // Handle message errors
-        messagingService.on('message_error', (error) => {
-          console.error('Message error:', error)
-          alert(`Failed to send message: ${error.error || 'Unknown error'}`)
-        })
-        
+        messageHandlers.messageError = (error) => {
+          console.error("Message error:", error);
+          alert(`Failed to send message: ${error.error || "Unknown error"}`);
+        };
+        messagingService.on("message_error", messageHandlers.messageError);
+
         // Handle message deletion
-        messagingService.on('message_deleted', (data) => {
-          console.log('🗑️ RECEIVER: Message deleted via Socket.io:', data)
+        messageHandlers.messageDeleted = (data) => {
+          console.log("🗑️ RECEIVER: Message deleted via Socket.io:", data);
           // Remove the deleted message from the local messages array
-          messages.value = messages.value.filter(msg => msg.id !== data.messageId)
-        })
-        
+          messages.value = messages.value.filter(
+            (msg) => msg.id !== data.messageId
+          );
+        };
+        messagingService.on("message_deleted", messageHandlers.messageDeleted);
+
         // Handle messages read status update
-        messagingService.on('messages_read', (data) => {
-          console.log('✅ RECEIVER: Messages read via Socket.io:', data)
+        messageHandlers.messagesRead = (data) => {
+          console.log("✅ RECEIVER: Messages read via Socket.io:", data);
           // Update read status for messages in the current conversation
-          if (selectedConversation.value && selectedConversation.value.id === data.conversationId) {
-            messages.value = messages.value.map(msg => {
+          if (
+            selectedConversation.value &&
+            selectedConversation.value.id === data.conversationId
+          ) {
+            messages.value = messages.value.map((msg) => {
               // Update read status for messages sent by current user that were read by the other person
               if (msg.senderId === currentUserId.value && !msg.readAt) {
-                return { ...msg, readAt: data.readAt }
+                return { ...msg, readAt: data.readAt };
               }
-              return msg
-            })
+              return msg;
+            });
           }
-        })
+        };
+        messagingService.on("messages_read", messageHandlers.messagesRead);
       }
-    }
+    };
 
     // Join conversation room when conversation is selected
     const joinConversationRoom = (conversationId) => {
       if (conversationId) {
-        messagingService.joinConversation(conversationId)
+        messagingService.joinConversation(conversationId);
       }
-    }
+    };
 
     // Update selectConversation to join room
     const selectConversationWithRoom = async (conversation) => {
-      selectedConversation.value = conversation
-      
+      selectedConversation.value = conversation;
+
       if (conversation?.id) {
-        joinConversationRoom(conversation.id)
-        await loadMessages(conversation.id)
+        joinConversationRoom(conversation.id);
+        await loadMessages(conversation.id);
       }
-    }
+    };
 
     onMounted(async () => {
       // Initialize auth store first
-      await authStore.initializeAuth()
-      
+      await authStore.initializeAuth();
+
       // Wait a moment for auth to be ready
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       // CRITICAL FIX: Load conversations FIRST, then setup messaging
-      console.log('🔄 Loading conversations first...')
-      await loadConversations()
-      console.log('✅ Conversations loaded:', conversations.value.length)
-      console.log('🔌 Setting up messaging...')
-      setupMessaging()
-      
+      console.log("🔄 Loading conversations first...");
+      await loadConversations();
+      console.log("✅ Conversations loaded:", conversations.value.length);
+      console.log("🔌 Setting up messaging...");
+      setupMessaging();
+
       // Join all existing conversation rooms for real-time updates
       setTimeout(() => {
-        conversations.value.forEach(conv => {
-          messagingService.joinConversation(conv.id)
-        })
-      }, 1000)
-    })
+        conversations.value.forEach((conv) => {
+          messagingService.joinConversation(conv.id);
+        });
+      }, 1000);
+    });
 
     onUnmounted(() => {
-      // Clean up event listeners
-      messagingService.off('new_message')
-      messagingService.off('user_typing')
-      messagingService.off('message_error')
-      messagingService.off('connect')
-      
-      // Clean up Socket.io connection
-      messagingService.disconnect()
-    })
+      // Clean up event listeners specific to Messages page
+      // Remove only the handlers registered by this component
+      if (messageHandlers.newMessage) {
+        messagingService.off("new_message", messageHandlers.newMessage);
+      }
+      if (messageHandlers.userTyping) {
+        messagingService.off("user_typing", messageHandlers.userTyping);
+      }
+      if (messageHandlers.messageError) {
+        messagingService.off("message_error", messageHandlers.messageError);
+      }
+      if (messageHandlers.messageDeleted) {
+        messagingService.off("message_deleted", messageHandlers.messageDeleted);
+      }
+      if (messageHandlers.messagesRead) {
+        messagingService.off("messages_read", messageHandlers.messagesRead);
+      }
+      if (messageHandlers.reconnect) {
+        messagingService.off("connect", messageHandlers.reconnect);
+      }
+
+      // Don't disconnect here - let App.vue manage the global connection
+      // This allows notifications to continue working on other pages
+    });
 
     return {
       authStore,
@@ -1362,10 +1715,10 @@ export default {
       messageToDelete,
       isDeleting,
       confirmDelete,
-      cancelDelete
-    }
-  }
-}
+      cancelDelete,
+    };
+  },
+};
 </script>
 
 <style scoped>
@@ -1381,8 +1734,7 @@ export default {
   background: rgba(26, 26, 26, 0.85) !important;
   border: 2px solid var(--cyber-grey-light, #4a4a4a) !important;
   border-radius: 15px;
-  box-shadow:
-    0 0 15px rgba(255, 140, 66, 0.1),
+  box-shadow: 0 0 15px rgba(255, 140, 66, 0.1),
     0 0 30px rgba(255, 140, 66, 0.05) !important;
   transition: all 0.3s ease;
   backdrop-filter: blur(8px);
@@ -1405,7 +1757,8 @@ export default {
 }
 
 /* Headings and Text */
-h5, h6 {
+h5,
+h6 {
   color: var(--cyber-text, #ffffff) !important;
   text-shadow: 0 0 5px rgba(255, 140, 66, 0.3);
 }
@@ -1438,7 +1791,11 @@ h5, h6 {
 }
 
 .conversation-item.active {
-  background: linear-gradient(90deg, rgba(255, 140, 66, 0.2), rgba(255, 210, 63, 0.1)) !important;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 140, 66, 0.2),
+    rgba(255, 210, 63, 0.1)
+  ) !important;
   border-left: 3px solid var(--cyber-orange, #ff8c42);
 }
 
@@ -1461,7 +1818,11 @@ h5, h6 {
 
 .conversation-item:hover .conversation-avatar {
   transform: scale(1.1);
-  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+  background: linear-gradient(
+    45deg,
+    var(--cyber-orange, #ff8c42),
+    var(--cyber-yellow, #ffd23f)
+  ) !important;
   box-shadow: 0 0 15px rgba(255, 140, 66, 0.5);
 }
 
@@ -1509,7 +1870,11 @@ h5, h6 {
 }
 
 .message-bubble.sent {
-  background: linear-gradient(135deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f));
+  background: linear-gradient(
+    135deg,
+    var(--cyber-orange, #ff8c42),
+    var(--cyber-yellow, #ffd23f)
+  );
   color: white;
   margin-left: auto;
   border: 1px solid var(--cyber-orange, #ff8c42);
@@ -1589,7 +1954,7 @@ h5, h6 {
 }
 
 .status-read {
-  color: #4CAF50;
+  color: #4caf50;
 }
 
 /* Message Input */
@@ -1634,7 +1999,11 @@ h5, h6 {
 
 /* Buttons */
 .btn-primary {
-  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+  background: linear-gradient(
+    45deg,
+    var(--cyber-orange, #ff8c42),
+    var(--cyber-yellow, #ffd23f)
+  ) !important;
   border: 2px solid var(--cyber-orange, #ff8c42) !important;
   color: white !important;
   font-weight: 600;
@@ -1679,7 +2048,11 @@ h5, h6 {
 }
 
 .badge.bg-primary {
-  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+  background: linear-gradient(
+    45deg,
+    var(--cyber-orange, #ff8c42),
+    var(--cyber-yellow, #ffd23f)
+  ) !important;
   color: white !important;
   border-color: var(--cyber-orange, #ff8c42) !important;
   box-shadow: 0 0 10px rgba(255, 140, 66, 0.5);
@@ -1716,8 +2089,12 @@ i.text-primary {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Context Menu */
@@ -1754,7 +2131,7 @@ i.text-primary {
   position: fixed;
   top: 20px;
   right: 20px;
-  background: #4CAF50;
+  background: #4caf50;
   color: white;
   padding: 12px 20px;
   border-radius: 8px;

@@ -28,28 +28,35 @@ class MessagingService {
   constructor() {
     this.socket = null
     this.isConnected = false
-    this.messageHandlers = new Map()
+    this.messageHandlers = new Map() // Each event can have multiple handlers (array)
   }
 
   // Initialize Socket.io connection
   connect(token) {
+    console.log('🔌 MESSAGING SERVICE: connect() called');
+    console.log('🔌 MESSAGING SERVICE: Has existing socket?', !!this.socket);
+    console.log('🔌 MESSAGING SERVICE: Current isConnected?', this.isConnected);
+    
     if (this.socket) {
+      console.log('🔌 MESSAGING SERVICE: Disconnecting existing socket');
       this.disconnect()
     }
 
-          this.socket = io('http://localhost:3005', {
-            auth: {
-              token: token
-            },
-            transports: ['websocket', 'polling'],
-            timeout: 20000,
-            forceNew: true
-          })
+    console.log('🔌 MESSAGING SERVICE: Creating new socket connection to port 3005');
+    
+    this.socket = io('http://localhost:3005', {
+      auth: {
+        token: token
+      },
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true
+    })
 
-          this.socket.on('connect', () => {
-            console.log('🔌 RECEIVER: Socket.io connected successfully')
-            this.isConnected = true
-          })
+    this.socket.on('connect', () => {
+      console.log('🔌 MESSAGING SERVICE: Socket.io connected successfully')
+      this.isConnected = true
+    })
 
           this.socket.on('disconnect', () => {
             console.log('Socket.io disconnected')
@@ -75,10 +82,14 @@ class MessagingService {
 
   // Disconnect from Socket.io
   disconnect() {
+    console.log('🔌 MESSAGING SERVICE: disconnect() called');
     if (this.socket) {
+      console.log('🔌 MESSAGING SERVICE: Disconnecting socket');
+      console.log('🔌 MESSAGING SERVICE: Handlers will be preserved:', Array.from(this.messageHandlers.keys()));
       this.socket.disconnect()
       this.socket = null
       this.isConnected = false
+      // DON'T clear handlers - they should persist across reconnections
     }
   }
 
@@ -86,54 +97,61 @@ class MessagingService {
   setupMessageHandlers() {
     this.socket.on('new_message', (message) => {
       console.log('Socket.io received new_message:', message)
-      const handler = this.messageHandlers.get('new_message')
-      if (handler) {
-        console.log('Calling new_message handler')
-        handler(message)
+      const handlers = this.messageHandlers.get('new_message') || []
+      if (handlers.length > 0) {
+        console.log(`Calling ${handlers.length} new_message handler(s)`)
+        handlers.forEach(handler => handler(message))
       } else {
         console.log('No new_message handler registered')
       }
     })
 
     this.socket.on('user_typing', (data) => {
-      const handler = this.messageHandlers.get('user_typing')
-      if (handler) {
-        handler(data)
-      }
+      const handlers = this.messageHandlers.get('user_typing') || []
+      handlers.forEach(handler => handler(data))
     })
 
     this.socket.on('message_error', (error) => {
-      const handler = this.messageHandlers.get('message_error')
-      if (handler) {
-        handler(error)
-      }
+      const handlers = this.messageHandlers.get('message_error') || []
+      handlers.forEach(handler => handler(error))
     })
 
     this.socket.on('message_deleted', (data) => {
       console.log('Socket.io received message_deleted:', data)
-      const handler = this.messageHandlers.get('message_deleted')
-      if (handler) {
-        handler(data)
-      }
+      const handlers = this.messageHandlers.get('message_deleted') || []
+      handlers.forEach(handler => handler(data))
     })
 
     this.socket.on('messages_read', (data) => {
       console.log('Socket.io received messages_read:', data)
-      const handler = this.messageHandlers.get('messages_read')
-      if (handler) {
-        handler(data)
-      }
+      const handlers = this.messageHandlers.get('messages_read') || []
+      handlers.forEach(handler => handler(data))
     })
   }
 
-  // Register event handlers
+  // Register event handlers (supports multiple handlers per event)
   on(event, handler) {
-    this.messageHandlers.set(event, handler)
+    console.log(`🔌 MESSAGING SERVICE: Registering handler for event: ${event}`);
+    if (!this.messageHandlers.has(event)) {
+      this.messageHandlers.set(event, [])
+    }
+    this.messageHandlers.get(event).push(handler)
+    console.log(`🔌 MESSAGING SERVICE: Total handlers for ${event}: ${this.messageHandlers.get(event).length}`);
   }
 
-  // Remove event handlers
-  off(event) {
-    this.messageHandlers.delete(event)
+  // Remove specific event handler
+  off(event, handler) {
+    if (!handler) {
+      // If no handler specified, remove all handlers for this event
+      this.messageHandlers.delete(event)
+    } else {
+      // Remove specific handler
+      const handlers = this.messageHandlers.get(event) || []
+      const index = handlers.indexOf(handler)
+      if (index > -1) {
+        handlers.splice(index, 1)
+      }
+    }
   }
 
   // Join a conversation room

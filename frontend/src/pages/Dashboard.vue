@@ -12,12 +12,19 @@
           <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
               <div class="d-flex align-items-center">
-                <div class="avatar bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px;">
+                <div
+                  class="avatar bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3"
+                  style="width: 60px; height: 60px"
+                >
                   <i class="fas fa-user text-primary fs-4"></i>
                 </div>
                 <div>
-                  <h2 class="fw-bold mb-1">Welcome back, {{ user?.firstName }}!</h2>
-                  <p class="text-muted mb-0">Here's what's happening with your account</p>
+                  <h2 class="fw-bold mb-1">
+                    Welcome back, {{ user?.firstName }}!
+                  </h2>
+                  <p class="text-muted mb-0">
+                    Here's what's happening with your account
+                  </p>
                 </div>
               </div>
             </div>
@@ -32,10 +39,17 @@
         :transition="{ duration: 0.6, delay: 0.1 }"
         class="row mb-5"
       >
-        <div class="col-lg-3 col-md-6 mb-4" v-for="(stat, index) in stats" :key="index">
+        <div
+          class="col-lg-3 col-md-6 mb-4"
+          v-for="(stat, index) in stats"
+          :key="index"
+        >
           <div class="card border-0 shadow-sm h-100">
             <div class="card-body text-center">
-              <div class="stat-icon bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 50px; height: 50px;">
+              <div
+                class="stat-icon bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                style="width: 50px; height: 50px"
+              >
                 <i :class="stat.icon" class="text-primary fs-5"></i>
               </div>
               <h4 class="fw-bold mb-1">{{ stat.value }}</h4>
@@ -66,15 +80,24 @@
                 <p class="text-muted">No recent activity</p>
               </div>
               <div v-else>
-                <div v-for="(activity, index) in recentActivity" :key="index" class="d-flex align-items-center p-3 border-bottom">
-                  <div class="activity-icon bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                <div
+                  v-for="(activity, index) in recentActivity"
+                  :key="index"
+                  class="d-flex align-items-center p-3 border-bottom"
+                >
+                  <div
+                    class="activity-icon bg-light rounded-circle d-flex align-items-center justify-content-center me-3"
+                    style="width: 40px; height: 40px"
+                  >
                     <i :class="activity.icon" class="text-primary"></i>
                   </div>
                   <div class="flex-grow-1">
                     <p class="mb-1 fw-medium">{{ activity.title }}</p>
                     <small class="text-muted">{{ activity.time }}</small>
                   </div>
-                  <span :class="activity.badgeClass" class="badge">{{ activity.status }}</span>
+                  <span :class="activity.badgeClass" class="badge">{{
+                    activity.status
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -97,7 +120,11 @@
             </div>
             <div class="card-body">
               <div class="d-grid gap-2">
-                <router-link to="/search" class="btn btn-outline-primary">
+                <router-link
+                  to="/search"
+                  class="btn btn-outline-primary"
+                  v-if="userType === 'student'"
+                >
                   <i class="fas fa-search me-2"></i>
                   Find Tutors
                 </router-link>
@@ -109,7 +136,11 @@
                   <i class="fas fa-user me-2"></i>
                   Update Profile
                 </router-link>
-                <router-link to="/analytics" class="btn btn-outline-primary" v-if="userType === 'tutor' || userType === 'centre'">
+                <router-link
+                  to="/analytics"
+                  class="btn btn-outline-primary"
+                  v-if="userType === 'tutor' || userType === 'centre'"
+                >
                   <i class="fas fa-chart-bar me-2"></i>
                   View Analytics
                 </router-link>
@@ -135,8 +166,15 @@
                 <p class="text-muted mb-0">No new notifications</p>
               </div>
               <div v-else>
-                <div v-for="(notification, index) in notifications" :key="index" class="d-flex align-items-start p-3 border-bottom">
-                  <div class="notification-icon bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 35px; height: 35px;">
+                <div
+                  v-for="(notification, index) in notifications"
+                  :key="index"
+                  class="d-flex align-items-start p-3 border-bottom"
+                >
+                  <div
+                    class="notification-icon bg-light rounded-circle d-flex align-items-center justify-content-center me-3"
+                    style="width: 35px; height: 35px"
+                  >
                     <i :class="notification.icon" class="text-primary"></i>
                   </div>
                   <div class="flex-grow-1">
@@ -154,104 +192,104 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
-import { useAuthStore } from '../stores/auth'
+import { ref, computed, onMounted } from "vue";
+import { useAuthStore } from "../stores/auth";
 
 export default {
-  name: 'Dashboard',
+  name: "Dashboard",
   setup() {
-    const authStore = useAuthStore()
-    
-    const user = computed(() => authStore.user)
-    const userType = computed(() => authStore.userType)
-    
-    const stats = ref([])
-    const recentActivity = ref([])
-    const notifications = ref([])
+    const authStore = useAuthStore();
+
+    const user = computed(() => authStore.user);
+    const userType = computed(() => authStore.userType);
+
+    const stats = ref([]);
+    const recentActivity = ref([]);
+    const notifications = ref([]);
 
     const loadDashboardData = async () => {
       // Load stats based on user type
-      if (userType.value === 'student') {
+      if (userType.value === "student") {
         stats.value = [
-          { icon: 'fas fa-book', label: 'Active Bookings', value: '3' },
-          { icon: 'fas fa-star', label: 'Completed Sessions', value: '12' },
-          { icon: 'fas fa-clock', label: 'Hours This Month', value: '24' },
-          { icon: 'fas fa-dollar-sign', label: 'Total Spent', value: '$1,440' }
-        ]
-      } else if (userType.value === 'tutor') {
+          { icon: "fas fa-book", label: "Active Bookings", value: "3" },
+          { icon: "fas fa-star", label: "Completed Sessions", value: "12" },
+          { icon: "fas fa-clock", label: "Hours This Month", value: "24" },
+          { icon: "fas fa-dollar-sign", label: "Total Spent", value: "$1,440" },
+        ];
+      } else if (userType.value === "tutor") {
         stats.value = [
-          { icon: 'fas fa-users', label: 'Total Students', value: '25' },
-          { icon: 'fas fa-star', label: 'Average Rating', value: '4.8' },
-          { icon: 'fas fa-clock', label: 'Hours This Month', value: '48' },
-          { icon: 'fas fa-dollar-sign', label: 'Earnings', value: '$2,880' }
-        ]
-      } else if (userType.value === 'centre') {
+          { icon: "fas fa-users", label: "Total Students", value: "25" },
+          { icon: "fas fa-star", label: "Average Rating", value: "4.8" },
+          { icon: "fas fa-clock", label: "Hours This Month", value: "48" },
+          { icon: "fas fa-dollar-sign", label: "Earnings", value: "$2,880" },
+        ];
+      } else if (userType.value === "centre") {
         stats.value = [
-          { icon: 'fas fa-users', label: 'Total Students', value: '150' },
-          { icon: 'fas fa-star', label: 'Average Rating', value: '4.6' },
-          { icon: 'fas fa-calendar', label: 'Classes This Month', value: '45' },
-          { icon: 'fas fa-dollar-sign', label: 'Revenue', value: '$8,100' }
-        ]
+          { icon: "fas fa-users", label: "Total Students", value: "150" },
+          { icon: "fas fa-star", label: "Average Rating", value: "4.6" },
+          { icon: "fas fa-calendar", label: "Classes This Month", value: "45" },
+          { icon: "fas fa-dollar-sign", label: "Revenue", value: "$8,100" },
+        ];
       }
 
       // Load recent activity
       recentActivity.value = [
         {
-          icon: 'fas fa-calendar-check',
-          title: 'New booking confirmed',
-          time: '2 hours ago',
-          status: 'Confirmed',
-          badgeClass: 'bg-success'
+          icon: "fas fa-calendar-check",
+          title: "New booking confirmed",
+          time: "2 hours ago",
+          status: "Confirmed",
+          badgeClass: "bg-success",
         },
         {
-          icon: 'fas fa-star',
-          title: 'Received 5-star review',
-          time: '1 day ago',
-          status: 'Completed',
-          badgeClass: 'bg-success'
+          icon: "fas fa-star",
+          title: "Received 5-star review",
+          time: "1 day ago",
+          status: "Completed",
+          badgeClass: "bg-success",
         },
         {
-          icon: 'fas fa-envelope',
-          title: 'New message from student',
-          time: '2 days ago',
-          status: 'Unread',
-          badgeClass: 'bg-warning'
-        }
-      ]
+          icon: "fas fa-envelope",
+          title: "New message from student",
+          time: "2 days ago",
+          status: "Unread",
+          badgeClass: "bg-warning",
+        },
+      ];
 
       // Load notifications
       notifications.value = [
         {
-          icon: 'fas fa-bell',
-          title: 'Booking reminder: Math session tomorrow at 2 PM',
-          time: '1 hour ago'
+          icon: "fas fa-bell",
+          title: "Booking reminder: Math session tomorrow at 2 PM",
+          time: "1 hour ago",
         },
         {
-          icon: 'fas fa-star',
-          title: 'New review received',
-          time: '3 hours ago'
+          icon: "fas fa-star",
+          title: "New review received",
+          time: "3 hours ago",
         },
         {
-          icon: 'fas fa-envelope',
-          title: 'Message from tutor',
-          time: '5 hours ago'
-        }
-      ]
-    }
+          icon: "fas fa-envelope",
+          title: "Message from tutor",
+          time: "5 hours ago",
+        },
+      ];
+    };
 
     onMounted(() => {
-      loadDashboardData()
-    })
+      loadDashboardData();
+    });
 
     return {
       user,
       userType,
       stats,
       recentActivity,
-      notifications
-    }
-  }
-}
+      notifications,
+    };
+  },
+};
 </script>
 
 <style scoped>
@@ -266,8 +304,7 @@ export default {
   background: rgba(26, 26, 26, 0.85) !important;
   border: 2px solid var(--cyber-grey-light, #4a4a4a) !important;
   border-radius: 15px;
-  box-shadow:
-    0 0 15px rgba(255, 140, 66, 0.1),
+  box-shadow: 0 0 15px rgba(255, 140, 66, 0.1),
     0 0 30px rgba(255, 140, 66, 0.05) !important;
   transition: all 0.3s ease;
   backdrop-filter: blur(8px);
@@ -291,7 +328,11 @@ export default {
 }
 
 /* Headings */
-h2, h3, h4, h5, h6 {
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--cyber-text, #ffffff) !important;
   text-shadow: 0 0 5px rgba(255, 140, 66, 0.3);
 }
@@ -330,7 +371,11 @@ h2, h3, h4, h5, h6 {
 
 .card:hover .stat-icon {
   transform: scale(1.1);
-  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+  background: linear-gradient(
+    45deg,
+    var(--cyber-orange, #ff8c42),
+    var(--cyber-yellow, #ffd23f)
+  ) !important;
   box-shadow: 0 0 20px rgba(255, 140, 66, 0.5);
 }
 
@@ -379,7 +424,11 @@ h2, h3, h4, h5, h6 {
 }
 
 .btn-outline-primary:hover {
-  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+  background: linear-gradient(
+    45deg,
+    var(--cyber-orange, #ff8c42),
+    var(--cyber-yellow, #ffd23f)
+  ) !important;
   border-color: var(--cyber-orange, #ff8c42) !important;
   color: white !important;
   transform: translateY(-2px);

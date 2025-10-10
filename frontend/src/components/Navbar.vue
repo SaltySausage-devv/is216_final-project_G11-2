@@ -1,34 +1,50 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark cyberpunk-navbar fixed-top shadow-sm">
+  <nav
+    class="navbar navbar-expand-lg navbar-dark cyberpunk-navbar fixed-top shadow-sm"
+  >
     <div class="container">
       <router-link to="/" class="navbar-brand d-flex align-items-center">
-        <i class="fas fa-graduation-cap me-2" style="color: var(--cyber-orange);"></i>
+        <i
+          class="fas fa-graduation-cap me-2"
+          style="color: var(--cyber-orange)"
+        ></i>
         <span class="fw-bold">OnlyTutor</span>
       </router-link>
 
-      <button 
-        class="navbar-toggler cyberpunk-hamburger" 
-        type="button" 
-        data-bs-toggle="collapse" 
+      <button
+        class="navbar-toggler cyberpunk-hamburger"
+        type="button"
+        data-bs-toggle="collapse"
         data-bs-target="#navbarNav"
         @click="toggleNavbar"
         :aria-expanded="isNavbarExpanded"
-        aria-controls="navbarNav" 
+        aria-controls="navbarNav"
         aria-label="Toggle navigation"
       >
         <span class="navbar-toggler-icon"></span>
       </button>
 
-      <div class="collapse navbar-collapse" :class="{ show: isNavbarExpanded }" id="navbarNav">
+      <div
+        class="collapse navbar-collapse"
+        :class="{ show: isNavbarExpanded }"
+        id="navbarNav"
+      >
         <ul class="navbar-nav me-auto">
-          <li class="nav-item">
+          <li
+            class="nav-item"
+            v-if="userType === 'student' || !isAuthenticated"
+          >
             <router-link to="/search" class="nav-link">
               <i class="fas fa-search me-1"></i>
               Find Tutors
             </router-link>
           </li>
           <li class="nav-item">
-            <router-link to="/dashboard" class="nav-link" v-if="isAuthenticated">
+            <router-link
+              to="/dashboard"
+              class="nav-link"
+              v-if="isAuthenticated"
+            >
               <i class="fas fa-tachometer-alt me-1"></i>
               Dashboard
             </router-link>
@@ -48,12 +64,12 @@
               Sign Up
             </a>
           </li>
-          
+
           <li class="nav-item dropdown" v-if="isAuthenticated">
-            <a 
-              class="nav-link dropdown-toggle d-flex align-items-center" 
-              href="#" 
-              role="button" 
+            <a
+              class="nav-link dropdown-toggle d-flex align-items-center"
+              href="#"
+              role="button"
               data-bs-toggle="dropdown"
               aria-expanded="false"
             >
@@ -79,9 +95,13 @@
                   Analytics
                 </router-link>
               </li>
-              <li><hr class="dropdown-divider"></li>
+              <li><hr class="dropdown-divider" /></li>
               <li>
-                <a href="#" @click.prevent="logout" class="dropdown-item text-danger">
+                <a
+                  href="#"
+                  @click.prevent="logout"
+                  class="dropdown-item text-danger"
+                >
                   <i class="fas fa-sign-out-alt me-2"></i>
                   Logout
                 </a>
@@ -95,136 +115,148 @@
 </template>
 
 <script>
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { animate, stagger, spring } from 'animejs'
+import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../stores/auth";
+import { animate, stagger, spring } from "animejs";
 
 export default {
-  name: 'Navbar',
+  name: "Navbar",
   setup() {
-    const authStore = useAuthStore()
-    const router = useRouter()
-    const isNavbarExpanded = ref(false)
+    const authStore = useAuthStore();
+    const router = useRouter();
+    const isNavbarExpanded = ref(false);
 
-    const isAuthenticated = computed(() => authStore.isAuthenticated)
-    const user = computed(() => authStore.user)
-    const userType = computed(() => authStore.userType)
+    const isAuthenticated = computed(() => authStore.isAuthenticated);
+    const user = computed(() => authStore.user);
+    const userType = computed(() => authStore.userType);
 
     const logout = async () => {
       try {
-        console.log('🚪 Navbar: Starting logout process...')
-        await authStore.logout()
-        console.log('🚪 Navbar: Logout completed, redirecting to home...')
-        router.push('/')
+        console.log("🚪 Navbar: Starting logout process...");
+        await authStore.logout();
+        console.log("🚪 Navbar: Logout completed, redirecting to home...");
+        router.push("/");
       } catch (error) {
-        console.error('❌ Navbar: Logout error:', error)
+        console.error("❌ Navbar: Logout error:", error);
         // Still redirect even if there's an error
-        router.push('/')
+        router.push("/");
       }
-    }
+    };
 
     // Custom toggle function as fallback
     const toggleNavbar = () => {
-      isNavbarExpanded.value = !isNavbarExpanded.value
-      const navbarCollapse = document.getElementById('navbarNav')
+      isNavbarExpanded.value = !isNavbarExpanded.value;
+      const navbarCollapse = document.getElementById("navbarNav");
       if (navbarCollapse) {
         if (isNavbarExpanded.value) {
-          navbarCollapse.classList.add('show')
+          navbarCollapse.classList.add("show");
         } else {
-          navbarCollapse.classList.remove('show')
+          navbarCollapse.classList.remove("show");
         }
       }
-    }
+    };
 
     onMounted(() => {
       // Advanced navbar brand animation with keyframes
-      animate('.navbar-brand', {
+      animate(".navbar-brand", {
         keyframes: [
-          { scale: 0.5, opacity: 0, rotate: -180, ease: 'outExpo', duration: 0 },
-          { scale: 1.1, opacity: 1, rotate: 10, ease: 'outBack', duration: 400 },
-          { scale: 1, rotate: 0, ease: spring({ bounce: 0.4 }), duration: 300 }
+          {
+            scale: 0.5,
+            opacity: 0,
+            rotate: -180,
+            ease: "outExpo",
+            duration: 0,
+          },
+          {
+            scale: 1.1,
+            opacity: 1,
+            rotate: 10,
+            ease: "outBack",
+            duration: 400,
+          },
+          { scale: 1, rotate: 0, ease: spring({ bounce: 0.4 }), duration: 300 },
         ],
-        duration: 700
-      })
+        duration: 700,
+      });
 
       // Advanced nav links with complex staggered animation
-      animate('.nav-link', {
+      animate(".nav-link", {
         keyframes: [
-          { y: -30, opacity: 0, scale: 0.8, ease: 'outExpo', duration: 0 },
-          { y: 0, opacity: 1, scale: 1.05, ease: 'outBack', duration: 400 },
-          { scale: 1, ease: 'outElastic', duration: 200 }
+          { y: -30, opacity: 0, scale: 0.8, ease: "outExpo", duration: 0 },
+          { y: 0, opacity: 1, scale: 1.05, ease: "outBack", duration: 400 },
+          { scale: 1, ease: "outElastic", duration: 200 },
         ],
         delay: stagger(150, { start: 200 }),
-        duration: 600
-      })
+        duration: 600,
+      });
 
       // Setup interactive navbar animations
-      setupNavbarInteractions()
-    })
+      setupNavbarInteractions();
+    });
 
     const setupNavbarInteractions = () => {
       // Nav link hover effects
-      const navLinks = document.querySelectorAll('.nav-link')
-      navLinks.forEach(link => {
-        link.addEventListener('mouseenter', () => {
+      const navLinks = document.querySelectorAll(".nav-link");
+      navLinks.forEach((link) => {
+        link.addEventListener("mouseenter", () => {
           animate(link, {
             scale: 1.1,
             y: -3,
             rotate: 2,
             duration: 200,
-            ease: 'outBack'
-          })
-        })
+            ease: "outBack",
+          });
+        });
 
-        link.addEventListener('mouseleave', () => {
+        link.addEventListener("mouseleave", () => {
           animate(link, {
             scale: 1,
             y: 0,
             rotate: 0,
             duration: 200,
-            ease: 'outBack'
-          })
-        })
-      })
+            ease: "outBack",
+          });
+        });
+      });
 
       // Button advanced hover effects
-      const buttons = document.querySelectorAll('.btn')
-      buttons.forEach(button => {
-        button.addEventListener('mouseenter', () => {
+      const buttons = document.querySelectorAll(".btn");
+      buttons.forEach((button) => {
+        button.addEventListener("mouseenter", () => {
           animate(button, {
             keyframes: [
-              { scale: 1.05, y: -2, ease: 'outBack', duration: 150 },
-              { scale: 1.1, y: -5, ease: 'outElastic', duration: 100 }
+              { scale: 1.05, y: -2, ease: "outBack", duration: 150 },
+              { scale: 1.1, y: -5, ease: "outElastic", duration: 100 },
             ],
-            duration: 250
-          })
-        })
+            duration: 250,
+          });
+        });
 
-        button.addEventListener('mouseleave', () => {
+        button.addEventListener("mouseleave", () => {
           animate(button, {
             scale: 1,
             y: 0,
             duration: 200,
-            ease: 'outBack'
-          })
-        })
-      })
+            ease: "outBack",
+          });
+        });
+      });
 
       // Brand logo continuous subtle animation
-      const brand = document.querySelector('.navbar-brand')
+      const brand = document.querySelector(".navbar-brand");
       if (brand) {
         animate(brand, {
           keyframes: [
-            { rotate: 0, scale: 1, ease: 'inOutSine', duration: 2000 },
-            { rotate: 2, scale: 1.02, ease: 'inOutSine', duration: 2000 },
-            { rotate: 0, scale: 1, ease: 'inOutSine', duration: 2000 }
+            { rotate: 0, scale: 1, ease: "inOutSine", duration: 2000 },
+            { rotate: 2, scale: 1.02, ease: "inOutSine", duration: 2000 },
+            { rotate: 0, scale: 1, ease: "inOutSine", duration: 2000 },
           ],
           loop: true,
-          duration: 6000
-        })
+          duration: 6000,
+        });
       }
-    }
+    };
 
     return {
       isAuthenticated,
@@ -232,10 +264,10 @@ export default {
       userType,
       logout,
       toggleNavbar,
-      isNavbarExpanded
-    }
-  }
-}
+      isNavbarExpanded,
+    };
+  },
+};
 </script>
 
 <style scoped>
@@ -310,11 +342,11 @@ export default {
     margin-right: 0;
     padding-left: 1rem;
   }
-  
+
   .navbar-brand i {
     font-size: 1.2rem;
   }
-  
+
   /* Force navbar items to edges */
   .navbar .container {
     padding-left: 0;
@@ -322,16 +354,16 @@ export default {
     max-width: 100%;
     margin: 0;
   }
-  
+
   .navbar-brand {
     margin-left: 0;
   }
-  
+
   .navbar-toggler {
     margin-right: 0;
     padding-right: 1rem;
   }
-  
+
   /* Ensure full width navbar */
   .navbar {
     padding-left: 0;
@@ -345,11 +377,11 @@ export default {
     font-size: 1.3rem;
     margin-right: 1rem;
   }
-  
+
   .navbar-brand i {
     font-size: 1.2rem;
   }
-  
+
   .navbar-collapse {
     background: rgba(26, 26, 26, 0.7);
     border: 1px solid var(--cyber-orange);
@@ -359,16 +391,16 @@ export default {
     box-shadow: 0 0 20px rgba(255, 140, 66, 0.3);
     backdrop-filter: blur(15px);
   }
-  
+
   .navbar-nav {
     margin-top: 0;
     gap: 0.5rem;
   }
-  
+
   .nav-item {
     margin-bottom: 0.5rem;
   }
-  
+
   .nav-link {
     padding: 0.75rem 1rem;
     border-radius: 6px;
@@ -380,15 +412,15 @@ export default {
     color: var(--cyber-text-muted) !important;
     font-weight: 500;
   }
-  
+
   .nav-link:hover {
     background: rgba(255, 140, 66, 0.1);
     transform: translateX(5px);
     color: var(--cyber-orange) !important;
   }
-  
+
   /* Removed mobile button styling - nav links now have consistent format */
-  
+
   .dropdown-menu {
     position: static !important;
     transform: none !important;
@@ -403,11 +435,11 @@ export default {
   .navbar-brand {
     font-size: 1.1rem;
   }
-  
+
   .navbar-brand i {
     font-size: 1rem;
   }
-  
+
   .display-4 {
     font-size: 1.8rem;
   }
