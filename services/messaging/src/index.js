@@ -870,23 +870,60 @@ server.listen(PORT, () => {
   console.log(`Messaging service running on port ${PORT}`);
 });
 
+// Graceful shutdown handler
+const gracefulShutdown = (signal) => {
+  console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
+
+  // Close Socket.io connections
+  io.close(() => {
+    console.log('🔌 Socket.io connections closed');
+  });
+
+  // Close HTTP server
+  server.close(() => {
+    console.log('🛑 HTTP server closed');
+
+    // Close database connections
+    if (supabase) {
+      console.log('🗄️  Database connections closed');
+    }
+
+    console.log('✅ Graceful shutdown completed');
+    process.exit(0);
+  });
+
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    console.error('⚠️  Forcing shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+// Register shutdown handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // Handle server errors gracefully
 server.on('error', (error) => {
   if (error.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Please kill the existing process or use a different port.`);
+    console.error(`❌ Port ${PORT} is already in use.`);
+    console.error(`💡 Run 'npm run cleanup' or './scripts/cleanup-ports.sh' to free the port`);
     process.exit(1);
   } else {
-    console.error('Server error:', error);
+    console.error('❌ Server error:', error);
+    process.exit(1);
   }
 });
 
-// Handle uncaught exceptions
+// Handle uncaught exceptions - exit gracefully to prevent zombie processes
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-  // Don't exit the process, just log the error
+  console.error('❌ Uncaught Exception:', error);
+  console.error('🔄 Restarting service due to uncaught exception...');
+  gracefulShutdown('uncaughtException');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit the process, just log the error
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('🔄 Restarting service due to unhandled rejection...');
+  gracefulShutdown('unhandledRejection');
 });
