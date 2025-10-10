@@ -750,204 +750,47 @@ export default {
           }, 0)
       }
 
-      // Simulate API call with filtering
-      setTimeout(() => {
-        // All available tutors - 10 tutors only with review counts <10
-        allTutors.value = [
-          {
-            id: 1,
-            name: 'Dr. Sarah Chen',
-            subjects: ['Mathematics', 'Additional Mathematics'],
-            levels: ['Secondary', 'JC'],
-            rating: 5,
-            reviews: 8,
-            hourlyRate: 80,
-            experience: '5+',
-            bio: 'Experienced mathematics tutor with 8 years of experience. Specializes in O-Level and A-Level mathematics.',
-            location: 'Orchard, Singapore',
-            teachingMode: 'online',
-            availability: ['now', 'week'],
-            avatar: 'https://i.pravatar.cc/400?img=47'
-          },
-          {
-            id: 2,
-            name: 'Mr. David Lim',
-            subjects: ['Physics', 'Chemistry'],
-            levels: ['Secondary', 'JC'],
-            rating: 5,
-            reviews: 6,
-            hourlyRate: 70,
-            experience: '5+',
-            bio: 'Former MOE teacher with 10 years of experience. Excellent track record with students.',
-            location: 'Marina Bay, Singapore',
-            teachingMode: 'in-person',
-            availability: ['week', 'weekend'],
-            avatar: 'https://i.pravatar.cc/400?img=5'
-          },
-          {
-            id: 3,
-            name: 'Ms. Emily Wong',
-            subjects: ['English', 'Literature'],
-            levels: ['Primary', 'Secondary'],
-            rating: 5,
-            reviews: 9,
-            hourlyRate: 60,
-            experience: '5+',
-            bio: 'Passionate English tutor with a focus on creative writing and comprehension skills.',
-            location: 'Tampines, Singapore',
-            teachingMode: 'both',
-            availability: ['now', 'weekend'],
-            avatar: 'https://i.pravatar.cc/400?img=44'
-          },
-          {
-            id: 4,
-            name: 'Prof. Michael Tan',
-            subjects: ['Biology', 'Chemistry'],
-            levels: ['Secondary', 'JC', 'IB'],
-            rating: 5,
-            reviews: 7,
-            hourlyRate: 95,
-            experience: '5+',
-            bio: 'University professor with expertise in life sciences. Published researcher and experienced tutor.',
-            location: 'Bukit Timah, Singapore',
-            teachingMode: 'online',
-            availability: ['week'],
-            avatar: 'https://i.pravatar.cc/400?img=8'
-          },
-          {
-            id: 5,
-            name: 'Ms. Rachel Goh',
-            subjects: ['Mathematics', 'Science'],
-            levels: ['Primary'],
-            rating: 4,
-            reviews: 5,
-            hourlyRate: 45,
-            experience: '3-5',
-            bio: 'Patient and nurturing tutor specializing in primary school students. Focus on building strong foundations.',
-            location: 'Jurong West, Singapore',
-            teachingMode: 'in-person',
-            availability: ['now', 'weekend'],
-            avatar: 'https://i.pravatar.cc/400?img=9'
-          },
-          {
-            id: 6,
-            name: 'Mr. Jason Koh',
-            subjects: ['English', 'Mathematics'],
-            levels: ['Primary', 'Secondary'],
-            rating: 4,
-            reviews: 4,
-            hourlyRate: 50,
-            experience: '3-5',
-            bio: 'Energetic and creative tutor who makes learning fun. Strong focus on exam techniques.',
-            location: 'Bedok, Singapore',
-            teachingMode: 'both',
-            availability: ['now', 'week'],
-            avatar: 'https://i.pravatar.cc/400?img=12'
-          },
-          {
-            id: 7,
-            name: 'Dr. Amanda Lee',
-            subjects: ['Additional Mathematics', 'Physics'],
-            levels: ['Secondary', 'JC', 'IGCSE'],
-            rating: 3,
-            reviews: 3,
-            hourlyRate: 85,
-            experience: '5+',
-            bio: 'PhD holder with passion for teaching. Specializes in helping students overcome math anxiety.',
-            location: 'Clementi, Singapore',
-            teachingMode: 'online',
-            availability: ['week', 'weekend'],
-            avatar: 'https://i.pravatar.cc/400?img=10'
-          },
-          {
-            id: 8,
-            name: 'Mr. Benjamin Ng',
-            subjects: ['Mathematics', 'Physics', 'Chemistry'],
-            levels: ['JC', 'IB'],
-            rating: 3,
-            reviews: 2,
-            hourlyRate: 75,
-            experience: '3-5',
-            bio: 'Former scholarship holder with strong academic background. Results-oriented teaching approach.',
-            location: 'Yishun, Singapore',
-            teachingMode: 'in-person',
-            availability: ['now'],
-            avatar: 'https://i.pravatar.cc/400?img=13'
-          },
-          {
-            id: 9,
-            name: 'Ms. Linda Tan',
-            subjects: ['Mathematics', 'Science'],
-            levels: ['Primary', 'Secondary'],
-            rating: 5,
-            reviews: 8,
-            hourlyRate: 55,
-            experience: '5+',
-            bio: 'Dedicated tutor with strong emphasis on building confidence. Makes complex topics simple.',
-            location: 'Ang Mo Kio, Singapore',
-            teachingMode: 'both',
-            availability: ['now', 'week', 'weekend'],
-            avatar: 'https://i.pravatar.cc/400?img=45'
-          },
-          {
-            id: 10,
-            name: 'Mr. William Chen',
-            subjects: ['Physics', 'Mathematics'],
-            levels: ['Secondary', 'JC'],
-            rating: 4,
-            reviews: 6,
-            hourlyRate: 90,
-            experience: '5+',
-            bio: 'Former engineer turned educator. Practical approach to physics and mathematics.',
-            location: 'Bishan, Singapore',
-            teachingMode: 'online',
-            availability: ['week'],
-            avatar: 'https://i.pravatar.cc/400?img=33'
-          }
-        ]
+      try {
+        // Build query parameters
+        const params = new URLSearchParams()
+        params.append('type', 'tutor')
+        params.append('page', currentPage.value)
+        params.append('limit', tutorsPerPage)
 
-        // Apply filters
+        if (filters.subject) params.append('subject', filters.subject)
+        if (filters.level) params.append('level', filters.level)
+        if (filters.location) params.append('location', filters.location)
+        if (filters.minRate) params.append('minRate', filters.minRate)
+        if (filters.maxRate) params.append('maxRate', filters.maxRate)
+
+        // Fetch tutors from API
+        const response = await fetch(`http://localhost:3003/profiles/search?${params}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch tutors')
+        }
+
+        const data = await response.json()
+        console.log('API Response:', data)
+
+        // Transform API data to frontend format
+        allTutors.value = data.profiles.map(profile => ({
+          id: profile.user_id,
+          name: `${profile.users?.first_name || ''} ${profile.users?.last_name || ''}`.trim() || 'Unknown Tutor',
+          subjects: profile.subjects || [],
+          levels: profile.levels || [],
+          rating: 5, // TODO: Get from reviews system
+          reviews: 0, // TODO: Get from reviews system
+          hourlyRate: profile.hourly_rate || 0,
+          experience: profile.experience_years >= 5 ? '5+' : profile.experience_years >= 3 ? '3-5' : '1-2',
+          bio: profile.bio || profile.headline || 'No bio available',
+          location: profile.location?.address || profile.preferred_locations?.[0] || 'Singapore',
+          teachingMode: profile.teaching_mode?.[0] || 'both',
+          availability: ['now'], // TODO: Get from availability system
+          avatar: profile.profile_image_url || `https://i.pravatar.cc/400?img=${profile.user_id % 50}`
+        }))
+
+        // Apply client-side filters for ratings, experience, availability
         let filtered = allTutors.value
-
-        // Subject filter
-        if (filters.subject) {
-          filtered = filtered.filter(tutor =>
-            tutor.subjects.includes(filters.subject)
-          )
-        }
-
-        // Level filter
-        if (filters.level) {
-          filtered = filtered.filter(tutor =>
-            tutor.levels.includes(filters.level)
-          )
-        }
-
-        // Teaching mode filter
-        if (filters.teachingMode) {
-          filtered = filtered.filter(tutor =>
-            tutor.teachingMode === filters.teachingMode || tutor.teachingMode === 'both'
-          )
-        }
-
-        // Location filter (simple contains check)
-        if (filters.location) {
-          filtered = filtered.filter(tutor =>
-            tutor.location.toLowerCase().includes(filters.location.toLowerCase())
-          )
-        }
-
-        // Rate range filter
-        if (filters.minRate) {
-          filtered = filtered.filter(tutor =>
-            tutor.hourlyRate >= parseInt(filters.minRate)
-          )
-        }
-        if (filters.maxRate) {
-          filtered = filtered.filter(tutor =>
-            tutor.hourlyRate <= parseInt(filters.maxRate)
-          )
-        }
 
         // Rating filter
         if (filters.ratings.length > 0) {
@@ -986,11 +829,17 @@ export default {
         totalFilteredTutors.value = filtered.length
         tutors.value = filtered.slice(0, tutorsPerPage)
         console.log(`Found ${filtered.length} tutors after filtering, showing ${tutors.value.length}`)
-        isLoading.value = false
 
         // Animate tutor cards entrance
         animateTutorCards()
-      }, 1000)
+      } catch (error) {
+        console.error('Error fetching tutors:', error)
+        tutors.value = []
+        allTutors.value = []
+        totalFilteredTutors.value = 0
+      } finally {
+        isLoading.value = false
+      }
     }
 
     // Get dynamic count of tutors by rating
@@ -1035,33 +884,28 @@ export default {
     }
 
     const loadMore = () => {
-      // Get filtered results
+      // Apply client-side filters for ratings, experience, availability
       let filtered = allTutors.value
 
-      // Apply all current filters
-      if (filters.subject) {
-        filtered = filtered.filter(tutor => tutor.subjects.includes(filters.subject))
-      }
-      if (filters.level) {
-        filtered = filtered.filter(tutor => tutor.levels.includes(filters.level))
-      }
-      if (filters.location) {
-        filtered = filtered.filter(tutor => tutor.location.toLowerCase().includes(filters.location.toLowerCase()))
-      }
-      if (filters.minRate) {
-        filtered = filtered.filter(tutor => tutor.hourlyRate >= parseInt(filters.minRate))
-      }
-      if (filters.maxRate) {
-        filtered = filtered.filter(tutor => tutor.hourlyRate <= parseInt(filters.maxRate))
-      }
+      // Rating filter
       if (filters.ratings.length > 0) {
-        filtered = filtered.filter(tutor => filters.ratings.includes(tutor.rating))
+        filtered = filtered.filter(tutor =>
+          filters.ratings.includes(tutor.rating)
+        )
       }
+
+      // Experience filter
       if (filters.experience.length > 0) {
-        filtered = filtered.filter(tutor => filters.experience.includes(tutor.experience))
+        filtered = filtered.filter(tutor =>
+          filters.experience.includes(tutor.experience)
+        )
       }
+
+      // Availability filter
       if (filters.availability.length > 0) {
-        filtered = filtered.filter(tutor => filters.availability.some(avail => tutor.availability.includes(avail)))
+        filtered = filtered.filter(tutor =>
+          filters.availability.some(avail => tutor.availability.includes(avail))
+        )
       }
 
       // Apply sorting
