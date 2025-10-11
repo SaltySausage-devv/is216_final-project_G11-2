@@ -136,52 +136,6 @@
                   <i class="fas fa-user me-2"></i>
                   Update Profile
                 </router-link>
-                <router-link
-                  to="/analytics"
-                  class="btn btn-outline-primary"
-                  v-if="userType === 'tutor' || userType === 'centre'"
-                >
-                  <i class="fas fa-chart-bar me-2"></i>
-                  View Analytics
-                </router-link>
-              </div>
-            </div>
-          </motion.div>
-
-          <!-- Notifications -->
-          <motion.div
-            :initial="{ opacity: 0, y: 30 }"
-            :animate="{ opacity: 1, y: 0 }"
-            :transition="{ duration: 0.6, delay: 0.4 }"
-            class="card border-0 shadow-sm"
-          >
-            <div class="card-header bg-white border-bottom">
-              <h5 class="fw-bold mb-0">
-                <i class="fas fa-bell me-2 text-primary"></i>
-                Notifications
-              </h5>
-            </div>
-            <div class="card-body p-0">
-              <div v-if="notifications.length === 0" class="text-center py-3">
-                <p class="text-muted mb-0">No new notifications</p>
-              </div>
-              <div v-else>
-                <div
-                  v-for="(notification, index) in notifications"
-                  :key="index"
-                  class="d-flex align-items-start p-3 border-bottom"
-                >
-                  <div
-                    class="notification-icon bg-light rounded-circle d-flex align-items-center justify-content-center me-3"
-                    style="width: 35px; height: 35px"
-                  >
-                    <i :class="notification.icon" class="text-primary"></i>
-                  </div>
-                  <div class="flex-grow-1">
-                    <p class="mb-1 fw-medium">{{ notification.title }}</p>
-                    <small class="text-muted">{{ notification.time }}</small>
-                  </div>
-                </div>
               </div>
             </div>
           </motion.div>
@@ -192,7 +146,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
 
 export default {
@@ -205,9 +159,10 @@ export default {
 
     const stats = ref([]);
     const recentActivity = ref([]);
-    const notifications = ref([]);
 
     const loadDashboardData = async () => {
+      console.log("📊 Loading dashboard data for user type:", userType.value);
+
       // Load stats based on user type
       if (userType.value === "student") {
         stats.value = [
@@ -257,28 +212,27 @@ export default {
         },
       ];
 
-      // Load notifications
-      notifications.value = [
-        {
-          icon: "fas fa-bell",
-          title: "Booking reminder: Math session tomorrow at 2 PM",
-          time: "1 hour ago",
-        },
-        {
-          icon: "fas fa-star",
-          title: "New review received",
-          time: "3 hours ago",
-        },
-        {
-          icon: "fas fa-envelope",
-          title: "Message from tutor",
-          time: "5 hours ago",
-        },
-      ];
+      console.log("✅ Dashboard data loaded, stats count:", stats.value.length);
     };
 
+    // Watch for userType changes and reload data
+    watch(
+      userType,
+      (newUserType) => {
+        console.log("👀 UserType changed to:", newUserType);
+        if (newUserType) {
+          loadDashboardData();
+        }
+      },
+      { immediate: true }
+    );
+
     onMounted(() => {
-      loadDashboardData();
+      console.log("🚀 Dashboard mounted, user type:", userType.value);
+      // Load data immediately if userType is already available
+      if (userType.value) {
+        loadDashboardData();
+      }
     });
 
     return {
@@ -286,7 +240,6 @@ export default {
       userType,
       stats,
       recentActivity,
-      notifications,
     };
   },
 };
