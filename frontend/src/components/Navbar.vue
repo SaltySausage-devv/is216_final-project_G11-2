@@ -89,6 +89,12 @@
                   Messages
                 </router-link>
               </li>
+              <li>
+                <router-link to="/calendar" class="dropdown-item">
+                  <i class="fas fa-calendar me-2"></i>
+                  Calendar
+                </router-link>
+              </li>
               <li v-if="userType === 'tutor' || userType === 'centre'">
                 <router-link to="/analytics" class="dropdown-item">
                   <i class="fas fa-chart-bar me-2"></i>

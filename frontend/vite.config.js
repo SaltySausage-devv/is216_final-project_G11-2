@@ -29,7 +29,8 @@ export default defineConfig({
       '/api/messaging': {
         target: 'http://localhost:3005',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        ws: true // Enable WebSocket proxying
       },
       '/api/reviews': {
         target: 'http://localhost:3006',
@@ -45,6 +46,18 @@ export default defineConfig({
         target: 'http://localhost:3008',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/api/calendar': {
+        target: 'http://localhost:3011',
+        changeOrigin: true,
+        rewrite: (path) => {
+          // /api/calendar -> /calendar (keep the /calendar)
+          // /api/calendar/bookings/... -> /bookings/... (remove /api/calendar)
+          if (path.startsWith('/api/calendar/')) {
+            return path.replace(/^\/api\/calendar/, '')
+          }
+          return path.replace(/^\/api/, '')
+        }
       }
     }
   }

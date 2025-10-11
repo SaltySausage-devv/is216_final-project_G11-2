@@ -278,7 +278,22 @@ const createConversationSchema = Joi.object({
 const sendMessageSchema = Joi.object({
   conversationId: Joi.string().uuid().required(),
   content: Joi.string().max(1000).required(),
-  messageType: Joi.string().valid('text', 'image', 'file', 'document').default('text')
+  messageType: Joi.string().valid('text', 'image', 'file', 'document', 'booking_offer', 'booking_proposal', 'booking_confirmation').default('text'),
+  bookingOfferId: Joi.string().uuid().allow(null).optional()
+});
+
+const createBookingOfferSchema = Joi.object({
+  conversationId: Joi.string().uuid().required(),
+  isOnline: Joi.boolean().default(false),
+  tuteeLocation: Joi.string().allow(null, '').optional(),
+  notes: Joi.string().max(500).allow(null, '').optional()
+});
+
+const createBookingProposalSchema = Joi.object({
+  bookingOfferId: Joi.string().uuid().required(),
+  proposedTime: Joi.date().required(),
+  tutorLocation: Joi.string().allow(null, '').optional(),
+  finalLocation: Joi.string().allow(null, '').optional()
 });
 
 // Routes
@@ -850,6 +865,397 @@ app.get('/messaging/conversations/:id/unread-count', verifyToken, async (req, re
     res.json({ unreadCount: count || 0 });
   } catch (error) {
     console.error('Unread count error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create booking offer
+app.post('/messaging/booking-offers', verifyToken, async (req, res) => {
+  try {
+    const { error, value } = createBookingOfferSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { conversationId, isOnline, tuteeLocation, notes } = value;
+
+    // Verify user is participant in conversation
+    const { data: conversation } = await supabase
+      .from('conversations')
+      .select('participant1_id, participant2_id')
+      .eq('id', conversationId)
+      .single();
+
+    if (!conversation ||
+        (conversation.participant1_id !== req.user.userId &&
+         conversation.participant2_id !== req.user.userId)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Determine tutor and tutee IDs
+    const tutorId = conversation.participant1_id === req.user.userId ?
+                   conversation.participant2_id : conversation.participant1_id;
+    const tuteeId = req.user.userId;
+
+    // Create booking offer
+    const { data: bookingOffer, error: insertError } = await supabase
+      .from('booking_offers')
+      .insert({
+        conversation_id: conversationId,
+        tutee_id: tuteeId,
+        tutor_id: tutorId,
+        is_online: isOnline,
+        tutee_location: tuteeLocation,
+        notes: notes,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    // Create booking offer message
+    const messageContent = JSON.stringify({
+      bookingOfferId: bookingOffer.id,
+      isOnline: isOnline,
+      tuteeLocation: tuteeLocation,
+      notes: notes
+    });
+
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: conversationId,
+        sender_id: req.user.userId,
+        content: messageContent,
+        message_type: 'booking_offer',
+        booking_offer_id: bookingOffer.id,
+        created_at: new Date().toISOString()
+      })
+      .select(`
+        *,
+        sender:sender_id (
+          first_name,
+          last_name,
+          user_type
+        )
+      `)
+      .single();
+
+    if (messageError) {
+      throw messageError;
+    }
+
+    // Broadcast message to conversation room
+    io.to(`conversation_${conversationId}`).emit('new_message', message);
+
+    // Update conversation last message
+    await supabase
+      .from('conversations')
+      .update({
+        last_message_at: new Date().toISOString(),
+        last_message_content: 'Booking offer sent'
+      })
+      .eq('id', conversationId);
+
+    res.status(201).json({
+      message: 'Booking offer created successfully',
+      bookingOffer,
+      message
+    });
+  } catch (error) {
+    console.error('Booking offer creation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create booking proposal
+app.post('/messaging/booking-proposals', verifyToken, async (req, res) => {
+  try {
+    const { error, value } = createBookingProposalSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { bookingOfferId, proposedTime, tutorLocation, finalLocation } = value;
+
+    // Get booking offer and verify user is the tutor
+    const { data: bookingOffer, error: fetchError } = await supabase
+      .from('booking_offers')
+      .select('*, conversations:conversation_id(participant1_id, participant2_id)')
+      .eq('id', bookingOfferId)
+      .single();
+
+    if (fetchError || !bookingOffer) {
+      return res.status(404).json({ error: 'Booking offer not found' });
+    }
+
+    if (bookingOffer.tutor_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Only tutors can create proposals' });
+    }
+
+    // Update booking offer with proposal
+    const { data: updatedOffer, error: updateError } = await supabase
+      .from('booking_offers')
+      .update({
+        proposed_time: proposedTime,
+        tutor_location: tutorLocation,
+        final_location: finalLocation,
+        status: 'proposed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bookingOfferId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // Create booking proposal message
+    const messageContent = JSON.stringify({
+      bookingOfferId: bookingOfferId,
+      proposedTime: proposedTime,
+      tutorLocation: tutorLocation,
+      finalLocation: finalLocation
+    });
+
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: bookingOffer.conversation_id,
+        sender_id: req.user.userId,
+        content: messageContent,
+        message_type: 'booking_proposal',
+        booking_offer_id: bookingOfferId,
+        created_at: new Date().toISOString()
+      })
+      .select(`
+        *,
+        sender:sender_id (
+          first_name,
+          last_name,
+          user_type
+        )
+      `)
+      .single();
+
+    if (messageError) {
+      throw messageError;
+    }
+
+    // Broadcast message to conversation room
+    io.to(`conversation_${bookingOffer.conversation_id}`).emit('new_message', message);
+
+    // Update conversation last message
+    await supabase
+      .from('conversations')
+      .update({
+        last_message_at: new Date().toISOString(),
+        last_message_content: 'Booking proposal sent'
+      })
+      .eq('id', bookingOffer.conversation_id);
+
+    res.status(201).json({
+      message: 'Booking proposal created successfully',
+      bookingOffer: updatedOffer,
+      message
+    });
+  } catch (error) {
+    console.error('Booking proposal creation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Confirm booking
+app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
+  try {
+    const { bookingOfferId } = req.body;
+
+    if (!bookingOfferId) {
+      return res.status(400).json({ error: 'Booking offer ID is required' });
+    }
+
+    // Get booking offer
+    const { data: bookingOffer, error: fetchError } = await supabase
+      .from('booking_offers')
+      .select('*')
+      .eq('id', bookingOfferId)
+      .single();
+
+    if (fetchError || !bookingOffer) {
+      return res.status(404).json({ error: 'Booking offer not found' });
+    }
+
+    // Verify user is involved in this booking
+    if (bookingOffer.tutee_id !== req.user.userId && bookingOffer.tutor_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Check if booking offer is already confirmed
+    if (bookingOffer.status === 'confirmed') {
+      return res.status(400).json({
+        error: 'Booking already confirmed',
+        message: 'This booking has already been accepted and cannot be confirmed again.'
+      });
+    }
+
+    // Check if a booking already exists for this offer
+    const { data: existingBooking, error: bookingCheckError } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('tutor_id', bookingOffer.tutor_id)
+      .eq('student_id', bookingOffer.tutee_id)
+      .eq('start_time', bookingOffer.proposed_time)
+      .single();
+
+    if (existingBooking) {
+      return res.status(400).json({
+        error: 'Booking already exists',
+        message: 'A booking for this time slot has already been created. Please check your calendar.',
+        bookingId: existingBooking.id
+      });
+    }
+
+    // Update booking offer to confirmed
+    const { data: confirmedOffer, error: updateError } = await supabase
+      .from('booking_offers')
+      .update({
+        status: 'confirmed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bookingOfferId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // Create booking record in bookings table
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .insert({
+        tutor_id: bookingOffer.tutor_id,
+        student_id: bookingOffer.tutee_id,
+        subject: 'Tutoring Session', // Default subject
+        level: 'General', // Default level
+        start_time: bookingOffer.proposed_time,
+        end_time: new Date(new Date(bookingOffer.proposed_time).getTime() + 60 * 60 * 1000), // 1 hour session
+        location: bookingOffer.final_location,
+        is_online: bookingOffer.is_online,
+        notes: bookingOffer.notes,
+        hourly_rate: 50, // Default rate - this could come from tutor profile
+        total_amount: 50, // Default amount for 1 hour
+        status: 'confirmed',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (bookingError) {
+      console.error('Error creating booking record:', bookingError);
+      // Don't fail the whole operation if booking creation fails
+    }
+
+    // Create booking confirmation message
+    const messageContent = JSON.stringify({
+      bookingOfferId: bookingOfferId,
+      confirmedTime: bookingOffer.proposed_time,
+      location: bookingOffer.final_location,
+      isOnline: bookingOffer.is_online,
+      bookingId: booking?.id
+    });
+
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: bookingOffer.conversation_id,
+        sender_id: req.user.userId,
+        content: messageContent,
+        message_type: 'booking_confirmation',
+        booking_offer_id: bookingOfferId,
+        created_at: new Date().toISOString()
+      })
+      .select(`
+        *,
+        sender:sender_id (
+          first_name,
+          last_name,
+          user_type
+        )
+      `)
+      .single();
+
+    if (messageError) {
+      throw messageError;
+    }
+
+    // Broadcast message to conversation room
+    io.to(`conversation_${bookingOffer.conversation_id}`).emit('new_message', message);
+
+    // Update conversation last message
+    await supabase
+      .from('conversations')
+      .update({
+        last_message_at: new Date().toISOString(),
+        last_message_content: 'Booking confirmed!'
+      })
+      .eq('id', bookingOffer.conversation_id);
+
+    res.status(201).json({
+      message: 'Booking confirmed successfully',
+      bookingOffer: confirmedOffer,
+      booking: booking,
+      message
+    });
+  } catch (error) {
+    console.error('Booking confirmation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get user's bookings
+app.get('/messaging/bookings', verifyToken, async (req, res) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+
+    let query = supabase
+      .from('booking_offers')
+      .select(`
+        *,
+        tutee:tutee_id (
+          first_name,
+          last_name,
+          email
+        ),
+        tutor:tutor_id (
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .or(`tutee_id.eq.${req.user.userId},tutor_id.eq.${req.user.userId}`);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const offset = (page - 1) * limit;
+    query = query.range(offset, offset + limit - 1).order('created_at', { ascending: false });
+
+    const { data: bookings, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    res.json({ bookings });
+  } catch (error) {
+    console.error('Bookings fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

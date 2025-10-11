@@ -5,8 +5,6 @@ const rateLimit = require('express-rate-limit');
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
-const { google } = require('googleapis');
-const cron = require('node-cron');
 require('dotenv').config({ path: '../../.env' });
 
 const app = express();
@@ -16,13 +14,6 @@ const PORT = process.env.PORT || 3011;
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
-);
-
-// Initialize Google Calendar API
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI
 );
 
 // Middleware
@@ -40,479 +31,613 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// JWT verification middleware
-const verifyToken = (req, res, next) => {
+// JWT verification middleware - using Supabase token
+const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  
+
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    // Verify token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    // Get user profile from database
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    req.user = {
+      userId: user.id,
+      email: user.email,
+      userType: userProfile?.user_type || 'student'
+    };
+
     next();
   } catch (error) {
+    console.error('Token verification error:', error);
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
 
 // Validation schemas
-const createEventSchema = Joi.object({
-  bookingId: Joi.number().required(),
-  title: Joi.string().required(),
-  description: Joi.string().optional(),
-  startTime: Joi.date().required(),
-  endTime: Joi.date().required(),
-  location: Joi.string().optional(),
-  attendees: Joi.array().items(Joi.string().email()).optional()
+const availabilitySchema = Joi.object({
+  day_of_week: Joi.number().integer().min(0).max(6).required(),
+  start_time: Joi.string().required(),
+  end_time: Joi.string().required(),
+  is_available: Joi.boolean().default(true),
+  recurrence_type: Joi.string().valid('weekly', 'biweekly', 'monthly').default('weekly'),
+  timezone: Joi.string().default('Asia/Singapore'),
+  notes: Joi.string().optional()
 });
 
-const updateEventSchema = Joi.object({
-  title: Joi.string().optional(),
-  description: Joi.string().optional(),
-  startTime: Joi.date().optional(),
-  endTime: Joi.date().optional(),
+const dateAvailabilitySchema = Joi.object({
+  specific_date: Joi.date().required(),
+  start_time: Joi.string().required(),
+  end_time: Joi.string().required(),
+  is_available: Joi.boolean().default(true),
   location: Joi.string().optional(),
-  attendees: Joi.array().items(Joi.string().email()).optional()
+  hourly_rate: Joi.number().optional(),
+  notes: Joi.string().optional()
+});
+
+const timeOffSchema = Joi.object({
+  start_date: Joi.date().required(),
+  end_date: Joi.date().required(),
+  reason: Joi.string().optional(),
+  is_recurring_annually: Joi.boolean().default(false)
 });
 
 // Routes
-app.get('/calendar/auth-url', verifyToken, (req, res) => {
+
+// Get user's calendar data (bookings only)
+app.get('/calendar', verifyToken, async (req, res) => {
   try {
-    const scopes = [
-      'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/calendar.events'
-    ];
-
-    const authUrl = oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: scopes,
-      state: req.user.userId.toString()
-    });
-
-    res.json({ authUrl });
-  } catch (error) {
-    console.error('Auth URL generation error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.post('/calendar/callback', async (req, res) => {
-  try {
-    const { code, state } = req.body;
-    const userId = parseInt(state);
-
-    if (!code || !userId) {
-      return res.status(400).json({ error: 'Invalid callback parameters' });
-    }
-
-    // Exchange code for tokens
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
-
-    // Store tokens in database
-    await supabase
-      .from('calendar_tokens')
-      .upsert({
-        user_id: userId,
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expiry_date: tokens.expiry_date,
-        created_at: new Date().toISOString()
-      });
-
-    res.json({ message: 'Calendar connected successfully' });
-  } catch (error) {
-    console.error('Calendar callback error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.post('/calendar/events', verifyToken, async (req, res) => {
-  try {
-    const { error, value } = createEventSchema.validate(req.body);
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
-    }
-
-    const { bookingId, title, description, startTime, endTime, location, attendees } = value;
-
-    // Get user's calendar tokens
-    const { data: tokens } = await supabase
-      .from('calendar_tokens')
-      .select('*')
-      .eq('user_id', req.user.userId)
-      .single();
-
-    if (!tokens) {
-      return res.status(400).json({ error: 'Calendar not connected' });
-    }
-
-    // Set up OAuth2 client with user's tokens
-    oauth2Client.setCredentials({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token
-    });
-
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-    // Create calendar event
-    const event = {
-      summary: title,
-      description: description || '',
-      start: {
-        dateTime: new Date(startTime).toISOString(),
-        timeZone: 'Asia/Singapore'
-      },
-      end: {
-        dateTime: new Date(endTime).toISOString(),
-        timeZone: 'Asia/Singapore'
-      },
-      location: location || '',
-      attendees: attendees?.map(email => ({ email })) || []
-    };
-
-    const response = await calendar.events.insert({
-      calendarId: 'primary',
-      resource: event
-    });
-
-    // Store event mapping in database
-    await supabase
-      .from('calendar_events')
-      .insert({
-        booking_id: bookingId,
-        user_id: req.user.userId,
-        google_event_id: response.data.id,
-        created_at: new Date().toISOString()
-      });
-
-    res.status(201).json({
-      message: 'Event created successfully',
-      event: response.data
-    });
-  } catch (error) {
-    console.error('Event creation error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.put('/calendar/events/:eventId', verifyToken, async (req, res) => {
-  try {
-    const { eventId } = req.params;
-    const { error, value } = updateEventSchema.validate(req.body);
-    
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
-    }
-
-    // Get event mapping
-    const { data: eventMapping } = await supabase
-      .from('calendar_events')
-      .select('*')
-      .eq('id', eventId)
-      .eq('user_id', req.user.userId)
-      .single();
-
-    if (!eventMapping) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-
-    // Get user's calendar tokens
-    const { data: tokens } = await supabase
-      .from('calendar_tokens')
-      .select('*')
-      .eq('user_id', req.user.userId)
-      .single();
-
-    if (!tokens) {
-      return res.status(400).json({ error: 'Calendar not connected' });
-    }
-
-    // Set up OAuth2 client
-    oauth2Client.setCredentials({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token
-    });
-
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-    // Update calendar event
-    const event = {};
-    if (value.title) event.summary = value.title;
-    if (value.description) event.description = value.description;
-    if (value.startTime) {
-      event.start = {
-        dateTime: new Date(value.startTime).toISOString(),
-        timeZone: 'Asia/Singapore'
-      };
-    }
-    if (value.endTime) {
-      event.end = {
-        dateTime: new Date(value.endTime).toISOString(),
-        timeZone: 'Asia/Singapore'
-      };
-    }
-    if (value.location) event.location = value.location;
-    if (value.attendees) event.attendees = value.attendees.map(email => ({ email }));
-
-    const response = await calendar.events.update({
-      calendarId: 'primary',
-      eventId: eventMapping.google_event_id,
-      resource: event
-    });
-
-    res.json({
-      message: 'Event updated successfully',
-      event: response.data
-    });
-  } catch (error) {
-    console.error('Event update error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.delete('/calendar/events/:eventId', verifyToken, async (req, res) => {
-  try {
-    const { eventId } = req.params;
-
-    // Get event mapping
-    const { data: eventMapping } = await supabase
-      .from('calendar_events')
-      .select('*')
-      .eq('id', eventId)
-      .eq('user_id', req.user.userId)
-      .single();
-
-    if (!eventMapping) {
-      return res.status(404).json({ error: 'Event not found' });
-    }
-
-    // Get user's calendar tokens
-    const { data: tokens } = await supabase
-      .from('calendar_tokens')
-      .select('*')
-      .eq('user_id', req.user.userId)
-      .single();
-
-    if (!tokens) {
-      return res.status(400).json({ error: 'Calendar not connected' });
-    }
-
-    // Set up OAuth2 client
-    oauth2Client.setCredentials({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token
-    });
-
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-    // Delete calendar event
-    await calendar.events.delete({
-      calendarId: 'primary',
-      eventId: eventMapping.google_event_id
-    });
-
-    // Remove event mapping
-    await supabase
-      .from('calendar_events')
-      .delete()
-      .eq('id', eventId);
-
-    res.json({ message: 'Event deleted successfully' });
-  } catch (error) {
-    console.error('Event deletion error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/calendar/events', verifyToken, async (req, res) => {
-  try {
+    const userId = req.user.userId;
     const { startDate, endDate } = req.query;
 
-    // Get user's calendar tokens
-    const { data: tokens } = await supabase
-      .from('calendar_tokens')
-      .select('*')
-      .eq('user_id', req.user.userId)
-      .single();
+    console.log('📅 Calendar request:', { userId, userType: req.user.userType, startDate, endDate });
 
-    if (!tokens) {
-      return res.status(400).json({ error: 'Calendar not connected' });
-    }
-
-    // Set up OAuth2 client
-    oauth2Client.setCredentials({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token
-    });
-
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-    // Get events from Google Calendar
-    const response = await calendar.events.list({
-      calendarId: 'primary',
-      timeMin: startDate || new Date().toISOString(),
-      timeMax: endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      singleEvents: true,
-      orderBy: 'startTime'
-    });
-
-    res.json({ events: response.data.items || [] });
-  } catch (error) {
-    console.error('Events fetch error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/calendar/sync/:bookingId', verifyToken, async (req, res) => {
-  try {
-    const { bookingId } = req.params;
-
-    // Get booking details
-    const { data: booking } = await supabase
+    // Get user's bookings - simple query
+    const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
-      .select(`
-        *,
-        tutors:tutor_id (
-          first_name,
-          last_name,
-          email
-        ),
-        students:student_id (
-          first_name,
-          last_name,
-          email
-        )
-      `)
-      .eq('id', bookingId)
-      .single();
+      .select('*')
+      .or(`tutor_id.eq.${userId},student_id.eq.${userId}`)
+      .order('start_time', { ascending: true });
 
-    if (!booking) {
-      return res.status(404).json({ error: 'Booking not found' });
+    if (bookingsError) {
+      console.error('❌ Bookings error:', bookingsError);
+      return res.status(500).json({ error: 'Failed to fetch bookings', details: bookingsError });
     }
 
-    // Create calendar event for both tutor and student
-    const eventTitle = `Tutoring Session - ${booking.subject}`;
-    const eventDescription = `Tutoring session for ${booking.level} ${booking.subject}`;
-    const attendees = [booking.tutors.email, booking.students.email];
+    console.log(`✅ Found ${bookings?.length || 0} bookings for user ${userId}`);
+    if (bookings && bookings.length > 0) {
+      console.log('📊 Sample booking:', JSON.stringify(bookings[0], null, 2));
+    }
 
-    // Create event for tutor
-    await createCalendarEvent(req.user.userId, {
-      bookingId,
-      title: eventTitle,
-      description: eventDescription,
-      startTime: booking.start_time,
-      endTime: booking.end_time,
+    // Format bookings for FullCalendar
+    const formattedBookings = (bookings || []).map(booking => ({
+      id: booking.id,
+      title: booking.title || 'Tutoring Session',
+      start: booking.start_time,
+      end: booking.end_time,
+      status: booking.status,
+      subject: booking.subject,
+      level: booking.level,
       location: booking.location,
-      attendees
-    });
+      notes: booking.notes,
+      tutor_id: booking.tutor_id,
+      student_id: booking.student_id
+    }));
 
-    res.json({ message: 'Booking synced to calendar successfully' });
+    console.log(`📤 Sending ${formattedBookings.length} formatted bookings`);
+
+    res.json({
+      data: formattedBookings
+    });
   } catch (error) {
-    console.error('Calendar sync error:', error);
+    console.error('❌ Calendar data error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Create tutor availability
+app.post('/availability', verifyToken, async (req, res) => {
+  try {
+    if (req.user.userType !== 'tutor') {
+      return res.status(403).json({ error: 'Only tutors can set availability' });
+    }
+
+    const { error, value } = availabilitySchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { data, error: insertError } = await supabase
+      .from('tutor_availability')
+      .insert({
+        tutor_id: req.user.userId,
+        ...value
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Availability creation error:', insertError);
+      return res.status(500).json({ error: 'Failed to create availability' });
+    }
+
+    res.status(201).json({ data });
+  } catch (error) {
+    console.error('Availability error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// Helper function to create calendar event
-async function createCalendarEvent(userId, eventData) {
+// Create specific date availability
+app.post('/availability/date', verifyToken, async (req, res) => {
   try {
-    // Get user's calendar tokens
-    const { data: tokens } = await supabase
-      .from('calendar_tokens')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (!tokens) {
-      throw new Error('Calendar not connected');
+    if (req.user.userType !== 'tutor') {
+      return res.status(403).json({ error: 'Only tutors can set availability' });
     }
 
-    // Set up OAuth2 client
-    oauth2Client.setCredentials({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token
-    });
+    const { error, value } = dateAvailabilitySchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
 
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-    // Create calendar event
-    const event = {
-      summary: eventData.title,
-      description: eventData.description,
-      start: {
-        dateTime: new Date(eventData.startTime).toISOString(),
-        timeZone: 'Asia/Singapore'
-      },
-      end: {
-        dateTime: new Date(eventData.endTime).toISOString(),
-        timeZone: 'Asia/Singapore'
-      },
-      location: eventData.location || '',
-      attendees: eventData.attendees?.map(email => ({ email })) || []
-    };
-
-    const response = await calendar.events.insert({
-      calendarId: 'primary',
-      resource: event
-    });
-
-    // Store event mapping
-    await supabase
-      .from('calendar_events')
+    const { data, error: insertError } = await supabase
+      .from('tutor_date_availability')
       .insert({
-        booking_id: eventData.bookingId,
-        user_id: userId,
-        google_event_id: response.data.id,
-        created_at: new Date().toISOString()
-      });
+        tutor_id: req.user.userId,
+        ...value
+      })
+      .select()
+      .single();
 
-    return response.data;
+    if (insertError) {
+      console.error('Date availability creation error:', insertError);
+      return res.status(500).json({ error: 'Failed to create availability' });
+    }
+
+    res.status(201).json({ data });
   } catch (error) {
-    console.error('Create calendar event error:', error);
-    throw error;
+    console.error('Date availability error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get tutor's available slots
+app.get('/tutor/:tutorId/availability', verifyToken, async (req, res) => {
+  try {
+    const { tutorId } = req.params;
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Date parameter is required' });
+    }
+
+    const targetDate = new Date(date);
+    const dayOfWeek = targetDate.getDay(); // 0 = Sunday, 6 = Saturday
+    const dateString = targetDate.toISOString().split('T')[0];
+
+    // Get recurring availability for this day
+    const { data: recurringAvailability, error: recurringError } = await supabase
+      .from('tutor_availability')
+      .select('*')
+      .eq('tutor_id', tutorId)
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_available', true);
+
+    // Get specific date availability
+    const { data: specificAvailability, error: specificError } = await supabase
+      .from('tutor_date_availability')
+      .select('*')
+      .eq('tutor_id', tutorId)
+      .eq('specific_date', dateString)
+      .eq('is_available', true);
+
+    // Check if tutor has time off on this date
+    const { data: timeOff, error: timeOffError } = await supabase
+      .from('tutor_time_off')
+      .select('*')
+      .eq('tutor_id', tutorId)
+      .lte('start_date', dateString)
+      .gte('end_date', dateString);
+
+    if (recurringError || specificError || timeOffError) {
+      console.error('Availability fetch error:', { recurringError, specificError, timeOffError });
+      return res.status(500).json({ error: 'Failed to fetch availability' });
+    }
+
+    // If tutor has time off, return empty availability
+    if (timeOff && timeOff.length > 0) {
+      return res.json({ data: [] });
+    }
+
+    // Combine and format availability
+    const availability = [
+      ...(recurringAvailability || []).map(slot => ({
+        ...slot,
+        start_time: `${dateString}T${slot.start_time}:00`,
+        end_time: `${dateString}T${slot.end_time}:00`,
+        availability_type: 'recurring'
+      })),
+      ...(specificAvailability || []).map(slot => ({
+        ...slot,
+        start_time: `${dateString}T${slot.start_time}:00`,
+        end_time: `${dateString}T${slot.end_time}:00`,
+        availability_type: 'specific'
+      }))
+    ];
+
+    res.json({ data: availability });
+  } catch (error) {
+    console.error('Tutor availability error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Add tutor time off
+app.post('/time-off', verifyToken, async (req, res) => {
+  try {
+    if (req.user.userType !== 'tutor') {
+      return res.status(403).json({ error: 'Only tutors can add time off' });
+    }
+
+    const { error, value } = timeOffSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
+    const { data, error: insertError } = await supabase
+      .from('tutor_time_off')
+      .insert({
+        tutor_id: req.user.userId,
+        ...value
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Time off creation error:', insertError);
+      return res.status(500).json({ error: 'Failed to add time off' });
+    }
+
+    res.status(201).json({ data });
+  } catch (error) {
+    console.error('Time off error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update availability
+app.put('/availability/:id', verifyToken, async (req, res) => {
+  try {
+    if (req.user.userType !== 'tutor') {
+      return res.status(403).json({ error: 'Only tutors can update availability' });
+    }
+
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Check if availability belongs to this tutor
+    const { data: existing, error: checkError } = await supabase
+      .from('tutor_availability')
+      .select('*')
+      .eq('id', id)
+      .eq('tutor_id', req.user.userId)
+      .single();
+
+    if (checkError || !existing) {
+      return res.status(404).json({ error: 'Availability not found' });
+    }
+
+    const { data, error: updateError } = await supabase
+      .from('tutor_availability')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Availability update error:', updateError);
+      return res.status(500).json({ error: 'Failed to update availability' });
+    }
+
+    res.json({ data });
+  } catch (error) {
+    console.error('Availability update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete availability
+app.delete('/availability/:id', verifyToken, async (req, res) => {
+  try {
+    if (req.user.userType !== 'tutor') {
+      return res.status(403).json({ error: 'Only tutors can delete availability' });
+    }
+
+    const { id } = req.params;
+
+    // Check if availability belongs to this tutor
+    const { data: existing, error: checkError } = await supabase
+      .from('tutor_availability')
+      .select('*')
+      .eq('id', id)
+      .eq('tutor_id', req.user.userId)
+      .single();
+
+    if (checkError || !existing) {
+      return res.status(404).json({ error: 'Availability not found' });
+    }
+
+    const { error: deleteError } = await supabase
+      .from('tutor_availability')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Availability deletion error:', deleteError);
+      return res.status(500).json({ error: 'Failed to delete availability' });
+    }
+
+    res.json({ message: 'Availability deleted successfully' });
+  } catch (error) {
+    console.error('Availability deletion error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Helper functions
+function getBookingColor(status) {
+  switch (status) {
+    case 'confirmed': return '#007bff';
+    case 'completed': return '#28a745';
+    case 'cancelled': return '#dc3545';
+    case 'scheduled': return '#ffc107';
+    default: return '#6c757d';
   }
 }
 
-// Auto-sync completed bookings to calendar
-cron.schedule('0 */6 * * *', async () => {
+function generateNextOccurrence(dayOfWeek, time) {
+  const today = new Date();
+  const currentDay = today.getDay();
+  let daysUntilNext = dayOfWeek - currentDay;
+
+  if (daysUntilNext <= 0) {
+    daysUntilNext += 7;
+  }
+
+  const nextDate = new Date(today);
+  nextDate.setDate(today.getDate() + daysUntilNext);
+
+  const [hours, minutes] = time.split(':');
+  nextDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+  return nextDate.toISOString();
+}
+
+// Booking management endpoints
+app.put('/bookings/:id', verifyToken, async (req, res) => {
   try {
-    console.log('Syncing completed bookings to calendar...');
-    
-    // Get completed bookings that haven't been synced
-    const { data: completedBookings } = await supabase
+    const { id } = req.params;
+    const { start_time, end_time } = req.body;
+
+    // Get booking and verify user is involved
+    const { data: booking, error: fetchError } = await supabase
       .from('bookings')
-      .select('id, tutor_id, student_id, subject, level, start_time, end_time, location')
-      .eq('status', 'completed')
-      .is('calendar_synced', null);
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    for (const booking of completedBookings || []) {
-      try {
-        // Sync for tutor
-        await createCalendarEvent(booking.tutor_id, {
-          bookingId: booking.id,
-          title: `Tutoring Session - ${booking.subject}`,
-          description: `Completed tutoring session for ${booking.level} ${booking.subject}`,
-          startTime: booking.start_time,
-          endTime: booking.end_time,
-          location: booking.location
-        });
-
-        // Mark as synced
-        await supabase
-          .from('bookings')
-          .update({ calendar_synced: true })
-          .eq('id', booking.id);
-      } catch (error) {
-        console.error(`Calendar sync error for booking ${booking.id}:`, error);
-      }
+    if (fetchError || !booking) {
+      return res.status(404).json({ error: 'Booking not found' });
     }
 
-    console.log('Calendar sync completed');
+    if (booking.tutor_id !== req.user.userId && booking.student_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Update booking
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        start_time: start_time || booking.start_time,
+        end_time: end_time || booking.end_time,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    res.json({ data: updatedBooking });
   } catch (error) {
-    console.error('Calendar sync cron error:', error);
+    console.error('Booking update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/bookings/:id/reschedule', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { start_time, end_time, reschedule_reason } = req.body;
+
+    // Get booking and verify user is involved
+    const { data: booking, error: fetchError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (booking.tutor_id !== req.user.userId && booking.student_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Update booking
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        start_time,
+        end_time,
+        rescheduled_at: new Date().toISOString(),
+        notes: reschedule_reason
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    res.json({ data: updatedBooking });
+  } catch (error) {
+    console.error('Booking reschedule error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/bookings/:id/cancel', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cancellation_reason, cancellation_details } = req.body;
+
+    // Get booking and verify user is involved
+    const { data: booking, error: fetchError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (booking.tutor_id !== req.user.userId && booking.student_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Update booking status to cancelled
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancellation_reason,
+        notes: cancellation_details
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    res.json({ data: updatedBooking });
+  } catch (error) {
+    console.error('Booking cancellation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/bookings/:id/confirm', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get booking and verify user is involved
+    const { data: booking, error: fetchError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    if (booking.tutor_id !== req.user.userId && booking.student_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Update booking status to confirmed
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        status: 'confirmed',
+        confirmed_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    res.json({ data: updatedBooking });
+  } catch (error) {
+    console.error('Booking confirmation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get booking and verify user is involved
+    const { data: booking, error: fetchError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Only tutors can mark bookings as complete
+    if (booking.tutor_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Only tutors can mark bookings as complete' });
+    }
+
+    // Update booking status to completed
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    res.json({ data: updatedBooking });
+  } catch (error) {
+    console.error('Booking completion error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

@@ -234,8 +234,114 @@
                             : null
                         "
                       >
+                        <!-- Booking Offer Message -->
                         <div
-                          v-if="message.messageType === 'text'"
+                          v-if="message.messageType === 'booking_offer'"
+                          class="message-content booking-message booking-offer"
+                        >
+                          <div class="booking-header">
+                            <i class="fas fa-calendar-plus me-2"></i>
+                            <span class="booking-title">Booking Request</span>
+                          </div>
+                          <div class="booking-details">
+                            <div v-if="getBookingData(message)">
+                              <p class="mb-2">
+                                <strong>Session Type:</strong>
+                                {{ getBookingData(message).isOnline ? 'Online Session' : 'On-site Session' }}
+                              </p>
+                              <p v-if="!getBookingData(message).isOnline && getBookingData(message).tuteeLocation" class="mb-2">
+                                <strong>Location:</strong> {{ getBookingData(message).tuteeLocation }}
+                              </p>
+                              <p v-if="getBookingData(message).notes" class="mb-2">
+                                <strong>Notes:</strong> {{ getBookingData(message).notes }}
+                              </p>
+                            </div>
+                            <div class="booking-actions">
+                              <button
+                                v-if="message.senderId !== currentUserId && authStore.user?.user_type === 'tutor'"
+                                class="btn btn-primary btn-sm me-2"
+                                @click="handleBookingOffer(message)"
+                              >
+                                <i class="fas fa-calendar-check me-1"></i>
+                                View & Respond
+                              </button>
+                              <span class="booking-status text-warning">
+                                <i class="fas fa-clock me-1"></i>
+                                Awaiting response
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Booking Proposal Message -->
+                        <div
+                          v-else-if="message.messageType === 'booking_proposal'"
+                          class="message-content booking-message booking-proposal"
+                        >
+                          <div class="booking-header">
+                            <i class="fas fa-calendar-check me-2"></i>
+                            <span class="booking-title">Booking Proposal</span>
+                          </div>
+                          <div class="booking-details">
+                            <div v-if="getBookingData(message)">
+                              <p class="mb-2">
+                                <strong>Proposed Time:</strong>
+                                {{ formatDateTime(getBookingData(message).proposedTime) }}
+                              </p>
+                              <p v-if="getBookingData(message).finalLocation" class="mb-2">
+                                <strong>Location:</strong> {{ getBookingData(message).finalLocation }}
+                              </p>
+                            </div>
+                            <div class="booking-actions">
+                              <button
+                                v-if="message.senderId !== currentUserId && (authStore.user?.user_type === 'student' || authStore.user?.user_type === 'parent')"
+                                class="btn btn-success btn-sm me-2"
+                                @click="confirmBooking(message)"
+                              >
+                                <i class="fas fa-check me-1"></i>
+                                Accept & Book
+                              </button>
+                              <button
+                                v-if="message.senderId !== currentUserId"
+                                class="btn btn-outline-secondary btn-sm"
+                                @click="sendMessage('I would like to discuss alternative times')"
+                              >
+                                <i class="fas fa-comment me-1"></i>
+                                Discuss
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Booking Confirmation Message -->
+                        <div
+                          v-else-if="message.messageType === 'booking_confirmation'"
+                          class="message-content booking-message booking-confirmation"
+                        >
+                          <div class="booking-header">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span class="booking-title">Booking Confirmed!</span>
+                          </div>
+                          <div class="booking-details">
+                            <div v-if="getBookingData(message)">
+                              <p class="mb-2">
+                                <strong>Time:</strong>
+                                {{ formatDateTime(getBookingData(message).confirmedTime) }}
+                              </p>
+                              <p v-if="getBookingData(message).location" class="mb-2">
+                                <strong>Location:</strong> {{ getBookingData(message).location }}
+                              </p>
+                              <p class="mb-0 text-success">
+                                <i class="fas fa-check-circle me-1"></i>
+                                Session has been booked and added to calendar
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Regular Text Message -->
+                        <div
+                          v-else-if="message.messageType === 'text'"
                           class="message-content"
                         >
                           {{ message.content || "Empty message" }}
@@ -300,6 +406,31 @@
                 </div>
               </div>
 
+              <!-- Booking Action Buttons (only for tutees) -->
+              <div
+                v-if="selectedConversation && canBookSession"
+                class="booking-actions p-3 border-bottom bg-light"
+              >
+                <div class="d-flex gap-2">
+                  <button
+                    class="btn btn-primary flex-fill"
+                    @click="showBookingOfferModal = true"
+                    :disabled="isLoading"
+                  >
+                    <i class="fas fa-calendar-plus me-2"></i>
+                    Book Session
+                  </button>
+                  <button
+                    class="btn btn-outline-secondary flex-fill"
+                    @click="showCalendarModal = true"
+                    :disabled="isLoading"
+                  >
+                    <i class="fas fa-calendar me-2"></i>
+                    View Calendar
+                  </button>
+                </div>
+              </div>
+
               <!-- Message Input -->
               <div
                 v-if="selectedConversation"
@@ -331,6 +462,19 @@
                   >
                     <i class="fas fa-paperclip"></i>
                   </button>
+
+                  <!-- Booking Offer Button (only for tutees/parents talking to tutors) -->
+                  <button
+                    v-if="canBookSession"
+                    type="button"
+                    class="btn btn-outline-warning"
+                    @click="showBookingOfferModal = true"
+                    :disabled="isLoading"
+                    title="Send Booking Request"
+                  >
+                    <i class="fas fa-calendar-plus"></i>
+                  </button>
+
                   <button
                     type="submit"
                     class="btn btn-primary"
@@ -475,6 +619,302 @@
         </div>
       </div>
     </div>
+
+    <!-- Booking Offer Modal -->
+    <div v-if="showBookingOfferModal" class="modal-overlay" @click="showBookingOfferModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>
+            <i class="fas fa-calendar-plus me-2 text-primary"></i>
+            Book a Session
+          </h3>
+          <button @click="showBookingOfferModal = false" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="createBookingOffer">
+            <!-- Session Type -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Session Type</label>
+              <div class="btn-group w-100" role="group">
+                <input
+                  type="radio"
+                  class="btn-check"
+                  name="sessionType"
+                  id="online"
+                  v-model="bookingOffer.isOnline"
+                  :value="true"
+                />
+                <label class="btn btn-outline-primary" for="online">
+                  <i class="fas fa-video me-2"></i>Online Session
+                </label>
+                <input
+                  type="radio"
+                  class="btn-check"
+                  name="sessionType"
+                  id="onsite"
+                  v-model="bookingOffer.isOnline"
+                  :value="false"
+                />
+                <label class="btn btn-outline-primary" for="onsite">
+                  <i class="fas fa-map-marker-alt me-2"></i>On-site Session
+                </label>
+              </div>
+            </div>
+
+            <!-- Location (for on-site) -->
+            <div v-if="!bookingOffer.isOnline" class="mb-3">
+              <label class="form-label fw-bold">Preferred Location</label>
+              <input
+                type="text"
+                class="form-control"
+                v-model="bookingOffer.tuteeLocation"
+                placeholder="Enter your preferred location for the session"
+                required
+              />
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Additional Notes</label>
+              <textarea
+                class="form-control"
+                v-model="bookingOffer.notes"
+                rows="3"
+                placeholder="Any specific requirements, preferred timings, or questions..."
+              ></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary me-2"
+            @click="showBookingOfferModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="createBookingOffer"
+            :disabled="isCreatingBooking"
+          >
+            <span v-if="isCreatingBooking" class="spinner me-2"></span>
+            <i class="fas fa-paper-plane me-2"></i>
+            Send Booking Request
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar Modal -->
+    <div v-if="showCalendarModal" class="modal-overlay" @click="showCalendarModal = false">
+      <div class="modal-content calendar-modal" @click.stop>
+        <div class="modal-header">
+          <h3>
+            <i class="fas fa-calendar me-2 text-primary"></i>
+            Availability Calendar
+          </h3>
+          <button @click="showCalendarModal = false" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="calendar-container">
+            <div class="calendar-header">
+              <button class="btn btn-sm btn-outline-secondary" @click="previousMonth">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <h5 class="mb-0">{{ currentMonthYear }}</h5>
+              <button class="btn btn-sm btn-outline-secondary" @click="nextMonth">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+            <div class="calendar-grid">
+              <div class="calendar-weekdays">
+                <div v-for="day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']" :key="day" class="calendar-weekday">
+                  {{ day }}
+                </div>
+              </div>
+              <div class="calendar-days">
+                <div
+                  v-for="day in calendarDays"
+                  :key="day.date"
+                  class="calendar-day"
+                  :class="{
+                    'other-month': !day.currentMonth,
+                    'today': day.isToday,
+                    'has-availability': day.hasAvailability
+                  }"
+                  @click="selectDate(day)"
+                >
+                  {{ day.day }}
+                </div>
+              </div>
+            </div>
+            <div v-if="selectedDate" class="time-slots mt-3">
+              <h6>Available Time Slots for {{ selectedDateFormatted }}</h6>
+              <div class="time-slots-grid">
+                <button
+                  v-for="slot in timeSlots"
+                  :key="slot.time"
+                  class="btn btn-outline-primary btn-sm m-1"
+                  :class="{ 'active': selectedTimeSlot === slot.time }"
+                  @click="selectedTimeSlot = slot.time"
+                  :disabled="!slot.available"
+                >
+                  {{ slot.time }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary me-2"
+            @click="showCalendarModal = false"
+          >
+            Close
+          </button>
+          <button
+            v-if="canSendProposal"
+            type="button"
+            class="btn btn-primary"
+            @click="sendBookingProposal"
+            :disabled="!selectedTimeSlot || isSendingProposal"
+          >
+            <span v-if="isSendingProposal" class="spinner me-2"></span>
+            <i class="fas fa-paper-plane me-2"></i>
+            Send Proposal
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Booking Proposal Modal -->
+    <div v-if="showBookingProposalModal" class="modal-overlay" @click="showBookingProposalModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>
+            <i class="fas fa-calendar-check me-2 text-primary"></i>
+            Respond to Booking Request
+          </h3>
+          <button @click="showBookingProposalModal = false" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="selectedBookingOffer" class="booking-request-details mb-3">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">Booking Request Details</h6>
+                <p class="mb-2">
+                  <strong>Session Type:</strong>
+                  {{ selectedBookingOffer.isOnline ? 'Online Session' : 'On-site Session' }}
+                </p>
+                <p v-if="selectedBookingOffer.tuteeLocation" class="mb-2">
+                  <strong>Preferred Location:</strong> {{ selectedBookingOffer.tuteeLocation }}
+                </p>
+                <p v-if="selectedBookingOffer.notes" class="mb-0">
+                  <strong>Notes:</strong> {{ selectedBookingOffer.notes }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <form @submit.prevent="createBookingProposal">
+            <!-- Date & Time Selection -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Proposed Date & Time</label>
+              <div class="row">
+                <div class="col-md-6">
+                  <input
+                    type="date"
+                    class="form-control"
+                    v-model="bookingProposal.proposedDate"
+                    required
+                  />
+                </div>
+                <div class="col-md-6">
+                  <input
+                    type="time"
+                    class="form-control"
+                    v-model="bookingProposal.proposedTime"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Location Choice -->
+            <div v-if="!selectedBookingOffer.isOnline" class="mb-3">
+              <label class="form-label fw-bold">Session Location</label>
+              <div class="form-check mb-2">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  name="locationChoice"
+                  id="useTuteeLocation"
+                  v-model="bookingProposal.locationChoice"
+                  value="tutee"
+                />
+                <label class="form-check-label" for="useTuteeLocation">
+                  Use tutee's suggested location: {{ selectedBookingOffer.tuteeLocation }}
+                </label>
+              </div>
+              <div class="form-check mb-2">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  name="locationChoice"
+                  id="useTutorLocation"
+                  v-model="bookingProposal.locationChoice"
+                  value="tutor"
+                />
+                <label class="form-check-label" for="useTutorLocation">
+                  Use my location
+                </label>
+              </div>
+              <div v-if="bookingProposal.locationChoice === 'tutor'" class="mt-2">
+                <input
+                  type="text"
+                  class="form-control"
+                  v-model="bookingProposal.tutorLocation"
+                  placeholder="Enter your location"
+                />
+              </div>
+            </div>
+
+            <!-- Additional Notes -->
+            <div class="mb-3">
+              <label class="form-label fw-bold">Additional Notes (Optional)</label>
+              <textarea
+                class="form-control"
+                v-model="bookingProposal.notes"
+                rows="2"
+                placeholder="Any additional information for the tutee..."
+              ></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary me-2"
+            @click="showBookingProposalModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="createBookingProposal"
+            :disabled="isCreatingProposal"
+          >
+            <span v-if="isCreatingProposal" class="spinner me-2"></span>
+            <i class="fas fa-paper-plane me-2"></i>
+            Send Proposal
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -504,6 +944,37 @@ export default {
     const messageToDelete = ref(null);
     const isDeleting = ref(false);
 
+    // Booking variables
+    const showBookingOfferModal = ref(false);
+    const showCalendarModal = ref(false);
+    const showBookingProposalModal = ref(false);
+    const isCreatingBooking = ref(false);
+    const isCreatingProposal = ref(false);
+    const isSendingProposal = ref(false);
+    const selectedBookingOffer = ref(null);
+
+    // Booking offer form data
+    const bookingOffer = ref({
+      isOnline: true,
+      tuteeLocation: '',
+      notes: ''
+    });
+
+    // Booking proposal form data
+    const bookingProposal = ref({
+      proposedDate: '',
+      proposedTime: '',
+      locationChoice: 'tutee',
+      tutorLocation: '',
+      notes: ''
+    });
+
+    // Calendar variables
+    const currentMonth = ref(new Date().getMonth());
+    const currentYear = ref(new Date().getFullYear());
+    const selectedDate = ref(null);
+    const selectedTimeSlot = ref(null);
+
     const filteredConversations = computed(() => {
       if (!searchQuery.value) return conversations.value;
       return conversations.value.filter((conv) =>
@@ -524,6 +995,99 @@ export default {
             .toLowerCase()
             .includes(participantSearchQuery.value.toLowerCase())
       );
+    });
+
+    // Check if current user can book sessions (student/parent talking to tutor)
+    const canBookSession = computed(() => {
+      if (!selectedConversation.value || !authStore.user) return false;
+
+      const currentUserType = authStore.user.user_type;
+      const participantType = selectedConversation.value.participant.type;
+
+      // Students and parents can book sessions with tutors
+      return (
+        (currentUserType === 'student' || currentUserType === 'parent') &&
+        participantType === 'tutor'
+      );
+    });
+
+    // Calendar computed properties
+    const currentMonthYear = computed(() => {
+      const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      return `${months[currentMonth.value]} ${currentYear.value}`;
+    });
+
+    const selectedDateFormatted = computed(() => {
+      if (!selectedDate.value) return '';
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      return selectedDate.value.toLocaleDateString(undefined, options);
+    });
+
+    const calendarDays = computed(() => {
+      const firstDay = new Date(currentYear.value, currentMonth.value, 1).getDay();
+      const daysInMonth = new Date(currentYear.value, currentMonth.value + 1, 0).getDate();
+      const daysInPrevMonth = new Date(currentYear.value, currentMonth.value, 0).getDate();
+
+      const days = [];
+      const today = new Date();
+
+      // Previous month days
+      for (let i = firstDay - 1; i >= 0; i--) {
+        days.push({
+          day: daysInPrevMonth - i,
+          date: new Date(currentYear.value, currentMonth.value - 1, daysInPrevMonth - i),
+          currentMonth: false,
+          isToday: false,
+          hasAvailability: false
+        });
+      }
+
+      // Current month days
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(currentYear.value, currentMonth.value, day);
+        days.push({
+          day,
+          date,
+          currentMonth: true,
+          isToday: date.toDateString() === today.toDateString(),
+          hasAvailability: Math.random() > 0.3 // Simulate some availability
+        });
+      }
+
+      // Next month days
+      const remainingDays = 42 - days.length; // 6 weeks
+      for (let day = 1; day <= remainingDays; day++) {
+        days.push({
+          day,
+          date: new Date(currentYear.value, currentMonth.value + 1, day),
+          currentMonth: false,
+          isToday: false,
+          hasAvailability: false
+        });
+      }
+
+      return days;
+    });
+
+    const timeSlots = computed(() => {
+      const slots = [];
+      for (let hour = 9; hour <= 21; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          slots.push({
+            time,
+            available: Math.random() > 0.4 // Simulate availability
+          });
+        }
+      }
+      return slots;
+    });
+
+    const canSendProposal = computed(() => {
+      return authStore.user?.user_type === 'tutor' && selectedBookingOffer.value;
     });
 
     const formatTime = (dateString) => {
@@ -1305,6 +1869,264 @@ export default {
       });
     };
 
+    // Booking methods
+    const createBookingOffer = async () => {
+      if (!selectedConversation.value) return;
+
+      isCreatingBooking.value = true;
+      try {
+        const response = await fetch('/api/messaging/booking-offers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authStore.token}`
+          },
+          body: JSON.stringify({
+            conversationId: selectedConversation.value.id,
+            isOnline: bookingOffer.value.isOnline,
+            tuteeLocation: bookingOffer.value.tuteeLocation,
+            notes: bookingOffer.value.notes
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create booking offer');
+        }
+
+        const data = await response.json();
+        console.log('Booking offer created:', data);
+
+        // Reset form and close modal
+        bookingOffer.value = {
+          isOnline: true,
+          tuteeLocation: '',
+          notes: ''
+        };
+        showBookingOfferModal.value = false;
+
+        // Show success message
+        alert('Booking request sent successfully!');
+      } catch (error) {
+        console.error('Error creating booking offer:', error);
+        alert('Failed to send booking request. Please try again.');
+      } finally {
+        isCreatingBooking.value = false;
+      }
+    };
+
+    const createBookingProposal = async () => {
+      if (!selectedBookingOffer.value) return;
+
+      // Validate required fields
+      if (!bookingProposal.value.proposedDate) {
+        alert('Please select a date for the booking');
+        return;
+      }
+      if (!bookingProposal.value.proposedTime) {
+        alert('Please select a time for the booking');
+        return;
+      }
+
+      isCreatingProposal.value = true;
+      try {
+        const proposedDateTime = new Date(`${bookingProposal.value.proposedDate}T${bookingProposal.value.proposedTime}`);
+
+        // Check if the date is valid
+        if (isNaN(proposedDateTime.getTime())) {
+          throw new Error('Invalid date or time selected');
+        }
+
+        let finalLocation = '';
+        if (selectedBookingOffer.value.isOnline) {
+          finalLocation = 'Online Session';
+        } else if (bookingProposal.value.locationChoice === 'tutee') {
+          finalLocation = selectedBookingOffer.value.tuteeLocation;
+        } else {
+          finalLocation = bookingProposal.value.tutorLocation;
+          if (!finalLocation) {
+            alert('Please enter a location for the session');
+            isCreatingProposal.value = false;
+            return;
+          }
+        }
+
+        const response = await fetch('/api/messaging/booking-proposals', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authStore.token}`
+          },
+          body: JSON.stringify({
+            bookingOfferId: selectedBookingOffer.value.id,
+            proposedTime: proposedDateTime.toISOString(),
+            tutorLocation: bookingProposal.value.tutorLocation,
+            finalLocation: finalLocation
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Backend error:', errorData);
+          throw new Error(errorData.error || 'Failed to create booking proposal');
+        }
+
+        const data = await response.json();
+        console.log('Booking proposal created:', data);
+
+        // Reset form and close modal
+        bookingProposal.value = {
+          proposedDate: '',
+          proposedTime: '',
+          locationChoice: 'tutee',
+          tutorLocation: '',
+          notes: ''
+        };
+        showBookingProposalModal.value = false;
+        selectedBookingOffer.value = null;
+
+        // Show success message
+        alert('Booking proposal sent successfully!');
+      } catch (error) {
+        console.error('Error creating booking proposal:', error);
+        alert('Failed to send booking proposal. Please try again.');
+      } finally {
+        isCreatingProposal.value = false;
+      }
+    };
+
+    // Calendar methods
+    const previousMonth = () => {
+      if (currentMonth.value === 0) {
+        currentMonth.value = 11;
+        currentYear.value--;
+      } else {
+        currentMonth.value--;
+      }
+    };
+
+    const nextMonth = () => {
+      if (currentMonth.value === 11) {
+        currentMonth.value = 0;
+        currentYear.value++;
+      } else {
+        currentMonth.value++;
+      }
+    };
+
+    const selectDate = (day) => {
+      if (day.hasAvailability) {
+        selectedDate.value = day.date;
+        selectedTimeSlot.value = null;
+      }
+    };
+
+    const sendBookingProposal = async () => {
+      if (!selectedDate.value || !selectedTimeSlot.value) return;
+
+      isSendingProposal.value = true;
+      try {
+        const proposedDateTime = new Date(selectedDate.value);
+        const [hours, minutes] = selectedTimeSlot.value.split(':');
+        proposedDateTime.setHours(parseInt(hours), parseInt(minutes));
+
+        const response = await fetch('/api/messaging/booking-proposals', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authStore.token}`
+          },
+          body: JSON.stringify({
+            bookingOfferId: selectedBookingOffer.value?.id,
+            proposedTime: proposedDateTime.toISOString(),
+            tutorLocation: '',
+            finalLocation: 'Tutor Location'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create booking proposal');
+        }
+
+        showCalendarModal.value = false;
+        selectedDate.value = null;
+        selectedTimeSlot.value = null;
+
+        alert('Booking proposal sent successfully!');
+      } catch (error) {
+        console.error('Error sending booking proposal:', error);
+        alert('Failed to send booking proposal. Please try again.');
+      } finally {
+        isSendingProposal.value = false;
+      }
+    };
+
+    // Helper methods for booking messages
+    const getBookingData = (message) => {
+      try {
+        return JSON.parse(message.content);
+      } catch (error) {
+        console.error('Error parsing booking data:', error);
+        return null;
+      }
+    };
+
+    const formatDateTime = (dateTimeString) => {
+      if (!dateTimeString) return '';
+      const date = new Date(dateTimeString);
+      return date.toLocaleString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const handleBookingOffer = (message) => {
+      const bookingData = getBookingData(message);
+      if (bookingData) {
+        selectedBookingOffer.value = {
+          id: bookingData.bookingOfferId,
+          isOnline: bookingData.isOnline,
+          tuteeLocation: bookingData.tuteeLocation,
+          notes: bookingData.notes
+        };
+        showBookingProposalModal.value = true;
+      }
+    };
+
+    const confirmBooking = async (message) => {
+      const bookingData = getBookingData(message);
+      if (!bookingData) return;
+
+      try {
+        const response = await fetch('/api/messaging/booking-confirmations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authStore.token}`
+          },
+          body: JSON.stringify({
+            bookingOfferId: bookingData.bookingOfferId
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to confirm booking');
+        }
+
+        const data = await response.json();
+        console.log('Booking confirmed:', data);
+
+        // Show success message
+        alert('Booking confirmed successfully! The session has been added to your calendar.');
+      } catch (error) {
+        console.error('Error confirming booking:', error);
+        alert('Failed to confirm booking. Please try again.');
+      }
+    };
+
     // Make functions globally available for context menu
     window.deleteMessage = deleteMessage;
     window.copyMessage = copyMessage;
@@ -1716,6 +2538,36 @@ export default {
       isDeleting,
       confirmDelete,
       cancelDelete,
+      // Booking related
+      canBookSession,
+      showBookingOfferModal,
+      showCalendarModal,
+      showBookingProposalModal,
+      isCreatingBooking,
+      isCreatingProposal,
+      isSendingProposal,
+      selectedBookingOffer,
+      bookingOffer,
+      bookingProposal,
+      createBookingOffer,
+      createBookingProposal,
+      // Calendar related
+      currentMonthYear,
+      calendarDays,
+      selectedDate,
+      selectedDateFormatted,
+      timeSlots,
+      selectedTimeSlot,
+      canSendProposal,
+      previousMonth,
+      nextMonth,
+      selectDate,
+      sendBookingProposal,
+      // Booking message helpers
+      getBookingData,
+      formatDateTime,
+      handleBookingOffer,
+      confirmBooking,
     };
   },
 };
@@ -2400,5 +3252,463 @@ i.text-primary {
   display: flex !important;
   flex-direction: column !important;
   position: relative !important;
+}
+
+/* Booking Actions */
+.booking-actions {
+  background: linear-gradient(135deg, rgba(255, 140, 66, 0.1), rgba(255, 210, 63, 0.05)) !important;
+  border-bottom: 2px solid var(--cyber-orange, #ff8c42) !important;
+}
+
+.booking-actions .btn {
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.booking-actions .btn-primary {
+  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+  border: 2px solid var(--cyber-orange, #ff8c42) !important;
+}
+
+.booking-actions .btn-outline-secondary {
+  background: transparent !important;
+  border: 2px solid var(--cyber-grey-light, #4a4a4a) !important;
+  color: var(--cyber-text, #ffffff) !important;
+}
+
+.booking-actions .btn-outline-secondary:hover {
+  background: rgba(74, 74, 74, 0.3) !important;
+  border-color: var(--cyber-orange, #ff8c42) !important;
+  color: var(--cyber-orange, #ff8c42) !important;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: #242424;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid #424242;
+}
+
+.modal-content.calendar-modal {
+  max-width: 600px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #424242;
+  background: #2c2c2c;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #a0aec0;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #ffffff;
+  background: #424242;
+}
+
+.modal-body {
+  padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: #242424;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 20px;
+  border-top: 1px solid #424242;
+  background: #242424;
+  border-radius: 0 0 12px 12px;
+}
+
+.modal-footer .btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.modal-footer .btn-secondary {
+  background: #6c757d;
+  border: 1px solid #6c757d;
+  color: white;
+}
+
+.modal-footer .btn-secondary:hover {
+  background: #5a6268;
+  border-color: #545b62;
+}
+
+.modal-footer .btn-primary {
+  background: linear-gradient(45deg, #ff8c42, #ffd23f);
+  border: 2px solid #ff8c42;
+  color: white;
+}
+
+.modal-footer .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 140, 66, 0.4);
+}
+
+/* Calendar Styles */
+.calendar-container {
+  color: #ffffff;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.calendar-header h5 {
+  margin: 0;
+  color: #ffd23f;
+  font-weight: 600;
+}
+
+.calendar-grid {
+  display: grid;
+  gap: 2px;
+  background: #424242;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #2c2c2c;
+}
+
+.calendar-weekday {
+  padding: 10px 5px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 12px;
+  color: #a0aec0;
+  border-right: 1px solid #424242;
+}
+
+.calendar-weekday:last-child {
+  border-right: none;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.calendar-day {
+  padding: 15px 5px;
+  text-align: center;
+  cursor: pointer;
+  background: #242424;
+  border-right: 1px solid #424242;
+  transition: all 0.2s ease;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-day:last-child {
+  border-right: none;
+}
+
+.calendar-day:hover {
+  background: #2c2c2c;
+}
+
+.calendar-day.other-month {
+  color: #666;
+  background: #1a1a1a;
+}
+
+.calendar-day.today {
+  background: rgba(255, 140, 66, 0.2);
+  color: #ff8c42;
+  font-weight: 600;
+}
+
+.calendar-day.has-availability {
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.calendar-day.has-availability:hover {
+  background: rgba(76, 175, 80, 0.2);
+}
+
+.time-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.time-slots-grid .btn {
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.time-slots-grid .btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.time-slots-grid .btn.active {
+  background: linear-gradient(45deg, #ff8c42, #ffd23f) !important;
+  border-color: #ff8c42 !important;
+  color: white !important;
+}
+
+/* Booking Request Details */
+.booking-request-details .card {
+  background: #2c2c2c;
+  border: 1px solid #424242;
+}
+
+.booking-request-details .card-title {
+  color: #ffd23f;
+  font-weight: 600;
+}
+
+.booking-request-details .card-body {
+  color: #ffffff;
+}
+
+.booking-request-details strong {
+  color: #ff8c42;
+}
+
+/* Form Controls in Modal */
+.form-label {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.form-control, .form-select {
+  background: #2c2c2c;
+  border: 1px solid #424242;
+  color: #ffffff;
+  border-radius: 6px;
+}
+
+.form-control:focus, .form-select:focus {
+  background: #2c2c2c;
+  border-color: #ff8c42;
+  box-shadow: 0 0 0 2px rgba(255, 140, 66, 0.2);
+  color: #ffffff;
+}
+
+.form-control::placeholder {
+  color: #a0aec0;
+}
+
+.form-check-input {
+  background-color: #2c2c2c;
+  border-color: #424242;
+}
+
+.form-check-input:checked {
+  background-color: #ff8c42;
+  border-color: #ff8c42;
+}
+
+.form-check-label {
+  color: #ffffff;
+}
+
+.btn-group .btn-check:checked + .btn {
+  background: linear-gradient(45deg, #ff8c42, #ffd23f) !important;
+  border-color: #ff8c42 !important;
+  color: white !important;
+}
+
+/* Booking Message Styles */
+.booking-message {
+  background: #2c2c2c !important;
+  border: 1px solid #424242 !important;
+  border-radius: 12px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  max-width: 400px;
+}
+
+.booking-header {
+  background: linear-gradient(45deg, rgba(255, 140, 66, 0.2), rgba(255, 210, 63, 0.1));
+  padding: 12px 16px;
+  border-bottom: 1px solid #424242;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.booking-offer .booking-header {
+  background: linear-gradient(45deg, rgba(255, 140, 66, 0.2), rgba(255, 210, 63, 0.1));
+  border-bottom: 1px solid #ff8c42;
+}
+
+.booking-proposal .booking-header {
+  background: linear-gradient(45deg, rgba(40, 167, 69, 0.2), rgba(40, 167, 69, 0.1));
+  border-bottom: 1px solid #28a745;
+}
+
+.booking-confirmation .booking-header {
+  background: linear-gradient(45deg, rgba(40, 167, 69, 0.2), rgba(40, 167, 69, 0.1));
+  border-bottom: 1px solid #28a745;
+}
+
+.booking-title {
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.booking-details {
+  padding: 16px;
+  color: #ffffff;
+}
+
+.booking-details p {
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.booking-details strong {
+  color: #ff8c42;
+  font-weight: 600;
+}
+
+.booking-actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #424242;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.booking-status {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.booking-status.text-warning {
+  color: #ffc107 !important;
+}
+
+.booking-status.text-success {
+  color: #28a745 !important;
+}
+
+.booking-actions .btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.booking-actions .btn-primary {
+  background: linear-gradient(45deg, #ff8c42, #ffd23f) !important;
+  border: 1px solid #ff8c42 !important;
+  color: white !important;
+}
+
+.booking-actions .btn-success {
+  background: linear-gradient(45deg, #28a745, #20c997) !important;
+  border: 1px solid #28a745 !important;
+  color: white !important;
+}
+
+.booking-actions .btn-outline-secondary {
+  background: transparent !important;
+  border: 1px solid #6c757d !important;
+  color: #6c757d !important;
+}
+
+.booking-actions .btn-outline-secondary:hover {
+  background: #6c757d !important;
+  color: white !important;
+}
+
+/* Message bubble adjustments for booking messages */
+.message-bubble.booking-message {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(0);
+  transition: all 0.3s ease;
+}
+
+.message-bubble.booking-message:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive booking messages */
+@media (max-width: 768px) {
+  .booking-message {
+    max-width: 100%;
+  }
+
+  .booking-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .booking-actions .btn {
+    width: 100%;
+  }
 }
 </style>

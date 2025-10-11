@@ -14,6 +14,25 @@ CREATE TABLE public.availability_slots (
   CONSTRAINT availability_slots_tutor_id_fkey FOREIGN KEY (tutor_id) REFERENCES public.users(id),
   CONSTRAINT availability_slots_centre_id_fkey FOREIGN KEY (centre_id) REFERENCES public.users(id)
 );
+CREATE TABLE public.booking_offers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  conversation_id uuid,
+  tutee_id uuid,
+  tutor_id uuid,
+  is_online boolean DEFAULT false,
+  tutee_location text,
+  tutor_location text,
+  final_location text,
+  proposed_time timestamp with time zone,
+  notes text,
+  status text DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'proposed'::text, 'confirmed'::text, 'cancelled'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT booking_offers_pkey PRIMARY KEY (id),
+  CONSTRAINT booking_offers_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id),
+  CONSTRAINT booking_offers_tutee_id_fkey FOREIGN KEY (tutee_id) REFERENCES public.users(id),
+  CONSTRAINT booking_offers_tutor_id_fkey FOREIGN KEY (tutor_id) REFERENCES public.users(id)
+);
 CREATE TABLE public.bookings (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   tutor_id uuid,
@@ -34,6 +53,11 @@ CREATE TABLE public.bookings (
   cancellation_reason text,
   rescheduled_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
+  title text DEFAULT 'Tutoring Session'::text,
+  description text,
+  google_calendar_event_id text,
+  google_meet_link text,
+  zoom_meeting_link text,
   CONSTRAINT bookings_pkey PRIMARY KEY (id),
   CONSTRAINT bookings_tutor_id_fkey FOREIGN KEY (tutor_id) REFERENCES public.users(id),
   CONSTRAINT bookings_centre_id_fkey FOREIGN KEY (centre_id) REFERENCES public.users(id),
@@ -48,6 +72,20 @@ CREATE TABLE public.calendar_events (
   CONSTRAINT calendar_events_pkey PRIMARY KEY (id),
   CONSTRAINT calendar_events_booking_id_fkey FOREIGN KEY (booking_id) REFERENCES public.bookings(id),
   CONSTRAINT calendar_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.calendar_sync_status (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  provider text NOT NULL CHECK (provider = ANY (ARRAY['google'::text, 'outlook'::text, 'apple'::text])),
+  external_calendar_id text,
+  sync_token text,
+  last_sync_at timestamp with time zone,
+  sync_status text DEFAULT 'disconnected'::text CHECK (sync_status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'syncing'::text, 'error'::text])),
+  error_message text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT calendar_sync_status_pkey PRIMARY KEY (id),
+  CONSTRAINT calendar_sync_status_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.calendar_tokens (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -138,14 +176,16 @@ CREATE TABLE public.messages (
   conversation_id uuid,
   sender_id uuid,
   content text NOT NULL,
-  message_type text DEFAULT 'text'::text CHECK (message_type = ANY (ARRAY['text'::text, 'image'::text, 'file'::text, 'document'::text])),
+  message_type text DEFAULT 'text'::text CHECK (message_type = ANY (ARRAY['text'::text, 'image'::text, 'file'::text, 'document'::text, 'booking_offer'::text, 'booking_proposal'::text, 'booking_confirmation'::text])),
   file_name text,
   file_size integer,
   read_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   deleted_at timestamp with time zone,
   archived_at timestamp with time zone,
+  booking_offer_id uuid,
   CONSTRAINT messages_pkey PRIMARY KEY (id),
+  CONSTRAINT messages_booking_offer_id_fkey FOREIGN KEY (booking_offer_id) REFERENCES public.booking_offers(id),
   CONSTRAINT messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES public.conversations(id),
   CONSTRAINT messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.users(id)
 );
@@ -254,6 +294,36 @@ CREATE TABLE public.travel_times (
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT travel_times_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.tutor_availability (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tutor_id uuid,
+  day_of_week integer NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+  start_time time without time zone NOT NULL,
+  end_time time without time zone NOT NULL,
+  is_available boolean DEFAULT true,
+  recurrence_type text DEFAULT 'weekly'::text CHECK (recurrence_type = ANY (ARRAY['weekly'::text, 'biweekly'::text, 'monthly'::text])),
+  timezone text NOT NULL DEFAULT 'Asia/Singapore'::text,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT tutor_availability_pkey PRIMARY KEY (id),
+  CONSTRAINT tutor_availability_tutor_id_fkey FOREIGN KEY (tutor_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.tutor_date_availability (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tutor_id uuid,
+  specific_date date NOT NULL,
+  start_time time without time zone NOT NULL,
+  end_time time without time zone NOT NULL,
+  is_available boolean DEFAULT true,
+  location text,
+  hourly_rate numeric,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT tutor_date_availability_pkey PRIMARY KEY (id),
+  CONSTRAINT tutor_date_availability_tutor_id_fkey FOREIGN KEY (tutor_id) REFERENCES public.users(id)
+);
 CREATE TABLE public.tutor_earnings (
   id integer NOT NULL DEFAULT nextval('tutor_earnings_id_seq'::regclass),
   tutor_id integer,
@@ -312,6 +382,18 @@ CREATE TABLE public.tutor_profiles (
   bulk_package text DEFAULT ''::text,
   CONSTRAINT tutor_profiles_pkey PRIMARY KEY (id),
   CONSTRAINT tutor_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.tutor_time_off (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  tutor_id uuid,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  reason text,
+  is_recurring_annually boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT tutor_time_off_pkey PRIMARY KEY (id),
+  CONSTRAINT tutor_time_off_tutor_id_fkey FOREIGN KEY (tutor_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.user_badges (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
