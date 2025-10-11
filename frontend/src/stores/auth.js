@@ -8,7 +8,8 @@ export const useAuthStore = defineStore('auth', () => {
     const isLoading = ref(false)
 
     const isAuthenticated = computed(() => {
-        const authenticated = !!session.value && !!user.value
+        // Consider authenticated if we have a valid session, even if user data is still loading
+        const authenticated = !!session.value
         console.log('🔍 Auth state check:', {
             hasSession: !!session.value,
             hasUser: !!user.value,

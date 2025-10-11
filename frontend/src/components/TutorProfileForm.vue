@@ -171,46 +171,58 @@
 
         <div class="mb-3">
           <label class="form-label">Qualifications</label>
-          <div v-for="(qual, index) in tutorProfile.qualifications" :key="index" class="qualification-item mb-2">
-            <div class="row g-2">
-              <div class="col-md-4">
+          <div v-for="(qual, index) in tutorProfile.qualifications" :key="index" class="qualification-item mb-4">
+            <!-- Degree Row - Full Width -->
+            <div class="row mb-3">
+              <div class="col-12">
+                <label class="form-label text-muted small">Degree/Certification</label>
                 <input
                   type="text"
                   v-model="qual.degree"
                   class="form-control"
                   :disabled="!editMode"
-                  placeholder="Degree/Certification"
+                  placeholder="e.g., Bachelor of Science, Master of Arts, PhD"
                 />
               </div>
-              <div class="col-md-4">
+            </div>
+
+            <!-- University & Year Row - 70% / 30% split -->
+            <div class="row">
+              <!-- University - 70% width -->
+              <div class="col-md-8 mb-2 mb-md-0">
+                <label class="form-label text-muted small">Institution</label>
                 <input
                   type="text"
                   v-model="qual.institution"
                   class="form-control"
                   :disabled="!editMode"
-                  placeholder="Institution"
+                  placeholder="e.g., National University of Singapore, NUS, NTU"
                 />
               </div>
-              <div class="col-md-3">
-                <input
-                  type="number"
-                  v-model.number="qual.year"
-                  class="form-control"
-                  :disabled="!editMode"
-                  placeholder="Year"
-                  min="1950"
-                  :max="new Date().getFullYear()"
-                />
-              </div>
-              <div class="col-md-1">
-                <button
-                  v-if="editMode"
-                  @click="removeQualification(index)"
-                  class="btn btn-outline-danger btn-sm"
-                  type="button"
-                >
-                  <i class="fas fa-trash"></i>
-                </button>
+
+              <!-- Year & Delete - 30% width -->
+              <div class="col-md-4">
+                <label class="form-label text-muted small">Year</label>
+                <div class="input-group">
+                  <input
+                    type="number"
+                    v-model.number="qual.year"
+                    class="form-control"
+                    :disabled="!editMode"
+                    placeholder="Year"
+                    min="1950"
+                    :max="new Date().getFullYear()"
+                  />
+                  <button
+                    v-if="editMode"
+                    @click="removeQualification(index)"
+                    class="btn btn-outline-danger"
+                    type="button"
+                    title="Remove qualification"
+                  >
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -306,43 +318,7 @@
           </div>
         </div>
 
-        <!-- Package Rates -->
-        <div class="mt-4">
-          <label class="form-label">Package Rates per Month</label>
-          <div class="row">
-            <div class="col-md-4 mb-3">
-              <input
-                type="text"
-                v-model="tutorProfile.monthlyPackage"
-                class="form-control"
-                :disabled="!editMode"
-                placeholder="e.g., $800/month"
-              />
-              <small class="text-muted">Monthly package rate</small>
-            </div>
-            <div class="col-md-4 mb-3">
-              <input
-                type="text"
-                v-model="tutorProfile.weeklyPackage"
-                class="form-control"
-                :disabled="!editMode"
-                placeholder="e.g., $200/week"
-              />
-              <small class="text-muted">Weekly package rate</small>
-            </div>
-            <div class="col-md-4 mb-3">
-              <input
-                type="text"
-                v-model="tutorProfile.bulkPackage"
-                class="form-control"
-                :disabled="!editMode"
-                placeholder="e.g., $500 for 10 sessions"
-              />
-              <small class="text-muted">Bulk session package</small>
-            </div>
-          </div>
         </div>
-      </div>
     </div>
 
     <!-- Location -->
@@ -486,9 +462,6 @@ export default {
       specialties: [],
       hourlyRate: null,
       groupRate: null,
-      monthlyPackage: '',
-      weeklyPackage: '',
-      bulkPackage: '',
       locationAddress: '',
       preferredLocations: []
     })
@@ -515,10 +488,9 @@ export default {
       if (tutorProfile.qualifications.length > 0) completeness += 10
       if (tutorProfile.experienceYears > 0) completeness += 10
 
-      // Rates (15 points)
+      // Rates (12 points)
       if (tutorProfile.hourlyRate) completeness += 10
       if (tutorProfile.groupRate) completeness += 2
-      if (tutorProfile.monthlyPackage || tutorProfile.weeklyPackage || tutorProfile.bulkPackage) completeness += 3
 
       // Location (10 points)
       if (tutorProfile.locationAddress) completeness += 10
@@ -594,16 +566,22 @@ export default {
             specialties: profile.specialties || [],
             hourlyRate: profile.hourly_rate || null,
             groupRate: profile.group_rate || null,
-            monthlyPackage: profile.monthly_package || '',
-            weeklyPackage: profile.weekly_package || '',
-            bulkPackage: profile.bulk_package || '',
             locationAddress: profile.location?.address || '',
             preferredLocations: profile.preferred_locations || []
           })
+
+          // Ensure there's always at least one qualification field visible after loading
+          if (tutorProfile.qualifications.length === 0) {
+            addQualification()
+          }
         }
       } catch (error) {
         // Profile doesn't exist yet, that's okay
         console.log('No existing tutor profile found')
+        // Still ensure there's at least one qualification field for new profiles
+        if (tutorProfile.qualifications.length === 0) {
+          addQualification()
+        }
       }
     }
 
@@ -621,14 +599,13 @@ export default {
           teachingMode: tutorProfile.teachingMode,
           languages: tutorProfile.languages,
           experienceYears: tutorProfile.experienceYears,
-          qualifications: tutorProfile.qualifications,
+          qualifications: tutorProfile.qualifications.filter(qual =>
+            qual.degree.trim() || qual.institution.trim() || qual.year
+          ),
           previousExperience: tutorProfile.previousExperience,
           specialties: tutorProfile.specialties,
           hourlyRate: tutorProfile.hourlyRate,
           groupRate: tutorProfile.groupRate,
-          monthlyPackage: tutorProfile.monthlyPackage,
-          weeklyPackage: tutorProfile.weeklyPackage,
-          bulkPackage: tutorProfile.bulkPackage,
           location: {
             address: tutorProfile.locationAddress
           },
@@ -649,7 +626,12 @@ export default {
     }
 
     onMounted(() => {
+      console.log('🎓 TutorProfileForm mounted - placeholders should be visible')
       loadTutorProfile()
+      // Ensure there's always at least one qualification field visible
+      if (tutorProfile.qualifications.length === 0) {
+        addQualification()
+      }
     })
 
     return {
@@ -724,6 +706,17 @@ export default {
 .form-control:disabled, .form-select:disabled {
   background: rgba(42, 42, 42, 0.5) !important;
   opacity: 0.7;
+}
+
+/* Fix placeholder visibility */
+.form-control::placeholder {
+  color: #999999 !important;
+  opacity: 1 !important;
+}
+
+.form-control:disabled::placeholder {
+  color: #666666 !important;
+  opacity: 0.7 !important;
 }
 
 .btn-primary {
