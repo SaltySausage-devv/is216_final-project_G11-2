@@ -123,9 +123,9 @@
                       required
                     >
                       <option value="">Select your role</option>
-                      <option value="student">Students</option>
-                      <option value="parent">Parents</option>
-                      <option value="tutor">Tutors</option>
+                      <option value="student">Student</option>
+                      <option value="parent">Parent</option>
+                      <option value="tutor">Tutor</option>
                     </select>
                   </div>
                   <div v-if="errors.userType" class="cyberpunk-error-message">
@@ -1158,6 +1158,30 @@ export default {
 
 .cyberpunk-input::placeholder {
   color: var(--cyber-text-dim);
+}
+
+/* Fix select dropdown styling */
+.cyberpunk-input select,
+.cyberpunk-input option {
+  background: rgba(42, 42, 42, 0.95) !important;
+  color: var(--cyber-text) !important;
+}
+
+select.cyberpunk-input {
+  cursor: pointer;
+}
+
+select.cyberpunk-input option {
+  background: rgba(42, 42, 42, 0.98) !important;
+  color: var(--cyber-text) !important;
+  padding: 0.5rem !important;
+}
+
+select.cyberpunk-input option:hover,
+select.cyberpunk-input option:focus,
+select.cyberpunk-input option:checked {
+  background: var(--cyber-orange) !important;
+  color: white !important;
 }
 
 .cyberpunk-toggle-btn {

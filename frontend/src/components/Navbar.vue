@@ -441,11 +441,17 @@ export default {
         console.log("🚪 Navbar: Starting logout process...");
         await authStore.logout();
         console.log("🚪 Navbar: Logout completed, redirecting to home...");
-        router.push("/");
+
+        // Use replace instead of push to avoid history issues
+        await router.replace("/");
+
+        // Force page reload to ensure clean state
+        window.location.reload();
       } catch (error) {
         console.error("❌ Navbar: Logout error:", error);
         // Still redirect even if there's an error
-        router.push("/");
+        await router.replace("/");
+        window.location.reload();
       }
     };
 

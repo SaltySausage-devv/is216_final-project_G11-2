@@ -29,8 +29,14 @@ const emailTransporter = nodemailer.createTransport({
   }
 });
 
-// Initialize Twilio client
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+// Initialize Twilio client (optional - only if credentials provided)
+let twilioClient = null;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+  console.log('Twilio client initialized successfully');
+} else {
+  console.warn('⚠️ Twilio credentials not found - SMS notifications will be disabled');
+}
 
 // RabbitMQ connection
 let connection;
@@ -134,6 +140,11 @@ async function sendEmail(to, subject, html, text) {
 }
 
 async function sendSMS(to, message) {
+  if (!twilioClient) {
+    console.warn('SMS sending skipped - Twilio not configured');
+    return { success: false, error: 'Twilio not configured' };
+  }
+
   try {
     const result = await twilioClient.messages.create({
       body: message,
@@ -577,13 +588,18 @@ async function sendEmail(notification) {
 }
 
 async function sendSMS(notification) {
+  if (!twilioClient) {
+    console.warn('SMS sending skipped - Twilio not configured');
+    return;
+  }
+
   try {
     const message = await twilioClient.messages.create({
       body: `${notification.title}\n\n${notification.message}`,
       from: process.env.TWILIO_PHONE_NUMBER,
       to: notification.phone
     });
-    
+
     console.log('SMS sent successfully:', message.sid);
   } catch (error) {
     console.error('SMS sending failed:', error);
