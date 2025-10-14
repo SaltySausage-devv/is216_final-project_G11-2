@@ -358,16 +358,26 @@ export default {
       isLoading.value = true
 
       try {
+        console.log('💾 Saving profile changes...')
         const result = await authStore.updateProfile(profileForm)
 
         if (result.success) {
+          console.log('✅ Profile saved successfully')
           editMode.value = false
+
+          // Reload profile to show updated data
+          loadProfile()
+
           // Show success message
+          alert('Profile updated successfully!')
         } else {
+          console.error('❌ Profile save failed:', result.error)
           // Show error message
+          alert(`Error: ${result.error || 'Failed to update profile'}`)
         }
       } catch (error) {
-        console.error('Profile update error:', error)
+        console.error('❌ Profile update error:', error)
+        alert('An unexpected error occurred while saving your profile.')
       } finally {
         isLoading.value = false
       }
@@ -398,18 +408,8 @@ export default {
         user: authStore.user
       })
 
-      // Initialize auth if not already done
-      if (!authStore.isAuthenticated && !authStore.user) {
-        console.log('🔄 Initializing auth from Profile component...')
-        authStore.initializeAuth().then(() => {
-          console.log('✅ Auth initialization completed')
-          setTimeout(() => {
-            loadProfile()
-          }, 500) // Small delay to ensure user data is loaded
-        })
-      } else {
-        loadProfile()
-      }
+      // Load profile data (auth is already initialized by main.js)
+      loadProfile()
     })
 
     // Watch for user data changes (for auth initialization)

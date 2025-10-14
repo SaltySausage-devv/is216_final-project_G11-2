@@ -25,24 +25,22 @@ import Footer from './components/Footer.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: Home },
-  { path: '/login', name: 'Login', component: Login },
-  { path: '/register', name: 'Register', component: Register },
+  { path: '/login', name: 'Login', component: Login, meta: { requiresGuest: true } },
+  { path: '/register', name: 'Register', component: Register, meta: { requiresGuest: true } },
   { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword },
   { path: '/reset-password', name: 'ResetPassword', component: ResetPassword },
-  { path: '/dashboard', name: 'Dashboard', component: Dashboard },
+  { path: '/dashboard', name: 'Dashboard', component: Dashboard, meta: { requiresAuth: true } },
   { path: '/search', name: 'SearchTutors', component: SearchTutors },
   { path: '/tutor/:id', name: 'TutorProfile', component: TutorProfile },
-  { path: '/messages', name: 'Messages', component: Messages },
-  { path: '/calendar', name: 'Calendar', component: Calendar },
-  { path: '/profile', name: 'Profile', component: Profile },
+  { path: '/messages', name: 'Messages', component: Messages, meta: { requiresAuth: true } },
+  { path: '/calendar', name: 'Calendar', component: Calendar, meta: { requiresAuth: true } },
+  { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
 })
-
-// No navigation guards needed
 
 const pinia = createPinia()
 const app = createApp(App)
@@ -60,4 +58,52 @@ app.mount('#app')
 // Initialize auth store after app is mounted
 const authStore = useAuthStore()
 console.log('🚀 App mounted, initializing auth store...')
-authStore.initializeAuth()
+
+// Initialize auth and set up navigation guards after initialization
+let authInitialized = false
+
+authStore.initializeAuth().then(() => {
+  authInitialized = true
+  console.log('✅ Auth initialization complete, guards are now active')
+})
+
+// Navigation guards
+router.beforeEach(async (to, from, next) => {
+  console.log('🛣️ Navigation:', from.path, '→', to.path)
+
+  // Wait for auth initialization on first navigation
+  if (!authInitialized) {
+    console.log('⏳ Waiting for auth initialization...')
+    await authStore.initializeAuth()
+    authInitialized = true
+    console.log('✅ Auth initialized')
+  }
+
+  const isAuthenticated = authStore.isAuthenticated
+
+  console.log('🔐 Auth check:', {
+    isAuthenticated,
+    hasSession: !!authStore.session,
+    hasUser: !!authStore.user,
+    requiresAuth: to.meta.requiresAuth,
+    requiresGuest: to.meta.requiresGuest
+  })
+
+  // Check if route requires authentication
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    console.log('❌ Access denied: requires authentication')
+    console.log('🔀 Redirecting to /login')
+    next('/login')
+  }
+  // Check if route requires guest (logged out)
+  else if (to.meta.requiresGuest && isAuthenticated) {
+    console.log('❌ Access denied: already authenticated')
+    console.log('🔀 Redirecting to /dashboard')
+    next('/dashboard')
+  }
+  // Allow navigation
+  else {
+    console.log('✅ Access granted')
+    next()
+  }
+})

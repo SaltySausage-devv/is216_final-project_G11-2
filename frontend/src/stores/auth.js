@@ -6,15 +6,24 @@ export const useAuthStore = defineStore('auth', () => {
     const user = ref(null)
     const session = ref(null)
     const isLoading = ref(false)
+    const isLoggingOut = ref(false) // Flag to prevent auth listener interference during logout
+    let authSubscription = null // Store subscription to prevent duplicates
 
     const isAuthenticated = computed(() => {
-        // Consider authenticated if we have a valid session, even if user data is still loading
+        // Consider authenticated if we have a valid session
+        // Don't check isLoggingOut here as it causes issues with navigation guards
         const authenticated = !!session.value
-        console.log('🔍 Auth state check:', {
-            hasSession: !!session.value,
-            hasUser: !!user.value,
-            isAuthenticated: authenticated
-        })
+
+        // Only log occasionally to avoid spam
+        if (Math.random() < 0.1) { // 10% of the time
+            console.log('🔍 Auth state check:', {
+                hasSession: !!session.value,
+                hasUser: !!user.value,
+                isLoggingOut: isLoggingOut.value,
+                isAuthenticated: authenticated
+            })
+        }
+
         return authenticated
     })
     const userType = computed(() => user.value?.user_type || null)
@@ -174,18 +183,23 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             console.log('🚪 Logging out user...')
 
+            // Set logout flag to prevent auth listener from interfering
+            isLoggingOut.value = true
+
+            // Clear local state first (optimistic update)
+            user.value = null
+            session.value = null
+
             // Sign out from Supabase
-            const { error } = await supabase.auth.signOut()
+            const { error } = await supabase.auth.signOut({ scope: 'local' })
 
             if (error) {
                 console.error('❌ Supabase signOut error:', error)
+                // Force clear even if error occurs
+                await supabase.auth.signOut({ scope: 'global' })
             } else {
                 console.log('✅ Supabase signOut successful')
             }
-
-            // Clear local state immediately
-            user.value = null
-            session.value = null
 
             console.log('✅ Local state cleared')
             console.log('🔍 Auth state after logout:', {
@@ -199,15 +213,30 @@ export const useAuthStore = defineStore('auth', () => {
             // Even if there's an error, clear local state
             user.value = null
             session.value = null
+        } finally {
+            // Keep logout flag set briefly to ensure no race conditions
+            setTimeout(() => {
+                isLoggingOut.value = false
+            }, 500)
         }
     }
 
     const initializeAuth = async () => {
         try {
+            console.log('🔧 Initializing auth...')
+
+            // Remove existing subscription if it exists
+            if (authSubscription) {
+                console.log('🔧 Removing existing auth subscription')
+                authSubscription.subscription.unsubscribe()
+                authSubscription = null
+            }
+
             // Get current session
             const { data: { session: currentSession } } = await supabase.auth.getSession()
 
             if (currentSession) {
+                console.log('✅ Found existing session')
                 session.value = currentSession
 
                 // Fetch user profile
@@ -219,14 +248,30 @@ export const useAuthStore = defineStore('auth', () => {
 
                 if (profile) {
                     user.value = profile
+                    console.log('✅ User profile loaded')
                 }
+            } else {
+                console.log('ℹ️ No existing session found')
             }
 
-            // Listen for auth state changes
-            supabase.auth.onAuthStateChange(async (event, newSession) => {
+            // Listen for auth state changes (only once)
+            authSubscription = supabase.auth.onAuthStateChange(async (event, newSession) => {
+                console.log('🔔 Auth state changed:', event)
+
+                // Ignore state changes during logout
+                if (isLoggingOut.value) {
+                    console.log('⏭️ Ignoring auth change during logout')
+                    return
+                }
+
                 session.value = newSession
 
-                if (newSession?.user) {
+                if (event === 'SIGNED_OUT') {
+                    console.log('👋 User signed out')
+                    user.value = null
+                    session.value = null
+                } else if (newSession?.user) {
+                    console.log('👤 Fetching user profile after auth change')
                     const { data: profile } = await supabase
                         .from('users')
                         .select('*')
@@ -240,37 +285,60 @@ export const useAuthStore = defineStore('auth', () => {
                     user.value = null
                 }
             })
+
+            console.log('✅ Auth initialization complete')
         } catch (error) {
-            console.error('Auth initialization error:', error)
+            console.error('❌ Auth initialization error:', error)
         }
     }
 
     const updateProfile = async (profileData) => {
         try {
+            console.log('📝 Updating profile...', profileData)
+
             if (!user.value?.id) {
                 throw new Error('No user logged in')
             }
 
+            const updateData = {
+                first_name: profileData.firstName,
+                last_name: profileData.lastName,
+                phone: profileData.phone,
+                date_of_birth: profileData.dateOfBirth,
+                address: profileData.address,
+                bio: profileData.bio,
+                updated_at: new Date().toISOString()
+            }
+
+            // Remove undefined fields
+            Object.keys(updateData).forEach(key => {
+                if (updateData[key] === undefined) {
+                    delete updateData[key]
+                }
+            })
+
+            console.log('📤 Sending update:', updateData)
+
             const { data, error } = await supabase
                 .from('users')
-                .update({
-                    first_name: profileData.firstName,
-                    last_name: profileData.lastName,
-                    phone: profileData.phone,
-                    date_of_birth: profileData.dateOfBirth,
-                    address: profileData.address,
-                    bio: profileData.bio
-                })
+                .update(updateData)
                 .eq('id', user.value.id)
                 .select()
                 .single()
 
-            if (error) throw error
+            if (error) {
+                console.error('❌ Profile update error:', error)
+                throw error
+            }
 
+            console.log('✅ Profile updated successfully:', data)
+
+            // Update local user state
             user.value = data
+
             return { success: true, user: data }
         } catch (error) {
-            console.error('Profile update error:', error)
+            console.error('❌ Profile update error:', error)
             return {
                 success: false,
                 error: error.message || 'Profile update failed'

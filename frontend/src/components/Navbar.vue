@@ -439,7 +439,18 @@ export default {
     const logout = async () => {
       try {
         console.log("🚪 Navbar: Starting logout process...");
-        await authStore.logout();
+
+        // Add timeout to prevent hanging
+        const logoutPromise = authStore.logout();
+        const timeoutPromise = new Promise((resolve) =>
+          setTimeout(() => {
+            console.warn("⚠️ Logout taking too long, forcing redirect...");
+            resolve();
+          }, 3000)
+        );
+
+        await Promise.race([logoutPromise, timeoutPromise]);
+
         console.log("🚪 Navbar: Logout completed, redirecting to home...");
 
         // Use replace instead of push to avoid history issues

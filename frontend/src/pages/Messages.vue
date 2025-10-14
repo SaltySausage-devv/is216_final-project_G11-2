@@ -3382,8 +3382,14 @@ i.text-primary {
 .modal-header h3 {
   margin: 0;
   color: #ffffff;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.modal-header h3 .text-primary {
+  color: #ff8c42 !important;
 }
 
 .close-btn {
@@ -3629,8 +3635,14 @@ i.text-primary {
 .modal-header h3 {
   margin: 0;
   color: #ffffff;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.modal-header h3 .text-primary {
+  color: #ff8c42 !important;
 }
 
 .close-btn {
@@ -3876,6 +3888,9 @@ i.text-primary {
 .form-label {
   color: #ffffff;
   font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0.3px;
+  font-size: 14px;
 }
 
 .form-control,
@@ -3916,6 +3931,36 @@ i.text-primary {
   background: linear-gradient(45deg, #ff8c42, #ffd23f) !important;
   border-color: #ff8c42 !important;
   color: white !important;
+}
+
+/* Session Type Buttons */
+.btn-outline-primary {
+  background: transparent;
+  border: 2px solid #424242 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0.3px;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-primary:hover {
+  background: rgba(255, 140, 66, 0.1);
+  border-color: #ff8c42 !important;
+  color: #ff8c42 !important;
+}
+
+.btn-outline-primary:focus {
+  box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.2);
+  border-color: #ff8c42 !important;
+}
+
+/* Remove Bootstrap blue outline */
+.btn-check:focus + .btn-outline-primary,
+.btn-outline-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.2) !important;
+  border-color: #ff8c42 !important;
 }
 
 /* Booking Message Styles */
