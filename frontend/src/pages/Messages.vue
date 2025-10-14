@@ -638,31 +638,6 @@
                 </div>
               </div>
 
-              <!-- Booking Action Buttons (only for tutees) -->
-              <div
-                v-if="selectedConversation && canBookSession"
-                class="booking-actions p-3 border-bottom bg-light"
-              >
-                <div class="d-flex gap-2">
-                  <button
-                    class="btn btn-primary flex-fill"
-                    @click="showBookingOfferModal = true"
-                    :disabled="isLoading"
-                  >
-                    <i class="fas fa-calendar-plus me-2"></i>
-                    Book Session
-                  </button>
-                  <button
-                    class="btn btn-outline-secondary flex-fill"
-                    @click="showCalendarModal = true"
-                    :disabled="isLoading"
-                  >
-                    <i class="fas fa-calendar me-2"></i>
-                    View Calendar
-                  </button>
-                </div>
-              </div>
-
               <!-- Message Input -->
               <div
                 v-if="selectedConversation"
@@ -2792,6 +2767,7 @@ export default {
     // Update selectConversation to join room
     const selectConversationWithRoom = async (conversation) => {
       selectedConversation.value = conversation;
+      showMobileChat.value = true; // Show chat on mobile
 
       if (conversation?.id) {
         joinConversationRoom(conversation.id);
@@ -3408,10 +3384,15 @@ i.text-primary {
     max-height: calc(750px - 150px) !important;
     overflow-y: auto;
   }
+
+  /* Ensure booking actions don't appear when no conversation selected */
+  .booking-actions {
+    display: flex;
+  }
 }
 
 /* Responsive - Telegram-style Mobile View */
-@media (max-width: 991.98px) {
+@media (max-width: 991px) {
   .messages-row {
     min-height: calc(100vh - 150px);
     position: relative;
@@ -3429,44 +3410,59 @@ i.text-primary {
     border-radius: 8px;
   }
 
-  /* Hide conversations when chat is active on mobile */
-  .conversations-col.hide-on-mobile {
-    display: none !important;
+  /* FORCE TOGGLE BEHAVIOR - Only one visible at a time */
+  .row.messages-row .conversations-col,
+  .row.messages-row .chat-col {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
-  /* Show chat when active on mobile */
-  .chat-col {
-    display: none;
-  }
-
-  .chat-col.show-on-mobile {
+  /* DEFAULT: Show conversations, hide chat */
+  .row.messages-row .conversations-col {
     display: flex !important;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
-    padding: 1rem;
-    background: #1a1a1a;
-    margin: 0 !important;
-  }
-
-  .chat-col.show-on-mobile .chat-card {
-    height: 100%;
-    max-height: 100vh;
-    margin: 0;
-  }
-
-  /* Conversations take full width when visible */
-  .conversations-col {
-    flex: 0 0 100%;
-    max-width: 100%;
+    z-index: 1 !important;
+    position: relative !important;
     height: calc(100vh - 150px);
   }
 
-  .conversations-col .card {
+  .row.messages-row .conversations-col .card {
     height: 100%;
+  }
+
+  .row.messages-row .chat-col {
+    display: none !important;
+    z-index: 0 !important;
+  }
+
+  /* WHEN CHAT IS ACTIVE: Hide conversations, show chat full screen */
+  .row.messages-row .conversations-col.hide-on-mobile {
+    display: none !important;
+    z-index: 0 !important;
+  }
+
+  .row.messages-row .chat-col.show-on-mobile {
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 10000 !important;
+    padding: 1rem !important;
+    background: #1a1a1a !important;
+    margin: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  .row.messages-row .chat-col.show-on-mobile .chat-card {
+    height: 100% !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
   }
 
   .conversations-list {
@@ -3477,9 +3473,23 @@ i.text-primary {
 
   .messages-container {
     flex: 1;
-    min-height: 0;
+    min-height: 400px !important;
     max-height: none !important;
     height: auto !important;
+  }
+
+  /* Make empty states more visible on mobile */
+  .text-center {
+    color: #ffffff !important;
+  }
+
+  .text-center .text-muted {
+    color: #ffffff !important;
+    opacity: 0.9;
+  }
+
+  .text-center i {
+    color: #ff8c42 !important;
   }
 }
 
