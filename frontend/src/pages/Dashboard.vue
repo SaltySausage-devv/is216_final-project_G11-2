@@ -54,6 +54,7 @@
               </div>
               <h4 class="fw-bold mb-1">{{ stat.value }}</h4>
               <p class="text-muted mb-0">{{ stat.label }}</p>
+              <button @click="setDataType(stat.label)">Show</button>
             </div>
           </div>
         </div>
@@ -66,7 +67,7 @@
         :transition="{ duration: 0.6, delay: 0.2 }"
         class="row"
       >
-        <div class="col-lg-8 mb-4">
+        <div display="inline-block"  class="col-lg-8 mb-4">
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-bottom">
               <h5 class="fw-bold mb-0">
@@ -103,8 +104,8 @@
             </div>
           </div>
         </div>
-
-        <div class="col-lg-4">
+        </motion.div>
+        <div display="inline-block" class="col-lg-4">
           <!-- Quick Actions -->
           <motion.div
             :initial="{ opacity: 0, y: 30 }"
@@ -140,17 +141,40 @@
             </div>
           </motion.div>
         </div>
-      </motion.div>
+        <!-- Student Retention Trend -->
+        <div class="col-lg-12">
+          <motion.div
+            :initial="{ opacity: 0, x: -30 }"
+            :animate="{ opacity: 1, x: 0 }"
+            :transition="{ duration: 0.6, delay: 0.2 }"
+            class="card border-0 shadow-sm h-100"
+          >
+            <div class="card-header bg-white border-bottom">
+              <h5 class="fw-bold mb-0">
+                <i class="fas fa-dollar-sign me-2 text-primary"></i>
+                {{ dataType }}
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="chart-container" style="height: 300px;width:auto;">
+                <LineChart :labels="labels" :datasets="datasets" />
+              </div>
+            </div>
+          </motion.div>
+        </div>
+        
+      </div>
     </div>
-  </div>
 </template>
 
 <script>
 import { ref, computed, onMounted, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
+import LineChart from '../components/LineChart.vue'
 
 export default {
   name: "Dashboard",
+  components: { LineChart },
   setup() {
     const authStore = useAuthStore();
 
@@ -215,6 +239,7 @@ export default {
       console.log("✅ Dashboard data loaded, stats count:", stats.value.length);
     };
 
+    const dataType = ref(null)
     // Watch for userType changes and reload data
     watch(
       userType,
@@ -226,6 +251,41 @@ export default {
       },
       { immediate: true }
     );
+    const charts = ref([])
+    const labels = ref([])
+    const datasets = ref([])
+
+    async function setDataType(label){
+      dataType.value = label
+      console.log(dataType.value)
+        try{
+          const response = await fetch(`http://localhost:3006/reviews/tutor/${user.value.id}`)
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch reviews')
+          }
+
+          const data = await response.json()
+          console.log('API Response:', data)
+
+          // Transform API data to frontend format
+          charts.value = data.reviews.map(reviews => ({
+            rating: reviews.rating
+          }))
+          console.error("no")
+          labels.value = [11,12]
+          datasets.value = [{
+            label: label,
+            backgroundColor: "#f87979",
+            data: charts.value.map((item) => {
+              return item.rating
+            })
+          }]
+        } catch (error) {
+          console.error("Failed!", error)
+        }
+      
+    }
 
     onMounted(() => {
       console.log("🚀 Dashboard mounted, user type:", userType.value);
@@ -240,6 +300,10 @@ export default {
       userType,
       stats,
       recentActivity,
+      setDataType,
+      datasets,
+      dataType,
+      labels
     };
   },
 };

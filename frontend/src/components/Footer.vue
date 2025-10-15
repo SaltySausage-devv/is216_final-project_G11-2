@@ -35,15 +35,6 @@
                 Find Tutors
               </router-link>
             </li>
-            <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Browse Subjects</a>
-            </li>
-            <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Pricing</a>
-            </li>
-            <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">How It Works</a>
-            </li>
           </ul>
         </div>
         
@@ -51,16 +42,11 @@
           <h5 class="fw-bold mb-3">For Tutors</h5>
           <ul class="list-unstyled">
             <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Become a Tutor</a>
-            </li>
-            <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Tutor Resources</a>
+              <router-link to="/register" class="text-muted text-decoration-none">Become a Tutor
+              </router-link>
             </li>
             <li class="mb-2">
               <a href="#" class="text-muted text-decoration-none">Success Stories</a>
-            </li>
-            <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Support</a>
             </li>
           </ul>
         </div>
@@ -69,13 +55,7 @@
           <h5 class="fw-bold mb-3">Company</h5>
           <ul class="list-unstyled">
             <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">About Us</a>
-            </li>
-            <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Careers</a>
-            </li>
-            <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Press</a>
+              <router-link to="/Home" class="text-muted text-decoration-none">About Us</router-link>
             </li>
             <li class="mb-2">
               <a href="#" class="text-muted text-decoration-none">Blog</a>
