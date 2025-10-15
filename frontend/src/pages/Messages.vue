@@ -3535,6 +3535,46 @@ i.text-primary {
   }
 }
 
+/* Mobile Modal Improvements */
+@media (max-width: 991px) {
+  .modal-overlay {
+    z-index: 99999 !important;
+    padding: 10px;
+  }
+
+  .modal-content {
+    width: 95% !important;
+    max-width: none !important;
+    max-height: 90vh !important;
+    margin: 0 !important;
+  }
+
+  .modal-header {
+    padding: 15px !important;
+  }
+
+  .modal-header h3 {
+    font-size: 18px !important;
+  }
+
+  .modal-body {
+    padding: 15px !important;
+  }
+
+  .modal-footer {
+    padding: 15px !important;
+  }
+
+  /* Ensure modal is above all mobile elements */
+  .modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+  }
+}
+
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
@@ -3546,7 +3586,7 @@ i.text-primary {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 99999;
 }
 
 .modal-content {
@@ -3794,7 +3834,7 @@ i.text-primary {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 99999;
   backdrop-filter: blur(5px);
 }
 
