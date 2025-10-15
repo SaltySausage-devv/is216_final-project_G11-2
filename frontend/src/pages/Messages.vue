@@ -331,27 +331,14 @@
                                   (authStore.user?.user_type === 'student' ||
                                     authStore.user?.user_type === 'parent')
                                 "
-                                class="btn btn-success btn-sm me-2"
+                                :disabled="getBookingData(message) && confirmedBookings.has(getBookingData(message).bookingOfferId)"
+                                :class="getBookingData(message) && confirmedBookings.has(getBookingData(message).bookingOfferId) ? 'btn btn-secondary btn-sm me-2' : 'btn btn-success btn-sm me-2'"
                                 @click="confirmBooking(message)"
                               >
-                                <i class="fas fa-check me-1"></i>
-                                Accept & Book
-                              </button>
-                              <button
-                                v-if="
-                                  message.senderId !== currentUserId &&
-                                  (authStore.user?.user_type === 'student' ||
-                                    authStore.user?.user_type === 'parent')
-                                "
-                                class="btn btn-danger btn-sm"
-                                @click="
-                                  sendMessage(
-                                    'I would like to discuss alternative times'
-                                  )
-                                "
-                              >
-                                <i class="fas fa-times me-1"></i>
-                                Reject
+                                <i
+                                  :class="getBookingData(message) && confirmedBookings.has(getBookingData(message).bookingOfferId) ? 'fas fa-check-circle me-1' : 'fas fa-check me-1'"
+                                ></i>
+                                {{ getBookingData(message) && confirmedBookings.has(getBookingData(message).bookingOfferId) ? 'Accepted' : 'Accept & Book' }}
                               </button>
                             </div>
                           </div>
@@ -390,6 +377,51 @@
                               <p class="mb-0 text-success">
                                 <i class="fas fa-check-circle me-1"></i>
                                 Session has been booked and added to calendar
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Booking Rejection Message -->
+                        <div
+                          v-else-if="
+                            message.messageType === 'booking_rejection'
+                          "
+                          class="message-content booking-message booking-rejection"
+                        >
+                          <div class="booking-header">
+                            <i class="fas fa-times-circle me-2"></i>
+                            <span class="booking-title"
+                              >Booking Proposal Rejected</span
+                            >
+                          </div>
+                          <div class="booking-details">
+                            <div v-if="getBookingData(message)">
+                              <p class="mb-2 text-danger">
+                                <i class="fas fa-times-circle me-1"></i>
+                                Booking proposal has been rejected
+                              </p>
+                              <p class="mb-2">
+                                <strong>Proposed Time:</strong>
+                                {{
+                                  formatDateTime(
+                                    getBookingData(message).proposedTime
+                                  )
+                                }}
+                              </p>
+                              <p
+                                v-if="getBookingData(message).finalLocation"
+                                class="mb-2"
+                              >
+                                <strong>Location:</strong>
+                                {{ getBookingData(message).finalLocation }}
+                              </p>
+                              <p
+                                v-if="getBookingData(message).rejectionReason"
+                                class="mb-0"
+                              >
+                                <strong>Reason:</strong>
+                                {{ getBookingData(message).rejectionReason }}
                               </p>
                             </div>
                           </div>
@@ -1209,6 +1241,7 @@ export default {
     const isCreatingProposal = ref(false);
     const isSendingProposal = ref(false);
     const selectedBookingOffer = ref(null);
+    const confirmedBookings = ref(new Set()); // Track confirmed booking IDs
 
     // Booking offer form data
     const bookingOffer = ref({
@@ -2421,6 +2454,11 @@ export default {
         const data = await response.json();
         console.log("Booking confirmed:", data);
 
+        // Add to confirmed bookings set to disable the button
+        if (bookingData.bookingOfferId) {
+          confirmedBookings.value.add(bookingData.bookingOfferId);
+        }
+
         // Show success message
         alert(
           "Booking confirmed successfully! The session has been added to your calendar."
@@ -2431,6 +2469,7 @@ export default {
       }
     };
 
+  
     // Make functions globally available for context menu
     window.deleteMessage = deleteMessage;
     window.copyMessage = copyMessage;
@@ -2870,6 +2909,7 @@ export default {
       isCreatingProposal,
       isSendingProposal,
       selectedBookingOffer,
+      confirmedBookings,
       bookingOffer,
       bookingProposal,
       createBookingOffer,
@@ -4269,6 +4309,15 @@ i.text-primary {
 
 .reschedule-accepted .booking-header i {
   color: #28a745;
+}
+
+.booking-rejection .booking-header {
+  background: rgba(220, 53, 69, 0.12);
+  border-bottom: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.booking-rejection .booking-header i {
+  color: #dc3545;
 }
 
 .reschedule-rejected .booking-header {

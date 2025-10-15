@@ -278,7 +278,7 @@ const createConversationSchema = Joi.object({
 const sendMessageSchema = Joi.object({
   conversationId: Joi.string().uuid().required(),
   content: Joi.string().max(1000).required(),
-  messageType: Joi.string().valid('text', 'image', 'file', 'document', 'booking_offer', 'booking_proposal', 'booking_confirmation').default('text'),
+  messageType: Joi.string().valid('text', 'image', 'file', 'document', 'booking_offer', 'booking_proposal', 'booking_confirmation', 'booking_rejection').default('text'),
   bookingOfferId: Joi.string().uuid().allow(null).optional()
 });
 
@@ -1141,6 +1141,7 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       .insert({
         tutor_id: bookingOffer.tutor_id,
         student_id: bookingOffer.tutee_id,
+        title: 'Tutoring Session', // Add title field for calendar display
         subject: 'Tutoring Session', // Default subject
         level: 'General', // Default level
         start_time: bookingOffer.proposed_time,
@@ -1159,6 +1160,8 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
     if (bookingError) {
       console.error('Error creating booking record:', bookingError);
       // Don't fail the whole operation if booking creation fails
+    } else {
+      console.log('✅ Booking record created successfully:', booking);
     }
 
     // Create booking confirmation message
@@ -1214,6 +1217,117 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Booking confirmation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Reject booking proposal
+app.post('/messaging/booking-rejections', verifyToken, async (req, res) => {
+  try {
+    const { bookingOfferId } = req.body;
+
+    if (!bookingOfferId) {
+      return res.status(400).json({ error: 'Booking offer ID is required' });
+    }
+
+    // Get booking offer
+    const { data: bookingOffer, error: fetchError } = await supabase
+      .from('booking_offers')
+      .select('*')
+      .eq('id', bookingOfferId)
+      .single();
+
+    if (fetchError || !bookingOffer) {
+      return res.status(404).json({ error: 'Booking offer not found' });
+    }
+
+    // Verify user is involved in this booking (student or parent)
+    if (bookingOffer.tutee_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Only the student can reject booking proposals' });
+    }
+
+    // Check if booking offer is already rejected or confirmed
+    if (bookingOffer.status === 'rejected') {
+      return res.status(400).json({
+        error: 'Booking already rejected',
+        message: 'This booking proposal has already been rejected.'
+      });
+    }
+
+    if (bookingOffer.status === 'confirmed') {
+      return res.status(400).json({
+        error: 'Booking already confirmed',
+        message: 'This booking has already been confirmed and cannot be rejected.'
+      });
+    }
+
+    // Update booking offer to rejected
+    const { data: rejectedOffer, error: updateError } = await supabase
+      .from('booking_offers')
+      .update({
+        status: 'rejected',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bookingOfferId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    // Create booking rejection message
+    const messageContent = JSON.stringify({
+      bookingOfferId: bookingOfferId,
+      proposedTime: bookingOffer.proposed_time,
+      finalLocation: bookingOffer.final_location,
+      isOnline: bookingOffer.is_online,
+      rejectionReason: 'Booking proposal rejected by student'
+    });
+
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: bookingOffer.conversation_id,
+        sender_id: req.user.userId,
+        content: messageContent,
+        message_type: 'booking_rejection',
+        booking_offer_id: bookingOfferId,
+        created_at: new Date().toISOString()
+      })
+      .select(`
+        *,
+        sender:sender_id (
+          first_name,
+          last_name,
+          user_type
+        )
+      `)
+      .single();
+
+    if (messageError) {
+      throw messageError;
+    }
+
+    // Broadcast message to conversation room
+    io.to(`conversation_${bookingOffer.conversation_id}`).emit('new_message', message);
+
+    // Update conversation last message
+    await supabase
+      .from('conversations')
+      .update({
+        last_message_at: new Date().toISOString(),
+        last_message_content: 'Booking proposal rejected'
+      })
+      .eq('id', bookingOffer.conversation_id);
+
+    res.status(201).json({
+      message: 'Booking proposal rejected successfully',
+      bookingOffer: rejectedOffer,
+      message
+    });
+  } catch (error) {
+    console.error('Booking rejection error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
