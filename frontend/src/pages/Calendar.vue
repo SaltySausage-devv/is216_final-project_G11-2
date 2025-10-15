@@ -190,11 +190,11 @@ export default {
     }
 
     function getEventColor(status) {
-      if (status === "confirmed") return "#ff6b35"; // Orange - matches theme
-      if (status === "completed") return "#4ecdc4"; // Teal - nice contrast
-      if (status === "cancelled") return "#6c757d"; // Grey
-      if (status === "pending") return "#ffa726"; // Light orange
-      return "#8e8ea0"; // Default grey
+      if (status === "confirmed") return "#10b981"; // Green - professional
+      if (status === "completed") return "#6366f1"; // Blue - professional
+      if (status === "cancelled") return "#ef4444"; // Red - clear indication
+      if (status === "pending") return "#f59e0b"; // Amber - attention
+      return "#6b7280"; // Gray - default
     }
 
     function handleEventClick(info) {
@@ -325,81 +325,109 @@ export default {
 <style scoped>
 .calendar-page {
   min-height: calc(100vh - 200px);
-  background: #1a1a2e;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .calendar-container {
-  background: #2d2d44;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  padding: 1.5rem;
+  background: rgba(45, 45, 68, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 107, 53, 0.1);
+  padding: 2rem;
   border: 1px solid rgba(255, 107, 53, 0.2);
   min-height: 750px;
+  transition: all 0.3s ease;
+}
+
+.calendar-container:hover {
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 107, 53, 0.2);
+  border-color: rgba(255, 107, 53, 0.3);
 }
 
 h1 {
   color: #ff6b35;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 2.5rem;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* FullCalendar custom styles */
 :deep(.fc) {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   height: 100% !important;
+  font-size: 0.9rem;
 }
 
 :deep(.fc .fc-view-harness) {
   height: 650px !important;
   min-height: 650px;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 :deep(.fc-toolbar-title) {
   color: #ffffff;
-  font-weight: 700;
-  font-size: 1.75rem;
+  font-weight: 800;
+  font-size: 1.875rem;
+  letter-spacing: -0.02em;
+  margin: 0 1rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 :deep(.fc-button-primary) {
-  background: #ff6b35 !important;
-  border: 1px solid #ff6b35 !important;
-  font-weight: 600;
+  background: linear-gradient(135deg, #ff6b35 0%, #e85a2a 100%) !important;
+  border: none !important;
+  font-weight: 700;
   font-size: 0.875rem;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  padding: 0.625rem 1.25rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
   color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  font-family: 'Inter', sans-serif;
 }
 
 :deep(.fc-button-primary:hover) {
-  background: #e85a2a !important;
-  border-color: #e85a2a !important;
+  background: linear-gradient(135deg, #e85a2a 0%, #d14a20 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
 }
 
 :deep(.fc-button-primary:disabled) {
   background: #4a4a4a !important;
-  border-color: #4a4a4a !important;
-  opacity: 0.5;
+  color: #9ca3af !important;
+  box-shadow: none;
+  transform: none;
+  opacity: 0.6;
 }
 
 :deep(.fc-button-active) {
-  background: #d14a20 !important;
-  border-color: #d14a20 !important;
+  background: linear-gradient(135deg, #d14a20 0%, #b83a10 100%) !important;
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
 }
 
 :deep(.fc-toolbar-chunk) {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 :deep(.fc-today-button) {
-  background: #4ecdc4 !important;
-  border: 1px solid #4ecdc4 !important;
+  background: linear-gradient(135deg, #4ecdc4 0%, #3dbdb5 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
 }
 
 :deep(.fc-today-button:hover) {
-  background: #3dbdb5 !important;
-  border-color: #3dbdb5 !important;
+  background: linear-gradient(135deg, #3dbdb5 0%, #2ba39c 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(78, 205, 196, 0.4);
 }
 
 :deep(.booking-event) {
@@ -412,44 +440,70 @@ h1 {
 }
 
 :deep(.fc-event) {
-  border-radius: 6px;
-  padding: 4px 8px;
+  border-radius: 8px;
+  padding: 6px 10px;
   font-size: 0.875em;
   font-weight: 600;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.01em;
+}
+
+:deep(.fc-event:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 :deep(.fc-event-title) {
-  font-weight: 600;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 :deep(.fc-daygrid-day-number) {
   color: #ffffff;
   font-weight: 600;
-  padding: 8px;
+  padding: 12px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
 :deep(.fc-col-header-cell) {
-  background: #3a3a52;
+  background: linear-gradient(135deg, #3a3a52 0%, #2d2d44 100%);
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  font-size: 0.875rem;
-  padding: 1rem 0.5rem;
+  font-size: 0.8rem;
+  padding: 1.25rem 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.05em;
 }
 
 :deep(.fc-day-today) {
-  background-color: rgba(255, 107, 53, 0.1) !important;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.15) 0%, rgba(255, 107, 53, 0.1) 100%) !important;
+  position: relative;
+}
+
+:deep(.fc-day-today::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(135deg, #ff6b35 0%, #e85a2a 100%);
+  border-radius: 8px 8px 0 0;
 }
 
 :deep(.fc-scrollgrid) {
   border-color: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   background: #2d2d44;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 :deep(.fc-theme-standard td),
@@ -459,70 +513,95 @@ h1 {
 
 :deep(.fc-daygrid-day) {
   background: #2d2d44;
+  transition: all 0.2s ease;
 }
 
 :deep(.fc-daygrid-day:hover) {
-  background: rgba(255, 107, 53, 0.05);
+  background: linear-gradient(135deg, #3a3a52 0%, #2d2d44 100%);
+  transform: scale(1.01);
 }
 
 :deep(.fc-day-other .fc-daygrid-day-number) {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 500;
 }
 
 /* More events popup */
 :deep(.fc-more-popover) {
-  background: #2d2d44 !important;
+  background: rgba(45, 45, 68, 0.98) !important;
+  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 107, 53, 0.3) !important;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 107, 53, 0.1);
+  font-family: 'Inter', sans-serif;
 }
 
 :deep(.fc-more-popover .fc-popover-header) {
-  background: #3a3a52 !important;
-  color: #ff6b35 !important;
-  font-weight: 700;
-  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #3a3a52 0%, #2d2d44 100%) !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid rgba(255, 107, 53, 0.2);
+  border-radius: 12px 12px 0 0;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
 }
 
 :deep(.fc-more-popover .fc-popover-body) {
-  background: #2d2d44 !important;
-  padding: 0.5rem;
+  background: rgba(45, 45, 68, 0.98) !important;
+  padding: 0.75rem;
+  border-radius: 0 0 12px 12px;
 }
 
 :deep(.fc-more-popover .fc-popover-close) {
-  color: #ffffff !important;
+  color: rgba(255, 255, 255, 0.7) !important;
   opacity: 0.7;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
+  transition: all 0.2s ease;
 }
 
 :deep(.fc-more-popover .fc-popover-close:hover) {
   opacity: 1;
   color: #ff6b35 !important;
+  transform: scale(1.1);
 }
 
 :deep(.fc-more-popover .fc-event) {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
 }
 
 :deep(.fc-more-popover .fc-daygrid-event) {
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+:deep(.fc-more-popover .fc-daygrid-event:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* More link styling */
 :deep(.fc-daygrid-more-link) {
   color: #ff6b35 !important;
-  font-weight: 600;
-  background: rgba(255, 107, 53, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.15) 100%);
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 107, 53, 0.3);
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
 }
 
 :deep(.fc-daygrid-more-link:hover) {
-  background: rgba(255, 107, 53, 0.2);
-  color: #ff8c5a !important;
+  background: linear-gradient(135deg, #ff6b35 0%, #e85a2a 100%);
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
 }
 
 /* Loading spinner */
