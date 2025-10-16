@@ -874,7 +874,6 @@
     <div
       v-if="showBookingOfferModal"
       class="modal-overlay"
-      @click="showBookingOfferModal = false"
     >
       <div class="modal-content" @click.stop>
         <div class="modal-header">
@@ -920,13 +919,37 @@
             <!-- Location (for on-site) -->
             <div v-if="!bookingOffer.isOnline" class="mb-3">
               <label class="form-label fw-bold">Preferred Location</label>
-              <input
-                type="text"
-                class="form-control"
-                v-model="bookingOffer.tuteeLocation"
-                placeholder="Enter your preferred location for the session"
-                required
-              />
+              <div class="position-relative">
+                <input
+                  type="text"
+                  class="form-control location-autocomplete-input"
+                  ref="tuteeLocationInput"
+                  v-model="bookingOffer.tuteeLocation"
+                  placeholder="Start typing an address in Singapore..."
+                  required
+                  @input="handleLocationInput('tutee', $event)"
+                  @keydown="handleKeyDown('tutee', $event)"
+                  @focus="handleInputFocus('tutee')"
+                  @blur="handleInputBlur('tutee')"
+                />
+                <div
+                  v-if="showDropdown.tutee && predictions.tutee.length > 0"
+                  ref="tuteeDropdown"
+                  class="custom-autocomplete-dropdown"
+                >
+                  <div
+                    v-for="(prediction, index) in predictions.tutee"
+                    :key="prediction.place_id"
+                    class="autocomplete-item"
+                    :class="{ 'active': selectedIndex.tutee === index }"
+                    @mousedown.prevent="selectPrediction('tutee', prediction)"
+                    @mouseenter="selectedIndex.tutee = index"
+                  >
+                    <div class="place-name">{{ prediction.structured_formatting.main_text }}</div>
+                    <div class="place-address">{{ prediction.structured_formatting.secondary_text }}</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Notes -->
@@ -967,7 +990,6 @@
     <div
       v-if="showCalendarModal"
       class="modal-overlay"
-      @click="showCalendarModal = false"
     >
       <div class="modal-content calendar-modal" @click.stop>
         <div class="modal-header">
@@ -1074,7 +1096,6 @@
     <div
       v-if="showBookingProposalModal"
       class="modal-overlay"
-      @click="showBookingProposalModal = false"
     >
       <div class="modal-content" @click.stop>
         <div class="modal-header">
@@ -1236,14 +1257,36 @@
               </div>
               <div
                 v-if="bookingProposal.locationChoice === 'tutor'"
-                class="mt-2"
+                class="mt-2 position-relative"
               >
                 <input
                   type="text"
-                  class="form-control"
+                  class="form-control location-autocomplete-input"
+                  ref="tutorLocationInput"
                   v-model="bookingProposal.tutorLocation"
-                  placeholder="Enter your location"
+                  placeholder="Start typing an address in Singapore..."
+                  @input="handleLocationInput('tutor', $event)"
+                  @keydown="handleKeyDown('tutor', $event)"
+                  @focus="handleInputFocus('tutor')"
+                  @blur="handleInputBlur('tutor')"
                 />
+                <div
+                  v-if="showDropdown.tutor && predictions.tutor.length > 0"
+                  ref="tutorDropdown"
+                  class="custom-autocomplete-dropdown"
+                >
+                  <div
+                    v-for="(prediction, index) in predictions.tutor"
+                    :key="prediction.place_id"
+                    class="autocomplete-item"
+                    :class="{ 'active': selectedIndex.tutor === index }"
+                    @mousedown.prevent="selectPrediction('tutor', prediction)"
+                    @mouseenter="selectedIndex.tutor = index"
+                  >
+                    <div class="place-name">{{ prediction.structured_formatting.main_text }}</div>
+                    <div class="place-address">{{ prediction.structured_formatting.secondary_text }}</div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1286,7 +1329,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
 import messagingService from "../services/messaging.js";
 import { useNotifications } from "../composables/useNotifications";
@@ -1346,6 +1389,283 @@ export default {
     const currentYear = ref(new Date().getFullYear());
     const selectedDate = ref(null);
     const selectedTimeSlot = ref(null);
+
+    const tuteeLocationInput = ref(null);
+    const tutorLocationInput = ref(null);
+    const tuteeDropdown = ref(null);
+    const tutorDropdown = ref(null);
+
+    const googleMaps = ref(null);
+    const googleMapsReady = ref(false);
+    const googleMapsError = ref(null);
+
+    // Custom autocomplete state
+    const predictions = ref({
+      tutee: [],
+      tutor: [],
+    });
+    const showDropdown = ref({
+      tutee: false,
+      tutor: false,
+    });
+    const selectedIndex = ref({
+      tutee: -1,
+      tutor: -1,
+    });
+    const autocompleteService = ref(null);
+    const placesService = ref(null);
+    let inputTimeout = null;
+
+    watch(
+      () => showBookingOfferModal.value,
+      async (modalOpen) => {
+        if (!modalOpen) {
+          // Clear predictions and hide dropdown
+          predictions.value.tutee = [];
+          showDropdown.value.tutee = false;
+          selectedIndex.value.tutee = -1;
+        }
+      }
+    );
+
+    watch(
+      () => showBookingProposalModal.value,
+      async (modalOpen) => {
+        if (!modalOpen) {
+          // Clear predictions and hide dropdown
+          predictions.value.tutor = [];
+          showDropdown.value.tutor = false;
+          selectedIndex.value.tutor = -1;
+        }
+      }
+    );
+
+    watch(
+      () => [bookingProposal.value.locationChoice, selectedBookingOffer.value?.isOnline],
+      async ([locationChoice, isOnline]) => {
+        if (showBookingProposalModal.value && locationChoice === "tutor" && isOnline === false) {
+          await setupAutocomplete("tutor");
+        }
+      }
+    );
+
+
+    const ensureGoogleMapsLoaded = async () => {
+      if (googleMapsReady.value) {
+        return googleMaps.value;
+      }
+
+      if (googleMapsError.value) {
+        return null;
+      }
+
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        console.warn(
+          "VITE_GOOGLE_MAPS_API_KEY is not set. Location autocomplete will fall back to manual input."
+        );
+        googleMapsError.value = new Error("Missing Google Maps API key");
+        return null;
+      }
+
+      try {
+        // Set the API key globally for the loader
+        if (!window.google || !window.google.maps || !window.google.maps.places) {
+          // Remove any existing script tags to avoid conflicts
+          const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+          if (existingScript) {
+            existingScript.remove();
+          }
+
+          // Create callback function that will be called when Google Maps loads
+          window.initGoogleMaps = () => {
+            console.log('Google Maps loaded successfully');
+          };
+
+          // Load Google Maps with Places library
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps`;
+          script.async = true;
+          script.defer = true;
+
+          await new Promise((resolve, reject) => {
+            script.onload = () => {
+              // Wait a bit for the libraries to fully initialize
+              setTimeout(() => {
+                if (window.google && window.google.maps && window.google.maps.places) {
+                  resolve();
+                } else {
+                  reject(new Error('Google Maps Places library failed to load'));
+                }
+              }, 100);
+            };
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+
+        googleMaps.value = window.google;
+        googleMapsReady.value = true;
+        return googleMaps.value;
+      } catch (error) {
+        googleMapsError.value = error;
+        console.error("Failed to load Google Maps:", error);
+        return null;
+      }
+    };
+
+    // Initialize Google Maps services
+    const initializeGoogleServices = async () => {
+      const google = await ensureGoogleMapsLoaded();
+      if (!google) return false;
+
+      if (!autocompleteService.value) {
+        autocompleteService.value = new google.maps.places.AutocompleteService();
+        console.log('✅ AutocompleteService initialized');
+      }
+
+      if (!placesService.value) {
+        // PlacesService needs a DOM element, using a hidden div
+        const div = document.createElement('div');
+        placesService.value = new google.maps.places.PlacesService(div);
+        console.log('✅ PlacesService initialized');
+      }
+
+      return true;
+    };
+
+    // Handle input changes and fetch predictions
+    const handleLocationInput = async (type, event) => {
+      const query = event.target.value;
+
+      if (!query || query.length < 3) {
+        predictions.value[type] = [];
+        showDropdown.value[type] = false;
+        return;
+      }
+
+      // Debounce the API calls
+      clearTimeout(inputTimeout);
+      inputTimeout = setTimeout(async () => {
+        const initialized = await initializeGoogleServices();
+        if (!initialized) return;
+
+        const request = {
+          input: query,
+          componentRestrictions: { country: 'sg' },
+        };
+
+        autocompleteService.value.getPlacePredictions(request, (results, status) => {
+          console.log(`📍 Predictions for ${type}:`, results, status);
+
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+            predictions.value[type] = results;
+            showDropdown.value[type] = true;
+            selectedIndex.value[type] = -1;
+          } else {
+            predictions.value[type] = [];
+            showDropdown.value[type] = false;
+          }
+        });
+      }, 300);
+    };
+
+    // Handle keyboard navigation
+    const handleKeyDown = (type, event) => {
+      if (!showDropdown.value[type] || predictions.value[type].length === 0) return;
+
+      switch (event.key) {
+        case 'ArrowDown':
+          event.preventDefault();
+          selectedIndex.value[type] = Math.min(
+            selectedIndex.value[type] + 1,
+            predictions.value[type].length - 1
+          );
+          break;
+        case 'ArrowUp':
+          event.preventDefault();
+          selectedIndex.value[type] = Math.max(selectedIndex.value[type] - 1, -1);
+          break;
+        case 'Enter':
+          event.preventDefault();
+          if (selectedIndex.value[type] >= 0) {
+            selectPrediction(type, predictions.value[type][selectedIndex.value[type]]);
+          }
+          break;
+        case 'Escape':
+          showDropdown.value[type] = false;
+          selectedIndex.value[type] = -1;
+          break;
+      }
+    };
+
+    // Select a prediction and get detailed place info
+    const selectPrediction = async (type, prediction) => {
+      console.log(`📍 Selected prediction for ${type}:`, prediction);
+
+      const initialized = await initializeGoogleServices();
+      if (!initialized) return;
+
+      const request = {
+        placeId: prediction.place_id,
+        fields: ['name', 'formatted_address', 'address_components', 'geometry'],
+      };
+
+      placesService.value.getDetails(request, (place, status) => {
+        console.log(`📍 Place details for ${type}:`, place, status);
+
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
+          let address = '';
+
+          // Combine name with formatted address
+          if (place.name && place.formatted_address) {
+            if (place.formatted_address.includes(place.name)) {
+              address = place.formatted_address;
+            } else {
+              address = `${place.name}, ${place.formatted_address}`;
+            }
+          } else if (place.formatted_address) {
+            address = place.formatted_address;
+          } else if (place.name) {
+            address = place.name;
+          }
+
+          console.log(`📍 Final address for ${type}:`, address);
+
+          // Update the input
+          if (type === 'tutee') {
+            bookingOffer.value.tuteeLocation = address;
+          } else {
+            bookingProposal.value.tutorLocation = address;
+          }
+        }
+
+        // Hide dropdown
+        showDropdown.value[type] = false;
+        selectedIndex.value[type] = -1;
+        predictions.value[type] = [];
+      });
+    };
+
+    // Handle input focus
+    const handleInputFocus = (type) => {
+      const query = type === 'tutee'
+        ? bookingOffer.value.tuteeLocation
+        : bookingProposal.value.tutorLocation;
+
+      if (query && query.length >= 3 && predictions.value[type].length > 0) {
+        showDropdown.value[type] = true;
+      }
+    };
+
+    // Handle input blur
+    const handleInputBlur = (type) => {
+      // Delay to allow click events on dropdown items
+      setTimeout(() => {
+        showDropdown.value[type] = false;
+        selectedIndex.value[type] = -1;
+      }, 200);
+    };
 
     const filteredConversations = computed(() => {
       if (!searchQuery.value) return conversations.value;
@@ -3140,11 +3460,24 @@ export default {
       isSendingProposal,
       selectedBookingOffer,
       confirmedBookings,
+      tuteeLocationInput,
+      tutorLocationInput,
+      tuteeDropdown,
+      tutorDropdown,
       bookingOffer,
       bookingProposal,
       createBookingOffer,
       createBookingProposal,
       calculateEndTime,
+      // Custom autocomplete
+      predictions,
+      showDropdown,
+      selectedIndex,
+      handleLocationInput,
+      handleKeyDown,
+      selectPrediction,
+      handleInputFocus,
+      handleInputBlur,
       // Calendar related
       currentMonthYear,
       calendarDays,
@@ -4757,5 +5090,78 @@ i.text-primary {
   .booking-actions .btn {
     width: 100%;
   }
+}
+</style>
+
+<style>
+/* Google Maps Autocomplete Dropdown - Global styles (not scoped) */
+/* Remove blue glow from location inputs */
+.location-autocomplete-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #4a4a4a !important;
+}
+
+/* Custom autocomplete dropdown styling */
+.custom-autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #1a1a1a;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  margin-top: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.autocomplete-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+  background-color: #2a2a2a;
+}
+
+.place-name {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.place-address {
+  color: #999999;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Custom scrollbar for dropdown */
+.custom-autocomplete-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-autocomplete-dropdown::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.custom-autocomplete-dropdown::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 4px;
+}
+
+.custom-autocomplete-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
 }
 </style>

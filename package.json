@@ -4,7 +4,8 @@
   "description": "A marketplace for private tutors and tuition centres in Singapore",
   "main": "index.js",
   "scripts": {
-    "dev": "npm run cleanup && concurrently \"npm run dev:auth\" \"npm run dev:users\" \"npm run dev:profiles\" \"npm run dev:bookings\" \"npm run dev:messaging\" \"npm run dev:reviews\" \"npm run dev:notifications\" \"npm run dev:analytics\" \"npm run dev:gamification\" \"npm run dev:earnings\" \"npm run dev:calendar\" \"npm run dev:maps\" \"npm run dev:frontend\"",
+    "dev": "node scripts/super-dev.js dev",
+    "start": "node scripts/super-dev.js start",
     "dev:auth": "cd services/auth && npm run dev",
     "dev:users": "cd services/users && npm run dev",
     "dev:profiles": "cd services/profiles && npm run dev",
@@ -18,20 +19,20 @@
     "dev:calendar": "cd services/calendar && npm run dev",
     "dev:maps": "cd services/maps && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:safe": "npm run cleanup && npm run dev",
-    "cleanup": "node scripts/dev-helper.js cleanup",
-    "dev-status": "node scripts/dev-helper.js status",
-    "dev-helper": "node scripts/dev-helper.js",
-    "cleanup-windows": "scripts\\cleanup-ports.bat",
-    "cleanup-mac": "./scripts/cleanup-ports.sh",
     "build": "npm run build:frontend",
-    "build:frontend": "cd frontend && npm run build",
-    "install:all": "npm install && cd frontend && npm install && cd ../services/auth && npm install && cd ../users && npm install && cd ../profiles && npm install && cd ../bookings && npm install && cd ../messaging && npm install && cd ../reviews && npm install && cd ../notifications && npm install && cd ../analytics && npm install && cd ../gamification && npm install && cd ../earnings && npm install && cd ../calendar && npm install && cd ../maps && npm install"
+    "build:frontend": "cd frontend && npm run build"
   },
-  "keywords": ["tutor", "education", "marketplace", "singapore", "booking"],
+  "keywords": [
+    "tutor",
+    "education",
+    "marketplace",
+    "singapore",
+    "booking"
+  ],
   "author": "TutorConnect Team",
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "kill-port": "2.0.1"
   }
 }
