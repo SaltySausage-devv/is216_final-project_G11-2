@@ -1022,12 +1022,27 @@ app.post('/messaging/booking-proposals', verifyToken, async (req, res) => {
       throw updateError;
     }
 
+    // Get tutor's hourly rate for credits calculation
+    const { data: tutorProfile } = await supabase
+      .from('tutor_profiles')
+      .select('hourly_rate')
+      .eq('user_id', req.user.userId)
+      .single();
+
+    const hourlyRate = tutorProfile?.hourly_rate || 0;
+    const sessionDuration = duration || 60; // in minutes
+    const creditsAmount = (hourlyRate * sessionDuration / 60).toFixed(2);
+
     // Create booking proposal message
     const messageContent = JSON.stringify({
       bookingOfferId: bookingOfferId,
       proposedTime: proposedTime,
+      proposedEndTime: calculatedEndTime,
+      duration: sessionDuration,
       tutorLocation: tutorLocation,
-      finalLocation: finalLocation
+      finalLocation: finalLocation,
+      hourlyRate: hourlyRate,
+      creditsAmount: creditsAmount
     });
 
     const { data: message, error: messageError } = await supabase
@@ -1164,6 +1179,89 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       // Don't fail the whole operation if booking creation fails
     } else {
       console.log('✅ Booking record created successfully:', booking);
+    }
+
+    // Handle credit transactions when student confirms booking
+    if (bookingOffer.tutee_id === req.user.userId && !existingBooking) {
+      try {
+        console.log('🔄 Processing credit transaction for booking confirmation...');
+        
+        // Get the actual hourly rate and calculate credits
+        const { data: tutorProfile, error: tutorProfileError } = await supabase
+          .from('tutor_profiles')
+          .select('hourly_rate')
+          .eq('user_id', bookingOffer.tutor_id)
+          .single();
+
+        console.log('📊 Tutor profile data:', { tutorProfile, tutorProfileError });
+
+        const hourlyRate = tutorProfile?.hourly_rate || 0;
+        const sessionDuration = bookingOffer.duration || 60; // in minutes
+        const creditsUsed = hourlyRate * sessionDuration / 60;
+        
+        console.log('💰 Credit calculation:', { hourlyRate, sessionDuration, creditsUsed });
+
+        // Deduct credits from student
+        const { data: student, error: studentError } = await supabase
+          .from('users')
+          .select('credits')
+          .eq('id', bookingOffer.tutee_id)
+          .single();
+
+        if (studentError) {
+          console.error('❌ Error fetching student credits:', studentError);
+        } else {
+          const newStudentCredits = Math.max(0, (student.credits || 0) - creditsUsed);
+          console.log(`💸 Deducting ${creditsUsed} credits from student. Old: ${student.credits}, New: ${newStudentCredits}`);
+          
+          const { error: studentUpdateError } = await supabase
+            .from('users')
+            .update({ 
+              credits: newStudentCredits,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', bookingOffer.tutee_id);
+            
+          if (studentUpdateError) {
+            console.error('❌ Error updating student credits:', studentUpdateError);
+          } else {
+            console.log('✅ Student credits updated successfully');
+          }
+        }
+
+        // Add credits to tutor
+        const { data: tutor, error: tutorError } = await supabase
+          .from('users')
+          .select('credits')
+          .eq('id', bookingOffer.tutor_id)
+          .single();
+
+        if (tutorError) {
+          console.error('❌ Error fetching tutor credits:', tutorError);
+        } else {
+          const newTutorCredits = (tutor.credits || 0) + creditsUsed;
+          console.log(`💰 Adding ${creditsUsed} credits to tutor. Old: ${tutor.credits}, New: ${newTutorCredits}`);
+          
+          const { error: tutorUpdateError } = await supabase
+            .from('users')
+            .update({ 
+              credits: newTutorCredits,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', bookingOffer.tutor_id);
+            
+          if (tutorUpdateError) {
+            console.error('❌ Error updating tutor credits:', tutorUpdateError);
+          } else {
+            console.log('✅ Tutor credits updated successfully');
+          }
+        }
+
+        console.log(`✅ Credits transferred: ${creditsUsed} from student to tutor`);
+      } catch (creditError) {
+        console.error('Error processing credit transaction:', creditError);
+        // Don't fail the booking confirmation if credit processing fails
+      }
     }
 
     // Create booking confirmation message

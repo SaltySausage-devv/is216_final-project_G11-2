@@ -215,8 +215,13 @@ export const useAuthStore = defineStore('auth', () => {
                     console.log('🔄 User data updated:', payload)
                     if (payload.new && user.value) {
                         // Update the user data with the new values
+                        const oldCredits = user.value.credits;
                         user.value = { ...user.value, ...payload.new }
-                        console.log('✅ User data updated in store:', user.value)
+                        console.log('✅ User data updated in store:', {
+                            oldCredits,
+                            newCredits: user.value.credits,
+                            fullUser: user.value
+                        })
                     }
                 }
             )

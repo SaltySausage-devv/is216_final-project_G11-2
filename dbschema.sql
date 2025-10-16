@@ -63,6 +63,7 @@ CREATE TABLE public.bookings (
   updated_at timestamp with time zone DEFAULT now(),
   pending_reschedule_start_time timestamp with time zone,
   pending_reschedule_end_time timestamp with time zone,
+  pending_reschedule_location text,
   reschedule_requested_by uuid,
   reschedule_requester_type text CHECK (reschedule_requester_type = ANY (ARRAY['tutor'::text, 'student'::text])),
   reschedule_reason text,

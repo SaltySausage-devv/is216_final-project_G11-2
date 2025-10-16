@@ -165,6 +165,7 @@ app.get('/calendar', verifyToken, async (req, res) => {
       reschedule_status: booking.reschedule_status,
       pending_reschedule_start_time: booking.pending_reschedule_start_time,
       pending_reschedule_end_time: booking.pending_reschedule_end_time,
+      pending_reschedule_location: booking.pending_reschedule_location,
       reschedule_requested_by: booking.reschedule_requested_by,
       reschedule_requester_type: booking.reschedule_requester_type,
       reschedule_reason: booking.reschedule_reason,
@@ -510,7 +511,7 @@ app.put('/bookings/:id', verifyToken, async (req, res) => {
 app.post('/bookings/:id/reschedule', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const { start_time, end_time, reschedule_reason } = req.body;
+    const { start_time, end_time, reschedule_reason, new_location } = req.body;
 
     // Get booking and verify user is involved
     const { data: booking, error: fetchError } = await supabase
@@ -536,19 +537,26 @@ app.post('/bookings/:id/reschedule', verifyToken, async (req, res) => {
     const requesterType = booking.tutor_id === req.user.userId ? 'tutor' : 'student';
 
     // Update booking with reschedule request details
+    const updateData = {
+      pending_reschedule_start_time: start_time,
+      pending_reschedule_end_time: end_time,
+      reschedule_requested_by: req.user.userId,
+      reschedule_requester_type: requesterType,
+      reschedule_reason: reschedule_reason,
+      reschedule_status: 'pending',
+      reschedule_requested_at: new Date().toISOString(),
+      reschedule_responded_at: null,
+      reschedule_response_message: null
+    };
+
+    // Add new location if provided
+    if (new_location) {
+      updateData.pending_reschedule_location = new_location;
+    }
+    
     const { data: updatedBooking, error: updateError } = await supabase
       .from('bookings')
-      .update({
-        pending_reschedule_start_time: start_time,
-        pending_reschedule_end_time: end_time,
-        reschedule_requested_by: req.user.userId,
-        reschedule_requester_type: requesterType,
-        reschedule_reason: reschedule_reason,
-        reschedule_status: 'pending',
-        reschedule_requested_at: new Date().toISOString(),
-        reschedule_responded_at: null,
-        reschedule_response_message: null
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -557,6 +565,7 @@ app.post('/bookings/:id/reschedule', verifyToken, async (req, res) => {
       console.error('Reschedule request creation error:', updateError);
       return res.status(500).json({ error: 'Failed to create reschedule request' });
     }
+
 
     // Send notification to the other party via messaging system
     const recipientId = requesterType === 'tutor' ? booking.student_id : booking.tutor_id;
@@ -596,7 +605,7 @@ app.post('/bookings/:id/reschedule', verifyToken, async (req, res) => {
 
       if (conversationId) {
         // Format the reschedule request message data
-        const messageContent = JSON.stringify({
+        const messageData = {
           bookingId: booking.id,
           currentStartTime: booking.start_time,
           currentEndTime: booking.end_time,
@@ -605,8 +614,15 @@ app.post('/bookings/:id/reschedule', verifyToken, async (req, res) => {
           reason: reschedule_reason || 'No reason provided',
           requesterType: requesterType,
           subject: booking.subject || 'Tutoring Session',
-          location: booking.location
-        });
+          currentLocation: booking.location
+        };
+        
+        // Only include proposedLocation if a new location was actually provided
+        if (new_location && new_location.trim() !== '') {
+          messageData.proposedLocation = new_location;
+        }
+        
+        const messageContent = JSON.stringify(messageData);
 
         // Get auth token from request
         const authToken = req.headers.authorization?.split(' ')[1];
@@ -797,26 +813,185 @@ app.post('/bookings/:id/reschedule/accept', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'No pending reschedule request found' });
     }
 
-    // Update the booking: apply new times and clear reschedule request fields
+    // Update the booking: apply new times and location, clear reschedule request fields
+    const updateData = {
+      start_time: booking.pending_reschedule_start_time,
+      end_time: booking.pending_reschedule_end_time,
+      rescheduled_at: new Date().toISOString(),
+      reschedule_status: 'accepted',
+      reschedule_responded_at: new Date().toISOString(),
+      reschedule_response_message: response_message || 'Accepted',
+      // Clear pending fields after accepting
+      pending_reschedule_start_time: null,
+      pending_reschedule_end_time: null,
+      pending_reschedule_location: null
+    };
+
+    // Update location if a new one was proposed
+    if (booking.pending_reschedule_location) {
+      updateData.location = booking.pending_reschedule_location;
+    }
+
     const { data: updatedBooking, error: updateError } = await supabase
       .from('bookings')
-      .update({
-        start_time: booking.pending_reschedule_start_time,
-        end_time: booking.pending_reschedule_end_time,
-        rescheduled_at: new Date().toISOString(),
-        reschedule_status: 'accepted',
-        reschedule_responded_at: new Date().toISOString(),
-        reschedule_response_message: response_message || 'Accepted',
-        // Clear pending fields after accepting
-        pending_reschedule_start_time: null,
-        pending_reschedule_end_time: null
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
 
     if (updateError) {
       throw updateError;
+    }
+
+    // Handle credit transactions for reschedule acceptance
+    try {
+      console.log('🔄 Processing credit transaction for reschedule acceptance...');
+      console.log('🔍 Reschedule acceptance details:', {
+        bookingId: booking.id,
+        userId: userId,
+        studentId: booking.student_id,
+        tutorId: booking.tutor_id,
+        currentStart: booking.start_time,
+        currentEnd: booking.end_time,
+        newStart: booking.pending_reschedule_start_time,
+        newEnd: booking.pending_reschedule_end_time
+      });
+
+      // Get tutor's hourly rate
+      const { data: tutorProfile, error: tutorProfileError } = await supabase
+        .from('tutor_profiles')
+        .select('hourly_rate')
+        .eq('user_id', booking.tutor_id)
+        .single();
+
+      if (tutorProfileError) {
+        console.error('❌ Error fetching tutor profile:', tutorProfileError);
+      } else if (tutorProfile?.hourly_rate) {
+        const hourlyRate = tutorProfile.hourly_rate;
+        
+        // Calculate current session duration (in hours)
+        const currentStart = new Date(booking.start_time);
+        const currentEnd = new Date(booking.end_time);
+        const currentDurationHours = (currentEnd.getTime() - currentStart.getTime()) / (1000 * 60 * 60);
+        const currentCredits = hourlyRate * currentDurationHours;
+
+        // Calculate new session duration (in hours)
+        const newStart = new Date(booking.pending_reschedule_start_time);
+        const newEnd = new Date(booking.pending_reschedule_end_time);
+        const newDurationHours = (newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60);
+        const newCredits = hourlyRate * newDurationHours;
+
+        // Calculate credit difference
+        const creditDifference = newCredits - currentCredits;
+
+        console.log('💰 Credit calculation:', {
+          hourlyRate,
+          currentDurationHours,
+          currentCredits,
+          newDurationHours,
+          newCredits,
+          creditDifference
+        });
+
+        if (creditDifference !== 0) {
+          console.log('🔍 Credit difference is not zero, proceeding with transaction...');
+          console.log('🔄 Updating credits for BOTH student and tutor...');
+          
+          // Update credits for BOTH parties
+          const updatePromises = [];
+          
+          // Update student credits
+          const { data: student, error: studentError } = await supabase
+            .from('users')
+            .select('credits')
+            .eq('id', booking.student_id)
+            .single();
+          
+          if (studentError) {
+            console.error('❌ Error fetching student credits:', studentError);
+          } else {
+            const currentStudentCredits = student.credits || 0;
+            const newStudentCredits = Math.max(0, currentStudentCredits - creditDifference);
+            console.log(`💸 Student credit adjustment: ${currentStudentCredits} → ${newStudentCredits} (difference: ${creditDifference})`);
+            
+            updatePromises.push(
+              supabase
+                .from('users')
+                .update({
+                  credits: newStudentCredits,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', booking.student_id)
+                .select('id, credits')
+                .then(result => {
+                  if (result.error) {
+                    console.error('❌ Error updating student credits:', result.error);
+                  } else {
+                    console.log(`✅ Student credits updated successfully:`, result.data);
+                  }
+                  return result;
+                })
+            );
+          }
+          
+          // Update tutor credits
+          const { data: tutor, error: tutorError } = await supabase
+            .from('users')
+            .select('credits')
+            .eq('id', booking.tutor_id)
+            .single();
+          
+          if (tutorError) {
+            console.error('❌ Error fetching tutor credits:', tutorError);
+          } else {
+            const currentTutorCredits = tutor.credits || 0;
+            const newTutorCredits = Math.max(0, currentTutorCredits + creditDifference);
+            console.log(`💰 Tutor credit adjustment: ${currentTutorCredits} → ${newTutorCredits} (difference: ${creditDifference})`);
+            
+            updatePromises.push(
+              supabase
+                .from('users')
+                .update({
+                  credits: newTutorCredits,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', booking.tutor_id)
+                .select('id, credits')
+                .then(result => {
+                  if (result.error) {
+                    console.error('❌ Error updating tutor credits:', result.error);
+                  } else {
+                    console.log(`✅ Tutor credits updated successfully:`, result.data);
+                  }
+                  return result;
+                })
+            );
+          }
+          
+          // Wait for both updates to complete
+          try {
+            await Promise.all(updatePromises);
+            console.log('✅ All credit updates completed successfully');
+          } catch (error) {
+            console.error('❌ Error in credit update process:', error);
+          }
+        } else {
+          console.log('ℹ️ No credit difference - no transaction needed');
+          console.log('🔍 Credit calculation details:', {
+            currentCredits,
+            newCredits,
+            creditDifference,
+            hourlyRate,
+            currentDurationHours,
+            newDurationHours
+          });
+        }
+      } else {
+        console.log('⚠️ Tutor hourly rate not found - skipping credit transaction');
+      }
+    } catch (creditError) {
+      console.error('❌ Error processing credit transaction:', creditError);
+      // Don't fail the reschedule acceptance if credit processing fails
     }
 
     // Send notification to requester
@@ -987,6 +1162,85 @@ app.post('/bookings/:id/reschedule/reject', verifyToken, async (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', service: 'calendar' });
 });
+
+// Test endpoint to manually update user credits (for debugging)
+app.post('/test-update-credits', verifyToken, async (req, res) => {
+  try {
+    const { userId, newCredits } = req.body;
+    const currentUserId = req.user.userId;
+    
+    console.log('🧪 Test credit update:', { userId, newCredits, currentUserId });
+    
+    const { data: updateResult, error: updateError } = await supabase
+      .from('users')
+      .update({
+        credits: newCredits,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select('id, credits');
+    
+    if (updateError) {
+      console.error('❌ Test credit update error:', updateError);
+      return res.status(500).json({ error: 'Failed to update credits', details: updateError });
+    }
+    
+    console.log('✅ Test credit update success:', updateResult);
+    res.json({ success: true, result: updateResult });
+  } catch (error) {
+    console.error('❌ Test credit update exception:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Test endpoint to simulate student credit update (for debugging)
+app.post('/test-student-credit-update', verifyToken, async (req, res) => {
+  try {
+    const { studentId, creditDifference } = req.body;
+    const currentUserId = req.user.userId;
+    
+    console.log('🧪 Test student credit update:', { studentId, creditDifference, currentUserId });
+    
+    // Get current student credits
+    const { data: student, error: studentError } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', studentId)
+      .single();
+    
+    if (studentError) {
+      console.error('❌ Error fetching student credits:', studentError);
+      return res.status(500).json({ error: 'Failed to fetch student credits', details: studentError });
+    }
+    
+    const currentCredits = student.credits || 0;
+    const newCredits = Math.max(0, currentCredits - creditDifference);
+    
+    console.log(`🧪 Student credit calculation: ${currentCredits} - ${creditDifference} = ${newCredits}`);
+    
+    // Update student credits
+    const { data: updateResult, error: updateError } = await supabase
+      .from('users')
+      .update({
+        credits: newCredits,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', studentId)
+      .select('id, credits');
+    
+    if (updateError) {
+      console.error('❌ Test student credit update error:', updateError);
+      return res.status(500).json({ error: 'Failed to update student credits', details: updateError });
+    }
+    
+    console.log('✅ Test student credit update success:', updateResult);
+    res.json({ success: true, result: updateResult });
+  } catch (error) {
+    console.error('❌ Test student credit update exception:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Calendar service running on port ${PORT}`);

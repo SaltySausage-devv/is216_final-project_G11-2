@@ -3,7 +3,10 @@
     <div class="container-fluid py-4 px-3 px-lg-5">
       <div class="row g-3 g-lg-4 messages-row">
         <!-- Conversations Sidebar -->
-        <div class="col-12 col-lg-4 conversations-col" :class="{ 'hide-on-mobile': showMobileChat }">
+        <div
+          class="col-12 col-lg-4 conversations-col"
+          :class="{ 'hide-on-mobile': showMobileChat }"
+        >
           <div class="card border-0 shadow-sm w-100 d-flex flex-column">
             <div class="card-header bg-white border-bottom">
               <div class="d-flex align-items-center justify-content-between">
@@ -135,7 +138,10 @@
         </div>
 
         <!-- Chat Area -->
-        <div class="col-12 col-lg-8 chat-col" :class="{ 'show-on-mobile': showMobileChat }">
+        <div
+          class="col-12 col-lg-8 chat-col"
+          :class="{ 'show-on-mobile': showMobileChat }"
+        >
           <div
             :initial="{ opacity: 0, x: 30 }"
             :animate="{ opacity: 1, x: 0 }"
@@ -282,7 +288,8 @@
                                 v-if="
                                   message.senderId !== currentUserId &&
                                   authStore.user?.user_type === 'tutor' &&
-                                  getBookingStatusValue(message) === 'awaiting_response'
+                                  getBookingStatusValue(message) ===
+                                    'awaiting_response'
                                 "
                                 class="btn btn-primary btn-sm me-2"
                                 @click="handleBookingOffer(message)"
@@ -291,10 +298,17 @@
                                 View & Respond
                               </button>
                               <span
-                                :class="['booking-status', getBookingStatusClass(message)]"
+                                :class="[
+                                  'booking-status',
+                                  getBookingStatusClass(message),
+                                ]"
                               >
                                 <i
-                                  :class="['fas', getBookingStatusIcon(message), 'me-1']"
+                                  :class="[
+                                    'fas',
+                                    getBookingStatusIcon(message),
+                                    'me-1',
+                                  ]"
                                 ></i>
                                 {{ getBookingStatusText(message) }}
                               </span>
@@ -328,6 +342,21 @@
                                 <strong>Location:</strong>
                                 {{ getBookingData(message).finalLocation }}
                               </p>
+                              <p
+                                v-if="getBookingData(message).creditsAmount"
+                                class="mb-2"
+                              >
+                                <strong
+                                  v-if="authStore.user?.user_type === 'tutor'"
+                                  >Credits earned:</strong
+                                >
+                                <strong v-else>Credits needed:</strong>
+                                <span class="text-warning fw-bold ms-1"
+                                  >${{
+                                    getBookingData(message).creditsAmount
+                                  }}</span
+                                >
+                              </p>
                             </div>
                             <div class="booking-actions">
                               <button
@@ -335,7 +364,8 @@
                                   message.senderId !== currentUserId &&
                                   (authStore.user?.user_type === 'student' ||
                                     authStore.user?.user_type === 'parent') &&
-                                  getBookingStatusValue(message) === 'pending_acceptance'
+                                  getBookingStatusValue(message) ===
+                                    'pending_acceptance'
                                 "
                                 class="btn btn-success btn-sm me-2"
                                 @click="confirmBooking(message)"
@@ -344,10 +374,17 @@
                                 Accept & Book
                               </button>
                               <span
-                                :class="['booking-status', getBookingStatusClass(message)]"
+                                :class="[
+                                  'booking-status',
+                                  getBookingStatusClass(message),
+                                ]"
                               >
                                 <i
-                                  :class="['fas', getBookingStatusIcon(message), 'me-1']"
+                                  :class="[
+                                    'fas',
+                                    getBookingStatusIcon(message),
+                                    'me-1',
+                                  ]"
                                 ></i>
                                 {{ getBookingStatusText(message) }}
                               </span>
@@ -466,7 +503,7 @@
                                 }}
                                 -
                                 {{
-                                  formatTime(
+                                  formatTimeOnly(
                                     getBookingData(message).currentEndTime
                                   )
                                 }}
@@ -480,7 +517,7 @@
                                 }}
                                 -
                                 {{
-                                  formatTime(
+                                  formatTimeOnly(
                                     getBookingData(message).proposedEndTime
                                   )
                                 }}
@@ -491,6 +528,17 @@
                               >
                                 <strong>Reason:</strong>
                                 {{ getBookingData(message).reason }}
+                              </p>
+                              <p
+                                v-if="
+                                  getBookingData(message).proposedLocation &&
+                                  getBookingData(message).proposedLocation !==
+                                    getBookingData(message).currentLocation
+                                "
+                                class="mb-2 text-info"
+                              >
+                                <strong>New Location:</strong>
+                                {{ getBookingData(message).proposedLocation }}
                               </p>
                             </div>
                             <div class="booking-actions">
@@ -538,7 +586,9 @@
                                 }}
                                 -
                                 {{
-                                  formatTime(getBookingData(message).newEndTime)
+                                  formatTimeOnly(
+                                    getBookingData(message).newEndTime
+                                  )
                                 }}
                               </p>
                               <p
@@ -589,7 +639,7 @@
                                 }}
                                 -
                                 {{
-                                  formatTime(
+                                  formatTimeOnly(
                                     getBookingData(message).originalEndTime
                                   )
                                 }}
@@ -871,10 +921,7 @@
     </div>
 
     <!-- Booking Offer Modal -->
-    <div
-      v-if="showBookingOfferModal"
-      class="modal-overlay"
-    >
+    <div v-if="showBookingOfferModal" class="modal-overlay">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>
@@ -941,12 +988,16 @@
                     v-for="(prediction, index) in predictions.tutee"
                     :key="prediction.place_id"
                     class="autocomplete-item"
-                    :class="{ 'active': selectedIndex.tutee === index }"
+                    :class="{ active: selectedIndex.tutee === index }"
                     @mousedown.prevent="selectPrediction('tutee', prediction)"
                     @mouseenter="selectedIndex.tutee = index"
                   >
-                    <div class="place-name">{{ prediction.structured_formatting.main_text }}</div>
-                    <div class="place-address">{{ prediction.structured_formatting.secondary_text }}</div>
+                    <div class="place-name">
+                      {{ prediction.structured_formatting.main_text }}
+                    </div>
+                    <div class="place-address">
+                      {{ prediction.structured_formatting.secondary_text }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -987,10 +1038,7 @@
     </div>
 
     <!-- Calendar Modal -->
-    <div
-      v-if="showCalendarModal"
-      class="modal-overlay"
-    >
+    <div v-if="showCalendarModal" class="modal-overlay">
       <div class="modal-content calendar-modal" @click.stop>
         <div class="modal-header">
           <h3>
@@ -1093,10 +1141,7 @@
     </div>
 
     <!-- Booking Proposal Modal -->
-    <div
-      v-if="showBookingProposalModal"
-      class="modal-overlay"
-    >
+    <div v-if="showBookingProposalModal" class="modal-overlay">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>
@@ -1116,17 +1161,19 @@
             <div class="summary-content">
               <span class="summary-item">
                 <i class="fas fa-laptop me-1"></i>
-                {{
-                  selectedBookingOffer.isOnline
-                    ? "Online"
-                    : "On-site"
-                }}
+                {{ selectedBookingOffer.isOnline ? "Online" : "On-site" }}
               </span>
-              <span v-if="selectedBookingOffer.tuteeLocation" class="summary-item">
+              <span
+                v-if="selectedBookingOffer.tuteeLocation"
+                class="summary-item"
+              >
                 <i class="fas fa-map-marker-alt me-1"></i>
                 {{ selectedBookingOffer.tuteeLocation }}
               </span>
-              <span v-if="selectedBookingOffer.notes" class="summary-item notes-item">
+              <span
+                v-if="selectedBookingOffer.notes"
+                class="summary-item notes-item"
+              >
                 <i class="fas fa-sticky-note me-1"></i>
                 {{ selectedBookingOffer.notes }}
               </span>
@@ -1165,7 +1212,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.duration === 30 }"
-                  @click="bookingProposal.duration = 30; bookingProposal.customDuration = ''"
+                  @click="
+                    bookingProposal.duration = 30;
+                    bookingProposal.customDuration = '';
+                  "
                 >
                   30 min
                 </button>
@@ -1173,7 +1223,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.duration === 60 }"
-                  @click="bookingProposal.duration = 60; bookingProposal.customDuration = ''"
+                  @click="
+                    bookingProposal.duration = 60;
+                    bookingProposal.customDuration = '';
+                  "
                 >
                   60 min
                 </button>
@@ -1181,7 +1234,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.duration === 90 }"
-                  @click="bookingProposal.duration = 90; bookingProposal.customDuration = ''"
+                  @click="
+                    bookingProposal.duration = 90;
+                    bookingProposal.customDuration = '';
+                  "
                 >
                   90 min
                 </button>
@@ -1189,7 +1245,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.duration === 120 }"
-                  @click="bookingProposal.duration = 120; bookingProposal.customDuration = ''"
+                  @click="
+                    bookingProposal.duration = 120;
+                    bookingProposal.customDuration = '';
+                  "
                 >
                   120 min
                 </button>
@@ -1197,7 +1256,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.customDuration !== '' }"
-                  @click="bookingProposal.duration = 0; bookingProposal.customDuration = '60'"
+                  @click="
+                    bookingProposal.duration = 0;
+                    bookingProposal.customDuration = '60';
+                  "
                 >
                   Custom
                 </button>
@@ -1215,9 +1277,16 @@
                   />
                   <span class="input-group-text">minutes</span>
                 </div>
-                <small class="text-muted">Min: 15 minutes, Max: 480 minutes (8 hours)</small>
+                <small class="text-muted"
+                  >Min: 15 minutes, Max: 480 minutes (8 hours)</small
+                >
               </div>
-              <div v-if="bookingProposal.proposedDate && bookingProposal.proposedTime" class="mt-2">
+              <div
+                v-if="
+                  bookingProposal.proposedDate && bookingProposal.proposedTime
+                "
+                class="mt-2"
+              >
                 <small class="text-muted">
                   <i class="fas fa-clock me-1"></i>
                   End time: {{ calculateEndTime() }}
@@ -1279,12 +1348,54 @@
                     v-for="(prediction, index) in predictions.tutor"
                     :key="prediction.place_id"
                     class="autocomplete-item"
-                    :class="{ 'active': selectedIndex.tutor === index }"
+                    :class="{ active: selectedIndex.tutor === index }"
                     @mousedown.prevent="selectPrediction('tutor', prediction)"
                     @mouseenter="selectedIndex.tutor = index"
                   >
-                    <div class="place-name">{{ prediction.structured_formatting.main_text }}</div>
-                    <div class="place-address">{{ prediction.structured_formatting.secondary_text }}</div>
+                    <div class="place-name">
+                      {{ prediction.structured_formatting.main_text }}
+                    </div>
+                    <div class="place-address">
+                      {{ prediction.structured_formatting.secondary_text }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tutor Earnings Section -->
+            <div v-if="authStore.user?.user_type === 'tutor'" class="mb-3">
+              <div class="tutor-earnings-section">
+                <div class="earnings-header">
+                  <i class="fas fa-coins me-2 text-warning"></i>
+                  <span class="earnings-title">Session Earnings</span>
+                </div>
+                <div class="earnings-content">
+                  <div class="earnings-breakdown">
+                    <div class="earnings-item">
+                      <span class="earnings-label">Hourly Rate:</span>
+                      <span class="earnings-value"
+                        >${{
+                          (tutorProfile.hourlyRate || 0).toFixed(2)
+                        }}/hr</span
+                      >
+                    </div>
+                    <div class="earnings-item">
+                      <span class="earnings-label">Duration:</span>
+                      <span class="earnings-value"
+                        >{{ getEffectiveDuration() }} minutes</span
+                      >
+                    </div>
+                    <div class="earnings-item earnings-total">
+                      <span class="earnings-label">Total Earnings:</span>
+                      <span class="earnings-value earnings-amount"
+                        >${{ calculatedEarnings }}</span
+                      >
+                    </div>
+                  </div>
+                  <div v-if="tutorProfile.loading" class="earnings-loading">
+                    <i class="fas fa-spinner fa-spin me-2"></i>
+                    Loading rate information...
                   </div>
                 </div>
               </div>
@@ -1342,6 +1453,24 @@ export default {
     const { showMessageNotification } = useNotifications();
 
     const currentUserId = computed(() => authStore.user?.id);
+
+    // Computed property to calculate earnings based on duration and hourly rate
+    const calculatedEarnings = computed(() => {
+      if (!tutorProfile.value.hourlyRate) return "0.00";
+
+      const durationInHours = getEffectiveDuration() / 60; // Convert minutes to hours
+      const total = tutorProfile.value.hourlyRate * durationInHours;
+      return total.toFixed(2); // Always show 2 decimal places
+    });
+
+    // Helper function to get the effective duration (either preset or custom)
+    const getEffectiveDuration = () => {
+      if (bookingProposal.value.customDuration !== "") {
+        return parseInt(bookingProposal.value.customDuration) || 60;
+      }
+      return bookingProposal.value.duration || 60;
+    };
+
     const searchQuery = ref("");
     const selectedConversation = ref(null);
     const conversations = ref([]);
@@ -1382,6 +1511,12 @@ export default {
       locationChoice: "tutee",
       tutorLocation: "",
       notes: "",
+    });
+
+    // Tutor profile data for earnings calculation
+    const tutorProfile = ref({
+      hourlyRate: 0,
+      loading: false,
     });
 
     // Calendar variables
@@ -1441,14 +1576,20 @@ export default {
     );
 
     watch(
-      () => [bookingProposal.value.locationChoice, selectedBookingOffer.value?.isOnline],
+      () => [
+        bookingProposal.value.locationChoice,
+        selectedBookingOffer.value?.isOnline,
+      ],
       async ([locationChoice, isOnline]) => {
-        if (showBookingProposalModal.value && locationChoice === "tutor" && isOnline === false) {
+        if (
+          showBookingProposalModal.value &&
+          locationChoice === "tutor" &&
+          isOnline === false
+        ) {
           await setupAutocomplete("tutor");
         }
       }
     );
-
 
     const ensureGoogleMapsLoaded = async () => {
       if (googleMapsReady.value) {
@@ -1470,20 +1611,26 @@ export default {
 
       try {
         // Set the API key globally for the loader
-        if (!window.google || !window.google.maps || !window.google.maps.places) {
+        if (
+          !window.google ||
+          !window.google.maps ||
+          !window.google.maps.places
+        ) {
           // Remove any existing script tags to avoid conflicts
-          const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+          const existingScript = document.querySelector(
+            'script[src*="maps.googleapis.com"]'
+          );
           if (existingScript) {
             existingScript.remove();
           }
 
           // Create callback function that will be called when Google Maps loads
           window.initGoogleMaps = () => {
-            console.log('Google Maps loaded successfully');
+            console.log("Google Maps loaded successfully");
           };
 
           // Load Google Maps with Places library
-          const script = document.createElement('script');
+          const script = document.createElement("script");
           script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps`;
           script.async = true;
           script.defer = true;
@@ -1492,10 +1639,16 @@ export default {
             script.onload = () => {
               // Wait a bit for the libraries to fully initialize
               setTimeout(() => {
-                if (window.google && window.google.maps && window.google.maps.places) {
+                if (
+                  window.google &&
+                  window.google.maps &&
+                  window.google.maps.places
+                ) {
                   resolve();
                 } else {
-                  reject(new Error('Google Maps Places library failed to load'));
+                  reject(
+                    new Error("Google Maps Places library failed to load")
+                  );
                 }
               }, 100);
             };
@@ -1520,15 +1673,16 @@ export default {
       if (!google) return false;
 
       if (!autocompleteService.value) {
-        autocompleteService.value = new google.maps.places.AutocompleteService();
-        console.log('✅ AutocompleteService initialized');
+        autocompleteService.value =
+          new google.maps.places.AutocompleteService();
+        console.log("✅ AutocompleteService initialized");
       }
 
       if (!placesService.value) {
         // PlacesService needs a DOM element, using a hidden div
-        const div = document.createElement('div');
+        const div = document.createElement("div");
         placesService.value = new google.maps.places.PlacesService(div);
-        console.log('✅ PlacesService initialized');
+        console.log("✅ PlacesService initialized");
       }
 
       return true;
@@ -1552,47 +1706,60 @@ export default {
 
         const request = {
           input: query,
-          componentRestrictions: { country: 'sg' },
+          componentRestrictions: { country: "sg" },
         };
 
-        autocompleteService.value.getPlacePredictions(request, (results, status) => {
-          console.log(`📍 Predictions for ${type}:`, results, status);
+        autocompleteService.value.getPlacePredictions(
+          request,
+          (results, status) => {
+            console.log(`📍 Predictions for ${type}:`, results, status);
 
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-            predictions.value[type] = results;
-            showDropdown.value[type] = true;
-            selectedIndex.value[type] = -1;
-          } else {
-            predictions.value[type] = [];
-            showDropdown.value[type] = false;
+            if (
+              status === window.google.maps.places.PlacesServiceStatus.OK &&
+              results
+            ) {
+              predictions.value[type] = results;
+              showDropdown.value[type] = true;
+              selectedIndex.value[type] = -1;
+            } else {
+              predictions.value[type] = [];
+              showDropdown.value[type] = false;
+            }
           }
-        });
+        );
       }, 300);
     };
 
     // Handle keyboard navigation
     const handleKeyDown = (type, event) => {
-      if (!showDropdown.value[type] || predictions.value[type].length === 0) return;
+      if (!showDropdown.value[type] || predictions.value[type].length === 0)
+        return;
 
       switch (event.key) {
-        case 'ArrowDown':
+        case "ArrowDown":
           event.preventDefault();
           selectedIndex.value[type] = Math.min(
             selectedIndex.value[type] + 1,
             predictions.value[type].length - 1
           );
           break;
-        case 'ArrowUp':
+        case "ArrowUp":
           event.preventDefault();
-          selectedIndex.value[type] = Math.max(selectedIndex.value[type] - 1, -1);
+          selectedIndex.value[type] = Math.max(
+            selectedIndex.value[type] - 1,
+            -1
+          );
           break;
-        case 'Enter':
+        case "Enter":
           event.preventDefault();
           if (selectedIndex.value[type] >= 0) {
-            selectPrediction(type, predictions.value[type][selectedIndex.value[type]]);
+            selectPrediction(
+              type,
+              predictions.value[type][selectedIndex.value[type]]
+            );
           }
           break;
-        case 'Escape':
+        case "Escape":
           showDropdown.value[type] = false;
           selectedIndex.value[type] = -1;
           break;
@@ -1608,14 +1775,17 @@ export default {
 
       const request = {
         placeId: prediction.place_id,
-        fields: ['name', 'formatted_address', 'address_components', 'geometry'],
+        fields: ["name", "formatted_address", "address_components", "geometry"],
       };
 
       placesService.value.getDetails(request, (place, status) => {
         console.log(`📍 Place details for ${type}:`, place, status);
 
-        if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
-          let address = '';
+        if (
+          status === window.google.maps.places.PlacesServiceStatus.OK &&
+          place
+        ) {
+          let address = "";
 
           // Combine name with formatted address
           if (place.name && place.formatted_address) {
@@ -1633,7 +1803,7 @@ export default {
           console.log(`📍 Final address for ${type}:`, address);
 
           // Update the input
-          if (type === 'tutee') {
+          if (type === "tutee") {
             bookingOffer.value.tuteeLocation = address;
           } else {
             bookingProposal.value.tutorLocation = address;
@@ -1649,9 +1819,10 @@ export default {
 
     // Handle input focus
     const handleInputFocus = (type) => {
-      const query = type === 'tutee'
-        ? bookingOffer.value.tuteeLocation
-        : bookingProposal.value.tutorLocation;
+      const query =
+        type === "tutee"
+          ? bookingOffer.value.tuteeLocation
+          : bookingProposal.value.tutorLocation;
 
       if (query && query.length >= 3 && predictions.value[type].length > 0) {
         showDropdown.value[type] = true;
@@ -2672,9 +2843,10 @@ export default {
       }
 
       // Validate duration
-      const effectiveDuration = bookingProposal.value.customDuration !== ''
-        ? bookingProposal.value.customDuration
-        : bookingProposal.value.duration;
+      const effectiveDuration =
+        bookingProposal.value.customDuration !== ""
+          ? bookingProposal.value.customDuration
+          : bookingProposal.value.duration;
 
       if (!effectiveDuration || effectiveDuration < 15) {
         alert("Please select a valid duration (minimum 15 minutes)");
@@ -2693,7 +2865,9 @@ export default {
         }
 
         // Calculate end time
-        const endDateTime = new Date(proposedDateTime.getTime() + effectiveDuration * 60000);
+        const endDateTime = new Date(
+          proposedDateTime.getTime() + effectiveDuration * 60000
+        );
 
         let finalLocation = "";
         if (selectedBookingOffer.value.isOnline) {
@@ -2933,6 +3107,16 @@ export default {
       });
     };
 
+    const formatTimeOnly = (dateTimeString) => {
+      if (!dateTimeString) return "";
+      const date = new Date(dateTimeString);
+      if (isNaN(date.getTime())) return "";
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
     const handleBookingOffer = (message) => {
       const bookingData = getBookingData(message);
       if (bookingData) {
@@ -2943,6 +3127,40 @@ export default {
           notes: bookingData.notes,
         };
         showBookingProposalModal.value = true;
+        // Load tutor profile data when opening the modal
+        loadTutorProfile();
+      }
+    };
+
+    // Function to load tutor profile data for earnings calculation
+    const loadTutorProfile = async () => {
+      if (authStore.user?.user_type !== "tutor") return;
+
+      try {
+        tutorProfile.value.loading = true;
+        const response = await fetch(
+          `http://localhost:3003/profiles/tutor/${authStore.user.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const profile = data.profile;
+          tutorProfile.value.hourlyRate = profile.hourly_rate || 0;
+          console.log(
+            "Loaded tutor profile for earnings calculation:",
+            profile.hourly_rate
+          );
+        }
+      } catch (error) {
+        console.error("Error loading tutor profile for earnings:", error);
+      } finally {
+        tutorProfile.value.loading = false;
       }
     };
 
@@ -2985,7 +3203,6 @@ export default {
       }
     };
 
-  
     // Make functions globally available for context menu
     window.deleteMessage = deleteMessage;
     window.copyMessage = copyMessage;
@@ -3384,7 +3601,10 @@ export default {
 
     // Calculate end time based on start time and duration
     const calculateEndTime = () => {
-      if (!bookingProposal.value.proposedDate || !bookingProposal.value.proposedTime) {
+      if (
+        !bookingProposal.value.proposedDate ||
+        !bookingProposal.value.proposedTime
+      ) {
         return "N/A";
       }
 
@@ -3394,16 +3614,19 @@ export default {
         );
 
         // Get the effective duration (either from quick buttons or custom input)
-        const effectiveDuration = bookingProposal.value.customDuration !== ''
-          ? bookingProposal.value.customDuration
-          : bookingProposal.value.duration;
+        const effectiveDuration =
+          bookingProposal.value.customDuration !== ""
+            ? bookingProposal.value.customDuration
+            : bookingProposal.value.duration;
 
         // Add duration in minutes
-        const endDateTime = new Date(startDateTime.getTime() + effectiveDuration * 60000);
+        const endDateTime = new Date(
+          startDateTime.getTime() + effectiveDuration * 60000
+        );
 
         // Format as HH:MM
-        const hours = String(endDateTime.getHours()).padStart(2, '0');
-        const minutes = String(endDateTime.getMinutes()).padStart(2, '0');
+        const hours = String(endDateTime.getHours()).padStart(2, "0");
+        const minutes = String(endDateTime.getMinutes()).padStart(2, "0");
 
         return `${hours}:${minutes}`;
       } catch (error) {
@@ -3498,14 +3721,100 @@ export default {
       getBookingStatusClass,
       getBookingStatusIcon,
       formatDateTime,
+      formatTimeOnly,
       handleBookingOffer,
       confirmBooking,
+      // Tutor earnings
+      tutorProfile,
+      calculatedEarnings,
+      getEffectiveDuration,
+      loadTutorProfile,
     };
   },
 };
 </script>
 
 <style scoped>
+/* Tutor Earnings Section */
+.tutor-earnings-section {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 140, 66, 0.1) 0%,
+    rgba(255, 193, 7, 0.05) 100%
+  );
+  border: 1px solid rgba(255, 140, 66, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 15px rgba(255, 140, 66, 0.1);
+}
+
+.earnings-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 140, 66, 0.2);
+}
+
+.earnings-title {
+  font-weight: 600;
+  color: var(--cyber-orange);
+  font-size: 1rem;
+  text-shadow: 0 0 5px rgba(255, 140, 66, 0.3);
+}
+
+.earnings-content {
+  padding: 0.5rem 0;
+}
+
+.earnings-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.earnings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.earnings-item.earnings-total {
+  border-top: 1px solid rgba(255, 140, 66, 0.2);
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.earnings-label {
+  color: var(--cyber-text);
+  font-size: 0.9rem;
+}
+
+.earnings-value {
+  color: var(--cyber-orange);
+  font-weight: 500;
+  text-shadow: 0 0 3px rgba(255, 140, 66, 0.3);
+}
+
+.earnings-amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--cyber-orange);
+  text-shadow: 0 0 5px rgba(255, 140, 66, 0.4);
+}
+
+.earnings-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  color: var(--cyber-text);
+  font-size: 0.9rem;
+}
+
 /* Cyberpunk Messages Page */
 .messages-page {
   background: #1a1a1a !important;
@@ -4223,7 +4532,8 @@ i.text-primary {
   color: #ffffff;
   font-size: 20px;
   font-weight: 700;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   letter-spacing: 0.5px;
 }
 
@@ -4431,7 +4741,6 @@ i.text-primary {
   position: relative !important;
 }
 
-
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
@@ -4476,7 +4785,8 @@ i.text-primary {
   color: #ffffff;
   font-size: 20px;
   font-weight: 700;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   letter-spacing: 0.5px;
 }
 
@@ -4756,7 +5066,8 @@ i.text-primary {
 .form-label {
   color: #ffffff;
   font-weight: 600;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   letter-spacing: 0.3px;
   font-size: 14px;
 }
@@ -4807,7 +5118,8 @@ i.text-primary {
   border: 2px solid #424242 !important;
   color: #ffffff !important;
   font-weight: 600;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   letter-spacing: 0.3px;
   transition: all 0.3s ease;
 }

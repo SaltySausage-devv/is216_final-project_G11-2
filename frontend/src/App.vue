@@ -321,6 +321,59 @@ export default {
       messagingService.disconnect();
     });
 
+    // Test function to manually update credits
+    const testCreditUpdate = async () => {
+      console.log("🧪 Testing credit update...");
+      try {
+        const response = await fetch("/api/calendar/test-update-credits", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authStore.token}`,
+          },
+          body: JSON.stringify({
+            userId: authStore.user.id,
+            newCredits: Math.floor(Math.random() * 1000), // Random credits for testing
+          }),
+        });
+
+        const result = await response.json();
+        console.log("🧪 Credit update test result:", result);
+      } catch (error) {
+        console.error("🧪 Credit update test error:", error);
+      }
+    };
+
+    // Test function to simulate student credit update
+    const testStudentCreditUpdate = async () => {
+      console.log("🧪 Testing student credit update...");
+      try {
+        const response = await fetch(
+          "/api/calendar/test-student-credit-update",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authStore.token}`,
+            },
+            body: JSON.stringify({
+              studentId: authStore.user.id,
+              creditDifference: 10, // Simulate a +10 credit difference (longer session)
+            }),
+          }
+        );
+
+        const result = await response.json();
+        console.log("🧪 Student credit update test result:", result);
+      } catch (error) {
+        console.error("🧪 Student credit update test error:", error);
+      }
+    };
+
+    // Expose test functions globally for debugging
+    window.testCreditUpdate = testCreditUpdate;
+    window.testStudentCreditUpdate = testStudentCreditUpdate;
+
     return {};
   },
 };
