@@ -123,10 +123,12 @@
 
               <h6 class="text-muted">Payment</h6>
               <p class="mb-2">
-                <strong>Hourly Rate:</strong> ${{ booking.hourly_rate }}
+                <strong>Hourly Rate:</strong>
+                {{ booking.hourly_rate || "N/A" }} credits/hour
               </p>
               <p class="mb-2">
-                <strong>Total Amount:</strong> ${{ booking.total_amount }}
+                <strong>Total Amount:</strong>
+                {{ booking.total_amount || "N/A" }} credits
               </p>
               <span
                 :class="getPaymentStatusClass(booking.payment_status)"
@@ -566,7 +568,8 @@ export default {
 <style scoped>
 .modal {
   z-index: 1050;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
 }
 
 .modal-dialog {
@@ -585,7 +588,11 @@ export default {
 }
 
 .modal-header {
-  background: linear-gradient(135deg, rgba(58, 58, 82, 0.95) 0%, rgba(45, 45, 68, 0.95) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(58, 58, 82, 0.95) 0%,
+    rgba(45, 45, 68, 0.95) 100%
+  );
   border-bottom: 1px solid rgba(255, 107, 53, 0.2);
   border-radius: 20px 20px 0 0;
   padding: 1.75rem 2rem;
@@ -621,7 +628,11 @@ export default {
 }
 
 .modal-footer {
-  background: linear-gradient(135deg, rgba(58, 58, 82, 0.95) 0%, rgba(45, 45, 68, 0.95) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(58, 58, 82, 0.95) 0%,
+    rgba(45, 45, 68, 0.95) 100%
+  );
   border-top: 1px solid rgba(255, 107, 53, 0.2);
   border-radius: 0 0 20px 20px;
   padding: 1.5rem 2rem;
@@ -837,7 +848,11 @@ strong {
 }
 
 .alert-warning {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.2) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.2) 0%,
+    rgba(217, 119, 6, 0.2) 100%
+  );
   border: 1px solid rgba(245, 158, 11, 0.5);
   color: #ffffff;
   border-radius: 12px;

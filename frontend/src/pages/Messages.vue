@@ -664,6 +664,122 @@
                           </div>
                         </div>
 
+                        <!-- Booking Cancelled Message -->
+                        <div
+                          v-else-if="
+                            message.messageType === 'booking_cancelled'
+                          "
+                          class="message-content booking-message booking-cancelled"
+                        >
+                          <div class="booking-header">
+                            <i class="fas fa-times-circle me-2"></i>
+                            <span class="booking-title">Booking Cancelled</span>
+                          </div>
+                          <div class="booking-details">
+                            <div v-if="getBookingCancellationData(message)">
+                              <p class="mb-2 text-danger">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                <span v-if="isBookingCancelledByMe(message)">
+                                  You cancelled this booking
+                                </span>
+                                <span v-else> This booking was cancelled </span>
+                              </p>
+                              <p class="mb-2">
+                                <strong>Subject:</strong>
+                                {{
+                                  getBookingCancellationData(message).subject
+                                }}
+                              </p>
+                              <p class="mb-2">
+                                <strong>Original Time:</strong>
+                                {{
+                                  formatDateTime(
+                                    getBookingCancellationData(message)
+                                      .originalStartTime
+                                  )
+                                }}
+                                -
+                                {{
+                                  formatTimeOnly(
+                                    getBookingCancellationData(message)
+                                      .originalEndTime
+                                  )
+                                }}
+                              </p>
+                              <p class="mb-2">
+                                <strong>Location:</strong>
+                                {{
+                                  getBookingCancellationData(message)
+                                    .location || "Online"
+                                }}
+                              </p>
+                              <p class="mb-2">
+                                <strong>Reason:</strong>
+                                {{
+                                  getBookingCancellationData(message)
+                                    .cancellationReason
+                                }}
+                              </p>
+                              <div class="refund-info">
+                                <p class="mb-1">
+                                  <strong>Refund Policy:</strong>
+                                </p>
+                                <div
+                                  v-if="
+                                    getBookingCancellationData(message)
+                                      .refundPolicy.studentRefunded
+                                  "
+                                  class="text-success"
+                                >
+                                  <i class="fas fa-check-circle me-1"></i>
+                                  <span
+                                    v-if="
+                                      getBookingCancellationData(message)
+                                        .refundPolicy.isTutorCancelling
+                                    "
+                                  >
+                                    Student will receive
+                                    {{
+                                      getBookingCancellationData(message)
+                                        .refundPolicy.creditsToRefund
+                                    }}
+                                    credits back (tutor cancelled)
+                                  </span>
+                                  <span v-else>
+                                    Student will receive
+                                    {{
+                                      getBookingCancellationData(message)
+                                        .refundPolicy.creditsToRefund
+                                    }}
+                                    credits back (cancelled more than 24 hours
+                                    before)
+                                  </span>
+                                </div>
+                                <div v-else class="text-warning">
+                                  <i
+                                    class="fas fa-exclamation-triangle me-1"
+                                  ></i>
+                                  No refund (student cancelled less than 24
+                                  hours before session)
+                                </div>
+                                <div class="text-info">
+                                  <i class="fas fa-info-circle me-1"></i>
+                                  Tutor credits have been deducted
+                                </div>
+                              </div>
+                            </div>
+                            <div class="booking-actions">
+                              <button
+                                class="btn btn-primary btn-sm"
+                                @click="$router.push('/calendar')"
+                              >
+                                <i class="fas fa-calendar me-1"></i>
+                                View Calendar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
                         <!-- Regular Text Message -->
                         <div
                           v-else-if="message.messageType === 'text'"
@@ -3009,6 +3125,22 @@ export default {
       }
     };
 
+    // Helper methods for booking cancellation messages
+    const getBookingCancellationData = (message) => {
+      try {
+        return JSON.parse(message.content);
+      } catch (error) {
+        console.error("Error parsing booking cancellation data:", error);
+        return null;
+      }
+    };
+
+    const isBookingCancelledByMe = (message) => {
+      const cancellationData = getBookingCancellationData(message);
+      if (!cancellationData) return false;
+      return cancellationData.cancellerId === authStore.user?.id;
+    };
+
     const resetBookingStatusState = () => {
       bookingOfferStatuses.value = new Map();
       confirmedBookings.value = new Set();
@@ -3306,10 +3438,19 @@ export default {
               deliveredAt: message.delivered_at,
               sender: message.sender
                 ? {
-                    name: `${message.sender.first_name} ${message.sender.last_name}`,
-                    type: message.sender.user_type,
+                    name:
+                      message.message_type === "booking_cancelled" ||
+                      message.message_type === "reschedule_request" ||
+                      message.message_type === "reschedule_accepted" ||
+                      message.message_type === "reschedule_rejected"
+                        ? "System"
+                        : `${message.sender.first_name} ${message.sender.last_name}`,
+                    type: message.sender.user_type || "system",
                   }
-                : null,
+                : {
+                    name: "System",
+                    type: "system",
+                  },
             };
 
             console.log(
@@ -3353,9 +3494,28 @@ export default {
             }
           } else {
             // Show notification if message is not in the currently viewed conversation
-            // and message is from another user
-            if (message.sender_id !== currentUserId.value && message.sender) {
-              const senderName = `${message.sender.first_name} ${message.sender.last_name}`;
+            // and message is from another user OR it's a system message
+            const isSystemMessage =
+              message.message_type === "booking_cancelled" ||
+              message.message_type === "reschedule_request" ||
+              message.message_type === "reschedule_accepted" ||
+              message.message_type === "reschedule_rejected";
+
+            // For booking cancellations, only show notification to the receiver (not the sender)
+            const isBookingCancellation =
+              message.message_type === "booking_cancelled";
+            const shouldShowNotification = isBookingCancellation
+              ? message.sender_id !== currentUserId.value // Only show to receiver for cancellations
+              : message.sender_id !== currentUserId.value || isSystemMessage; // Normal logic for other messages
+
+            if (shouldShowNotification && message.sender) {
+              const senderName =
+                message.message_type === "booking_cancelled" ||
+                message.message_type === "reschedule_request" ||
+                message.message_type === "reschedule_accepted" ||
+                message.message_type === "reschedule_rejected"
+                  ? "System"
+                  : `${message.sender.first_name} ${message.sender.last_name}`;
 
               // Generate user-friendly message preview based on message type
               let messagePreview;
@@ -3373,6 +3533,8 @@ export default {
                 messagePreview = "📝 Booking proposal";
               } else if (message.message_type === "booking_confirmation") {
                 messagePreview = "✅ Booking confirmed";
+              } else if (message.message_type === "booking_cancelled") {
+                messagePreview = "❌ Booking cancelled";
               } else {
                 messagePreview = message.content;
               }
@@ -3729,6 +3891,9 @@ export default {
       calculatedEarnings,
       getEffectiveDuration,
       loadTutorProfile,
+      // Booking cancellation helpers
+      getBookingCancellationData,
+      isBookingCancelledByMe,
     };
   },
 };
@@ -5237,6 +5402,23 @@ i.text-primary {
 
 .reschedule-rejected .booking-header i {
   color: #dc3545;
+}
+
+.booking-cancelled .booking-header {
+  background: rgba(220, 53, 69, 0.12);
+  border-bottom: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.booking-cancelled .booking-header i {
+  color: #dc3545;
+}
+
+.refund-info {
+  background: rgba(108, 117, 125, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  border-left: 3px solid #6c757d;
 }
 
 .booking-title {

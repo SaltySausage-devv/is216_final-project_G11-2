@@ -81,6 +81,25 @@ export const useAuthStore = defineStore('auth', () => {
                 if (profileError) {
                     console.error('Profile fetch error:', profileError)
                 } else {
+                    // If user is a tutor, fetch penalty points from tutor_profiles
+                    if (profile.user_type === 'tutor') {
+                        const { data: tutorProfile, error: tutorProfileError } = await supabase
+                            .from('tutor_profiles')
+                            .select('penalty_points')
+                            .eq('user_id', data.user.id)
+                            .single()
+
+                        if (!tutorProfileError && tutorProfile) {
+                            profile.penalty_points = tutorProfile.penalty_points || 0
+                            console.log('📊 Tutor penalty points loaded:', tutorProfile.penalty_points)
+                        } else {
+                            profile.penalty_points = 0
+                            console.log('📊 No tutor profile found, defaulting penalty points to 0')
+                        }
+                    } else {
+                        profile.penalty_points = 0
+                    }
+
                     user.value = profile
                     console.log('✅ User profile loaded:', profile)
                     // Set up real-time subscription for user data updates
@@ -158,6 +177,25 @@ export const useAuthStore = defineStore('auth', () => {
 
                 console.log('✅ Profile created successfully:', profile)
 
+                // If user is a tutor, fetch penalty points from tutor_profiles
+                if (profile.user_type === 'tutor') {
+                    const { data: tutorProfile, error: tutorProfileError } = await supabase
+                        .from('tutor_profiles')
+                        .select('penalty_points')
+                        .eq('user_id', authData.user.id)
+                        .single()
+
+                    if (!tutorProfileError && tutorProfile) {
+                        profile.penalty_points = tutorProfile.penalty_points || 0
+                        console.log('📊 Tutor penalty points loaded:', tutorProfile.penalty_points)
+                    } else {
+                        profile.penalty_points = 0
+                        console.log('📊 No tutor profile found, defaulting penalty points to 0')
+                    }
+                } else {
+                    profile.penalty_points = 0
+                }
+
                 session.value = authData.session
                 user.value = profile
                 // Set up real-time subscription for user data updates
@@ -220,6 +258,28 @@ export const useAuthStore = defineStore('auth', () => {
                         console.log('✅ User data updated in store:', {
                             oldCredits,
                             newCredits: user.value.credits,
+                            fullUser: user.value
+                        })
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'tutor_profiles',
+                    filter: `user_id=eq.${userId}`
+                },
+                async (payload) => {
+                    console.log('🔄 Tutor profile updated:', payload)
+                    if (payload.new && user.value && user.value.user_type === 'tutor') {
+                        // Update penalty points in user data
+                        const oldPenaltyPoints = user.value.penalty_points;
+                        user.value.penalty_points = payload.new.penalty_points || 0;
+                        console.log('✅ Penalty points updated in store:', {
+                            oldPenaltyPoints,
+                            newPenaltyPoints: user.value.penalty_points,
                             fullUser: user.value
                         })
                     }
@@ -290,6 +350,25 @@ export const useAuthStore = defineStore('auth', () => {
                     .single()
 
                 if (profile) {
+                    // If user is a tutor, fetch penalty points from tutor_profiles
+                    if (profile.user_type === 'tutor') {
+                        const { data: tutorProfile, error: tutorProfileError } = await supabase
+                            .from('tutor_profiles')
+                            .select('penalty_points')
+                            .eq('user_id', currentSession.user.id)
+                            .single()
+
+                        if (!tutorProfileError && tutorProfile) {
+                            profile.penalty_points = tutorProfile.penalty_points || 0
+                            console.log('📊 Tutor penalty points loaded:', tutorProfile.penalty_points)
+                        } else {
+                            profile.penalty_points = 0
+                            console.log('📊 No tutor profile found, defaulting penalty points to 0')
+                        }
+                    } else {
+                        profile.penalty_points = 0
+                    }
+
                     user.value = profile
                     console.log('✅ User profile loaded')
                     // Set up real-time subscription for user data updates
@@ -324,6 +403,25 @@ export const useAuthStore = defineStore('auth', () => {
                         .single()
 
                     if (profile) {
+                        // If user is a tutor, fetch penalty points from tutor_profiles
+                        if (profile.user_type === 'tutor') {
+                            const { data: tutorProfile, error: tutorProfileError } = await supabase
+                                .from('tutor_profiles')
+                                .select('penalty_points')
+                                .eq('user_id', newSession.user.id)
+                                .single()
+
+                            if (!tutorProfileError && tutorProfile) {
+                                profile.penalty_points = tutorProfile.penalty_points || 0
+                                console.log('📊 Tutor penalty points loaded:', tutorProfile.penalty_points)
+                            } else {
+                                profile.penalty_points = 0
+                                console.log('📊 No tutor profile found, defaulting penalty points to 0')
+                            }
+                        } else {
+                            profile.penalty_points = 0
+                        }
+
                         user.value = profile
                         // Set up real-time subscription for user data updates
                         setupUserSubscription(newSession.user.id)

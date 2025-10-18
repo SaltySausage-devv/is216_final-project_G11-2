@@ -6,6 +6,7 @@ const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const cron = require('node-cron');
+const axios = require('axios');
 require('dotenv').config({ path: '../../.env' });
 
 const app = express();
@@ -31,6 +32,28 @@ const limiter = rateLimit({
   max: 100
 });
 app.use(limiter);
+
+// Helper function to send messages via messaging service (with Socket.IO broadcast)
+async function sendMessageViaMessagingService(conversationId, content, messageType, authToken) {
+  try {
+    const messagingServiceUrl = process.env.MESSAGING_SERVICE_URL || 'http://localhost:3005';
+    const response = await axios.post(`${messagingServiceUrl}/messaging/system-message`, {
+      conversationId,
+      content,
+      messageType,
+      authToken
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return response.status === 200;
+  } catch (error) {
+    console.error('Error sending message via messaging service:', error.message);
+    return false;
+  }
+}
 
 // JWT verification middleware
 const verifyToken = (req, res, next) => {
@@ -309,7 +332,7 @@ app.put('/bookings/:id/cancel', verifyToken, async (req, res) => {
     // Check if user is involved in this booking
     const { data: booking } = await supabase
       .from('bookings')
-      .select('tutor_id, student_id, status')
+      .select('*')
       .eq('id', id)
       .single();
 
@@ -320,6 +343,21 @@ app.put('/bookings/:id/cancel', verifyToken, async (req, res) => {
     if (booking.status === 'cancelled') {
       return res.status(400).json({ error: 'Booking is already cancelled' });
     }
+
+    // Calculate time difference to determine refund policy
+    const bookingTime = new Date(booking.start_time);
+    const now = new Date();
+    const timeDiff = bookingTime - now;
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    const isMoreThan24Hours = hoursDiff > 24;
+
+    console.log(`🕐 Cancellation timing: ${hoursDiff.toFixed(2)} hours before session (24h+ = ${isMoreThan24Hours})`);
+
+    // Calculate credits to refund (based on hourly rate and duration)
+    const duration = (new Date(booking.end_time) - new Date(booking.start_time)) / (1000 * 60 * 60);
+    const creditsToRefund = booking.hourly_rate * duration;
+
+    console.log(`💰 Credits calculation: ${booking.hourly_rate} rate × ${duration} hours = ${creditsToRefund} credits`);
 
     const { data: updatedBooking, error } = await supabase
       .from('bookings')
@@ -336,9 +374,245 @@ app.put('/bookings/:id/cancel', verifyToken, async (req, res) => {
       throw error;
     }
 
+    // Determine who cancelled and apply appropriate refund policy
+    const cancellerId = req.user.userId;
+    const isTutorCancelling = cancellerId === booking.tutor_id;
+    const isStudentCancelling = cancellerId === booking.student_id;
+    
+    // If tutor cancels, student always gets refunded regardless of timing
+    // If student cancels, apply 24-hour policy
+    const shouldRefundStudent = isTutorCancelling || isMoreThan24Hours;
+    
+    if (shouldRefundStudent) {
+      const refundReason = isTutorCancelling ? 'tutor cancelled' : 'more than 24 hours';
+      console.log(`✅ ${refundReason} - processing full refund to student`);
+      
+      // Student gets credits back
+      const { data: student, error: studentError } = await supabase
+        .from('users')
+        .select('credits')
+        .eq('id', booking.student_id)
+        .single();
+
+      if (studentError) {
+        console.error('❌ Error fetching student credits:', studentError);
+      } else {
+        const newStudentCredits = (student.credits || 0) + creditsToRefund;
+        console.log(`💸 Refunding ${creditsToRefund} credits to student. Old: ${student.credits}, New: ${newStudentCredits}`);
+        
+        const { error: studentUpdateError } = await supabase
+          .from('users')
+          .update({ 
+            credits: newStudentCredits,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', booking.student_id);
+          
+        if (studentUpdateError) {
+          console.error('❌ Error updating student credits:', studentUpdateError);
+        } else {
+          console.log('✅ Student credits refunded successfully');
+        }
+      }
+
+      // Tutor loses credits (they were already given when booking was confirmed)
+      const { data: tutor, error: tutorError } = await supabase
+        .from('users')
+        .select('credits')
+        .eq('id', booking.tutor_id)
+        .single();
+
+      if (tutorError) {
+        console.error('❌ Error fetching tutor credits:', tutorError);
+      } else {
+        const newTutorCredits = Math.max(0, (tutor.credits || 0) - creditsToRefund);
+        console.log(`💸 Deducting ${creditsToRefund} credits from tutor. Old: ${tutor.credits}, New: ${newTutorCredits}`);
+        
+        const { error: tutorUpdateError } = await supabase
+          .from('users')
+          .update({ 
+            credits: newTutorCredits,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', booking.tutor_id);
+          
+        if (tutorUpdateError) {
+          console.error('❌ Error updating tutor credits:', tutorUpdateError);
+        } else {
+          console.log('✅ Tutor credits deducted successfully');
+        }
+      }
+    } else {
+      // Only happens when student cancels less than 24 hours before
+      console.log('❌ Student cancelled less than 24 hours - no refund for student, tutor still loses credits');
+      
+      // Student gets no refund (credits stay with tutor)
+      // Tutor still loses credits (they were already given when booking was confirmed)
+      const { data: tutor, error: tutorError } = await supabase
+        .from('users')
+        .select('credits')
+        .eq('id', booking.tutor_id)
+        .single();
+
+      if (tutorError) {
+        console.error('❌ Error fetching tutor credits:', tutorError);
+      } else {
+        const newTutorCredits = Math.max(0, (tutor.credits || 0) - creditsToRefund);
+        console.log(`💸 Deducting ${creditsToRefund} credits from tutor (late cancellation). Old: ${tutor.credits}, New: ${newTutorCredits}`);
+        
+        const { error: tutorUpdateError } = await supabase
+          .from('users')
+          .update({ 
+            credits: newTutorCredits,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', booking.tutor_id);
+          
+        if (tutorUpdateError) {
+          console.error('❌ Error updating tutor credits:', tutorUpdateError);
+        } else {
+          console.log('✅ Tutor credits deducted successfully (late cancellation)');
+        }
+      }
+    }
+
+    // Handle penalty points for tutors
+    if (isTutorCancelling) {
+      const penaltyPointsToAdd = isMoreThan24Hours ? 0 : 1;
+      console.log(`⚠️ Tutor cancellation - adding ${penaltyPointsToAdd} penalty points`);
+      
+      if (penaltyPointsToAdd > 0) {
+        // Get current penalty points
+        const { data: tutorProfile, error: tutorProfileError } = await supabase
+          .from('tutor_profiles')
+          .select('penalty_points')
+          .eq('user_id', booking.tutor_id)
+          .single();
+
+        if (tutorProfileError) {
+          console.error('❌ Error fetching tutor penalty points:', tutorProfileError);
+        } else {
+          const currentPenaltyPoints = tutorProfile?.penalty_points || 0;
+          const newPenaltyPoints = currentPenaltyPoints + penaltyPointsToAdd;
+          
+          console.log(`⚠️ Updating penalty points: ${currentPenaltyPoints} + ${penaltyPointsToAdd} = ${newPenaltyPoints}`);
+          
+          const { error: penaltyUpdateError } = await supabase
+            .from('tutor_profiles')
+            .update({ 
+              penalty_points: newPenaltyPoints,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', booking.tutor_id);
+            
+          if (penaltyUpdateError) {
+            console.error('❌ Error updating tutor penalty points:', penaltyUpdateError);
+          } else {
+            console.log('✅ Tutor penalty points updated successfully');
+            
+            // Check if account should be suspended (5+ penalty points)
+            if (newPenaltyPoints >= 5) {
+              console.log('🚨 ACCOUNT SUSPENSION: Tutor has reached 5+ penalty points');
+              // TODO: Implement account suspension logic here
+            }
+          }
+        }
+      }
+    }
+
+    // Send notification to both parties about the cancellation
+    const cancellerId = req.user.userId;
+    const cancellerType = cancellerId === booking.tutor_id ? 'tutor' : 'student';
+    const otherPartyId = cancellerId === booking.tutor_id ? booking.student_id : booking.tutor_id;
+    
+    console.log(`📧 Sending cancellation notifications to both parties (cancelled by ${cancellerType})`);
+
+    try {
+      // Find or create conversation between tutor and student
+      const { data: existingConversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`and(participant1_id.eq.${booking.tutor_id},participant2_id.eq.${booking.student_id}),and(participant1_id.eq.${booking.student_id},participant2_id.eq.${booking.tutor_id})`)
+        .limit(1);
+
+      let conversationId;
+      if (existingConversations && existingConversations.length > 0) {
+        conversationId = existingConversations[0].id;
+      } else {
+        // Create new conversation if none exists
+        const { data: newConversation, error: conversationError } = await supabase
+          .from('conversations')
+          .insert({
+            participant1_id: booking.tutor_id,
+            participant2_id: booking.student_id,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (conversationError) {
+          console.error('Failed to create conversation for cancellation notification:', conversationError);
+        } else {
+          conversationId = newConversation.id;
+        }
+      }
+
+      if (conversationId) {
+        // Format the cancellation message data for both parties
+        const messageData = {
+          bookingId: booking.id,
+          cancelledBy: cancellerType,
+          cancellationReason: reason || 'No reason provided',
+          refundPolicy: {
+            isMoreThan24Hours,
+            creditsToRefund,
+            studentRefunded: shouldRefundStudent,
+            tutorCreditsDeducted: true,
+            isTutorCancelling: isTutorCancelling
+          },
+          subject: booking.subject || 'Tutoring Session',
+          originalStartTime: booking.start_time,
+          originalEndTime: booking.end_time,
+          location: booking.location,
+          // Include both user IDs so the frontend can show appropriate messages
+          cancellerId: cancellerId,
+          otherPartyId: otherPartyId
+        };
+
+        const messageContent = JSON.stringify(messageData);
+        
+        // Get auth token for messaging service
+        const authToken = req.headers.authorization?.split(' ')[1];
+        
+        // Send message via messaging service (with Socket.IO broadcast to both parties)
+        const sent = await sendMessageViaMessagingService(
+          conversationId,
+          messageContent,
+          'booking_cancelled',
+          authToken
+        );
+
+        if (sent) {
+          console.log(`✅ Cancellation notification sent to both parties via messaging service`);
+        } else {
+          console.error('Failed to send cancellation notification via messaging service');
+        }
+      }
+    } catch (notificationError) {
+      // Don't fail the whole operation if notification fails
+      console.error('Error sending cancellation notification:', notificationError);
+    }
+
     res.json({
       message: 'Booking cancelled successfully',
-      booking: updatedBooking
+      booking: updatedBooking,
+      refundPolicy: {
+        isMoreThan24Hours,
+        creditsToRefund,
+        studentRefunded: shouldRefundStudent,
+        tutorCreditsDeducted: true,
+        isTutorCancelling: isTutorCancelling
+      }
     });
   } catch (error) {
     console.error('Booking cancellation error:', error);
@@ -640,6 +914,24 @@ app.post('/booking-confirmations', verifyToken, async (req, res) => {
       throw updateError;
     }
 
+    // Get tutor's actual hourly rate
+    const { data: tutorProfile, error: tutorProfileError } = await supabase
+      .from('tutor_profiles')
+      .select('hourly_rate')
+      .eq('user_id', bookingOffer.tutor_id)
+      .single();
+
+    if (tutorProfileError) {
+      console.error('❌ Error fetching tutor profile:', tutorProfileError);
+    }
+
+    const hourlyRate = tutorProfile?.hourly_rate || 10; // Use 10 as fallback
+    const sessionDuration = 60; // 1 hour session in minutes
+    const sessionDurationHours = sessionDuration / 60; // convert to hours
+    const totalAmount = hourlyRate * sessionDurationHours;
+
+    console.log(`💰 Booking credit calculation: ${hourlyRate} credits/hour × ${sessionDurationHours} hours = ${totalAmount} credits`);
+
     // Create a final booking record from the confirmed offer
     const { data: finalBooking, error: bookingError } = await supabase
       .from('bookings')
@@ -650,6 +942,8 @@ app.post('/booking-confirmations', verifyToken, async (req, res) => {
         end_time: new Date(new Date(bookingOffer.proposed_time).getTime() + 60 * 60 * 1000).toISOString(), // 1 hour session
         location: bookingOffer.final_location,
         is_online: bookingOffer.is_online,
+        hourly_rate: hourlyRate,
+        total_amount: totalAmount,
         status: 'confirmed',
         notes: bookingOffer.notes,
         created_at: new Date().toISOString()

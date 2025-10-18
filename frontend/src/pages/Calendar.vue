@@ -105,23 +105,6 @@ export default {
       try {
         loading.value = true;
 
-        // Check if user is logged in
-        console.log("📅 Calendar: Checking auth state...", {
-          hasToken: !!authStore.token,
-          hasUser: !!authStore.user,
-          token: authStore.token?.substring(0, 20) + "...",
-          userId: authStore.user?.id,
-        });
-
-        if (!authStore.token || !authStore.user) {
-          console.warn(
-            "⚠️ No auth token or user found, showing empty calendar"
-          );
-          bookings.value = [];
-          loading.value = false;
-          return;
-        }
-
         // Fetch bookings for a wide date range (1 year back to 2 years forward)
         const startDate = new Date();
         startDate.setFullYear(startDate.getFullYear() - 1);
@@ -177,24 +160,22 @@ export default {
         } else {
           const errorText = await bookingsResponse.text();
           console.error("❌ Failed to fetch bookings:", errorText);
-          // Don't show error toast, just show empty calendar
-          bookings.value = [];
+          showToast("Failed to load calendar data", "error");
         }
       } catch (error) {
         console.error("Error fetching calendar data:", error);
-        // Don't show error toast, just show empty calendar
-        bookings.value = [];
+        showToast("Failed to load calendar data", "error");
       } finally {
         loading.value = false;
       }
     }
 
     function getEventColor(status) {
-      if (status === "confirmed") return "#10b981"; // Green - professional
-      if (status === "completed") return "#6366f1"; // Blue - professional
-      if (status === "cancelled") return "#ef4444"; // Red - clear indication
-      if (status === "pending") return "#f59e0b"; // Amber - attention
-      return "#6b7280"; // Gray - default
+      if (status === "confirmed") return "#ff6b35"; // Orange - matches theme
+      if (status === "completed") return "#4ecdc4"; // Teal - nice contrast
+      if (status === "cancelled") return "#6c757d"; // Grey
+      if (status === "pending") return "#ffa726"; // Light orange
+      return "#8e8ea0"; // Default grey
     }
 
     function handleEventClick(info) {
@@ -277,30 +258,7 @@ export default {
     }
 
     // Lifecycle
-    onMounted(async () => {
-      console.log("📅 Calendar mounted, checking auth state...");
-      console.log("📅 Auth token available:", !!authStore.token);
-      console.log("📅 Auth user available:", !!authStore.user);
-
-      // Wait for auth to be ready (max 3 seconds)
-      const maxWaitTime = 3000; // 3 seconds
-      const checkInterval = 100; // Check every 100ms
-      let elapsed = 0;
-
-      while (!authStore.token && elapsed < maxWaitTime) {
-        console.log(`⏳ Waiting for auth... (${elapsed}ms)`);
-        await new Promise((resolve) => setTimeout(resolve, checkInterval));
-        elapsed += checkInterval;
-      }
-
-      if (authStore.token) {
-        console.log("✅ Auth ready, fetching calendar data");
-      } else {
-        console.warn(
-          "⚠️ Auth not ready after timeout, will show empty calendar"
-        );
-      }
-
+    onMounted(() => {
       fetchCalendarData();
     });
 
@@ -325,109 +283,81 @@ export default {
 <style scoped>
 .calendar-page {
   min-height: calc(100vh - 200px);
-  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #1a1a2e;
 }
 
 .calendar-container {
-  background: rgba(45, 45, 68, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 107, 53, 0.1);
-  padding: 2rem;
+  background: #2d2d44;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
   border: 1px solid rgba(255, 107, 53, 0.2);
   min-height: 750px;
-  transition: all 0.3s ease;
-}
-
-.calendar-container:hover {
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 107, 53, 0.2);
-  border-color: rgba(255, 107, 53, 0.3);
 }
 
 h1 {
   color: #ff6b35;
-  font-weight: 800;
-  font-size: 2.5rem;
-  margin-bottom: 1.5rem;
-  letter-spacing: -0.02em;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
 }
 
 /* FullCalendar custom styles */
 :deep(.fc) {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   height: 100% !important;
-  font-size: 0.9rem;
 }
 
 :deep(.fc .fc-view-harness) {
   height: 650px !important;
   min-height: 650px;
-  border-radius: 12px;
-  overflow: hidden;
 }
 
 :deep(.fc-toolbar-title) {
   color: #ffffff;
-  font-weight: 800;
-  font-size: 1.875rem;
-  letter-spacing: -0.02em;
-  margin: 0 1rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
+  font-size: 1.75rem;
 }
 
 :deep(.fc-button-primary) {
-  background: linear-gradient(135deg, #ff6b35 0%, #e85a2a 100%) !important;
-  border: none !important;
-  font-weight: 700;
+  background: #ff6b35 !important;
+  border: 1px solid #ff6b35 !important;
+  font-weight: 600;
   font-size: 0.875rem;
-  padding: 0.625rem 1.25rem;
-  border-radius: 10px;
-  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
   color: #ffffff !important;
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-  font-family: 'Inter', sans-serif;
 }
 
 :deep(.fc-button-primary:hover) {
-  background: linear-gradient(135deg, #e85a2a 0%, #d14a20 100%) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(255, 107, 53, 0.4);
+  background: #e85a2a !important;
+  border-color: #e85a2a !important;
 }
 
 :deep(.fc-button-primary:disabled) {
   background: #4a4a4a !important;
-  color: #9ca3af !important;
-  box-shadow: none;
-  transform: none;
-  opacity: 0.6;
+  border-color: #4a4a4a !important;
+  opacity: 0.5;
 }
 
 :deep(.fc-button-active) {
-  background: linear-gradient(135deg, #d14a20 0%, #b83a10 100%) !important;
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  background: #d14a20 !important;
+  border-color: #d14a20 !important;
 }
 
 :deep(.fc-toolbar-chunk) {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 :deep(.fc-today-button) {
-  background: linear-gradient(135deg, #4ecdc4 0%, #3dbdb5 100%) !important;
-  border: none !important;
-  color: #ffffff !important;
-  font-weight: 700;
-  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+  background: #4ecdc4 !important;
+  border: 1px solid #4ecdc4 !important;
 }
 
 :deep(.fc-today-button:hover) {
-  background: linear-gradient(135deg, #3dbdb5 0%, #2ba39c 100%) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(78, 205, 196, 0.4);
+  background: #3dbdb5 !important;
+  border-color: #3dbdb5 !important;
 }
 
 :deep(.booking-event) {
@@ -440,70 +370,44 @@ h1 {
 }
 
 :deep(.fc-event) {
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: 6px;
+  padding: 4px 8px;
   font-size: 0.875em;
   font-weight: 600;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  font-family: 'Inter', sans-serif;
-  letter-spacing: 0.01em;
-}
-
-:deep(.fc-event:hover) {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 :deep(.fc-event-title) {
-  font-weight: 700;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-weight: 600;
 }
 
 :deep(.fc-daygrid-day-number) {
   color: #ffffff;
   font-weight: 600;
-  padding: 12px;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
+  padding: 8px;
 }
 
 :deep(.fc-col-header-cell) {
-  background: linear-gradient(135deg, #3a3a52 0%, #2d2d44 100%);
+  background: #3a3a52;
   color: #ffffff;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.8rem;
-  padding: 1.25rem 0.75rem;
+  font-size: 0.875rem;
+  padding: 1rem 0.5rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  letter-spacing: 0.05em;
 }
 
 :deep(.fc-day-today) {
-  background: linear-gradient(135deg, rgba(255, 107, 53, 0.15) 0%, rgba(255, 107, 53, 0.1) 100%) !important;
-  position: relative;
-}
-
-:deep(.fc-day-today::before) {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(135deg, #ff6b35 0%, #e85a2a 100%);
-  border-radius: 8px 8px 0 0;
+  background-color: rgba(255, 107, 53, 0.1) !important;
 }
 
 :deep(.fc-scrollgrid) {
   border-color: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   background: #2d2d44;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 :deep(.fc-theme-standard td),
@@ -513,95 +417,70 @@ h1 {
 
 :deep(.fc-daygrid-day) {
   background: #2d2d44;
-  transition: all 0.2s ease;
 }
 
 :deep(.fc-daygrid-day:hover) {
-  background: linear-gradient(135deg, #3a3a52 0%, #2d2d44 100%);
-  transform: scale(1.01);
+  background: rgba(255, 107, 53, 0.05);
 }
 
 :deep(.fc-day-other .fc-daygrid-day-number) {
-  color: rgba(255, 255, 255, 0.4);
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.3);
 }
 
 /* More events popup */
 :deep(.fc-more-popover) {
-  background: rgba(45, 45, 68, 0.98) !important;
-  backdrop-filter: blur(20px);
+  background: #2d2d44 !important;
   border: 1px solid rgba(255, 107, 53, 0.3) !important;
-  border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 107, 53, 0.1);
-  font-family: 'Inter', sans-serif;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 :deep(.fc-more-popover .fc-popover-header) {
-  background: linear-gradient(135deg, #3a3a52 0%, #2d2d44 100%) !important;
-  color: #ffffff !important;
-  font-weight: 800;
-  padding: 1rem 1.25rem;
+  background: #3a3a52 !important;
+  color: #ff6b35 !important;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid rgba(255, 107, 53, 0.2);
-  border-radius: 12px 12px 0 0;
-  font-size: 0.9rem;
-  letter-spacing: 0.02em;
 }
 
 :deep(.fc-more-popover .fc-popover-body) {
-  background: rgba(45, 45, 68, 0.98) !important;
-  padding: 0.75rem;
-  border-radius: 0 0 12px 12px;
+  background: #2d2d44 !important;
+  padding: 0.5rem;
 }
 
 :deep(.fc-more-popover .fc-popover-close) {
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: #ffffff !important;
   opacity: 0.7;
-  font-size: 1.25rem;
-  transition: all 0.2s ease;
+  font-size: 1.5rem;
 }
 
 :deep(.fc-more-popover .fc-popover-close:hover) {
   opacity: 1;
   color: #ff6b35 !important;
-  transform: scale(1.1);
 }
 
 :deep(.fc-more-popover .fc-event) {
-  margin-bottom: 0.5rem;
-  border-radius: 6px;
+  margin-bottom: 0.25rem;
 }
 
 :deep(.fc-more-popover .fc-daygrid-event) {
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
-}
-
-:deep(.fc-more-popover .fc-daygrid-event:hover) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 /* More link styling */
 :deep(.fc-daygrid-more-link) {
   color: #ff6b35 !important;
-  font-weight: 700;
-  background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.15) 100%);
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(255, 107, 53, 0.3);
-  font-size: 0.8rem;
-  letter-spacing: 0.02em;
+  font-weight: 600;
+  background: rgba(255, 107, 53, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 :deep(.fc-daygrid-more-link:hover) {
-  background: linear-gradient(135deg, #ff6b35 0%, #e85a2a 100%);
-  color: #ffffff !important;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+  background: rgba(255, 107, 53, 0.2);
+  color: #ff8c5a !important;
 }
 
 /* Loading spinner */

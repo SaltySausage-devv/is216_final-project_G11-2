@@ -120,11 +120,36 @@ export default {
           console.log("🌐 APP: Current user ID:", authStore.user?.id);
           console.log("🌐 APP: Current route:", route.name, route.path);
 
-          // Only show notification if:
-          // 1. Message is from another user (not yourself)
+          // Show notification if:
+          // 1. Message is from another user (not yourself) OR it's a system message (booking_cancelled, etc.)
           // 2. You're NOT on the messages page viewing that conversation
-          if (message.sender_id !== authStore.user?.id && message.sender) {
-            console.log("🌐 APP: Message is from another user");
+          const isSystemMessage =
+            message.message_type === "booking_cancelled" ||
+            message.message_type === "reschedule_request" ||
+            message.message_type === "reschedule_accepted" ||
+            message.message_type === "reschedule_rejected";
+
+          // For booking cancellations, only show notification to the receiver (not the sender)
+          const isBookingCancellation =
+            message.message_type === "booking_cancelled";
+          const shouldShowNotification = isBookingCancellation
+            ? message.sender_id !== authStore.user?.id // Only show to receiver for cancellations
+            : message.sender_id !== authStore.user?.id || isSystemMessage; // Normal logic for other messages
+
+          if (shouldShowNotification && message.sender) {
+            console.log(
+              "🌐 APP: Message is from another user or system message"
+            );
+            console.log("🌐 APP: isSystemMessage:", isSystemMessage);
+            console.log("🌐 APP: message.message_type:", message.message_type);
+            console.log(
+              "🌐 APP: isBookingCancellation:",
+              isBookingCancellation
+            );
+            console.log(
+              "🌐 APP: shouldShowNotification:",
+              shouldShowNotification
+            );
             const isOnMessagesPage =
               route.name === "Messages" || route.path === "/messages";
             console.log("🌐 APP: Is on Messages page?", isOnMessagesPage);
@@ -133,7 +158,13 @@ export default {
             // The Messages page will handle its own notifications for conversations you're not viewing
             if (!isOnMessagesPage) {
               console.log("🌐 APP: Showing notification!");
-              const senderName = `${message.sender.first_name} ${message.sender.last_name}`;
+              const senderName =
+                message.message_type === "booking_cancelled" ||
+                message.message_type === "reschedule_request" ||
+                message.message_type === "reschedule_accepted" ||
+                message.message_type === "reschedule_rejected"
+                  ? "System"
+                  : `${message.sender.first_name} ${message.sender.last_name}`;
 
               // Generate user-friendly message preview based on message type
               let messagePreview;
@@ -151,10 +182,17 @@ export default {
                 messagePreview = "📝 Booking proposal";
               } else if (message.message_type === "booking_confirmation") {
                 messagePreview = "✅ Booking confirmed";
+              } else if (message.message_type === "booking_cancelled") {
+                messagePreview = "❌ Booking cancelled";
               } else {
                 messagePreview = message.content;
               }
 
+              console.log("🌐 APP: Calling showMessageNotification with:", {
+                senderName,
+                message: messagePreview,
+                conversationId: message.conversation_id,
+              });
               showMessageNotification({
                 senderName,
                 message: messagePreview,

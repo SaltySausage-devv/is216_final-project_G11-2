@@ -70,6 +70,23 @@
             </a>
           </li>
 
+          <!-- Penalty Points (Tutors Only) -->
+          <li class="nav-item" v-if="isAuthenticated && userType === 'tutor'">
+            <a
+              class="nav-link d-flex align-items-center"
+              href="#"
+              role="button"
+              data-bs-toggle="tooltip"
+              data-bs-placement="bottom"
+              :title="`Penalty Points: ${penaltyPoints}`"
+            >
+              <i class="fas fa-exclamation-triangle fs-5 me-1 text-warning"></i>
+              <span class="penalty-points-text text-warning">
+                {{ penaltyPoints }}
+              </span>
+            </a>
+          </li>
+
           <!-- Notifications Dropdown -->
           <li class="nav-item dropdown" v-if="isAuthenticated">
             <a
@@ -217,6 +234,7 @@ export default {
     const user = computed(() => authStore.user);
     const userType = computed(() => authStore.userType);
     const currentUserId = computed(() => authStore.user?.id);
+    const penaltyPoints = computed(() => authStore.user?.penalty_points || 0);
 
     // Notification state
     const NOTIFICATIONS_STORAGE_KEY = "tutorconnect_notifications";
@@ -550,6 +568,7 @@ export default {
       isAuthenticated,
       user,
       userType,
+      penaltyPoints,
       logout,
       toggleNavbar,
       isNavbarExpanded,
@@ -960,5 +979,34 @@ export default {
   .notifications-body {
     max-height: 300px;
   }
+}
+
+/* Penalty Points Styling */
+.penalty-points-text {
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover .penalty-points-text {
+  color: var(--cyber-orange) !important;
+  text-shadow: var(--cyber-glow);
+}
+
+.nav-link:hover .fas.fa-exclamation-triangle {
+  color: var(--cyber-orange) !important;
+  text-shadow: var(--cyber-glow);
+}
+
+/* Penalty points tooltip styling */
+.tooltip {
+  font-size: 0.875rem;
+}
+
+.tooltip-inner {
+  background-color: var(--cyber-dark);
+  color: var(--cyber-text);
+  border: 1px solid var(--cyber-orange);
+  border-radius: 6px;
 }
 </style>

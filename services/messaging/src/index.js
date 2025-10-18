@@ -1152,6 +1152,34 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       confirmedOffer = updatedOffer;
     }
 
+    // Get tutor's actual hourly rate
+    const { data: tutorProfile, error: tutorProfileError } = await supabase
+      .from('tutor_profiles')
+      .select('hourly_rate')
+      .eq('user_id', bookingOffer.tutor_id)
+      .single();
+
+    if (tutorProfileError) {
+      console.error('❌ Error fetching tutor profile:', tutorProfileError);
+    }
+
+    const hourlyRate = tutorProfile?.hourly_rate;
+    const sessionDuration = bookingOffer.duration || 60; // in minutes
+    const sessionDurationHours = sessionDuration / 60; // convert to hours
+    
+    let finalHourlyRate = hourlyRate;
+    let finalTotalAmount = 0;
+
+    if (!hourlyRate || hourlyRate <= 0) {
+      console.warn(`⚠️ Tutor ${bookingOffer.tutor_id} has no hourly rate set, using default 10 credits/hour`);
+      finalHourlyRate = 10; // Changed from 50 to 10 to match Tutor A's actual rate
+      finalTotalAmount = finalHourlyRate * sessionDurationHours;
+      console.log(`💰 Booking credit calculation (DEFAULT): ${finalHourlyRate} credits/hour × ${sessionDurationHours} hours = ${finalTotalAmount} credits`);
+    } else {
+      finalTotalAmount = hourlyRate * sessionDurationHours;
+      console.log(`💰 Booking credit calculation: ${hourlyRate} credits/hour × ${sessionDurationHours} hours = ${finalTotalAmount} credits`);
+    }
+
     // Create booking record in bookings table
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
@@ -1166,8 +1194,8 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
         location: bookingOffer.final_location,
         is_online: bookingOffer.is_online,
         notes: bookingOffer.notes,
-        hourly_rate: 50, // Default rate - this could come from tutor profile
-        total_amount: 50, // Default amount for 1 hour
+        hourly_rate: finalHourlyRate, // Use actual tutor rate or default
+        total_amount: finalTotalAmount, // Calculate based on actual rate and duration
         status: 'confirmed',
         created_at: new Date().toISOString()
       })
@@ -1195,7 +1223,7 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
 
         console.log('📊 Tutor profile data:', { tutorProfile, tutorProfileError });
 
-        const hourlyRate = tutorProfile?.hourly_rate || 0;
+        const hourlyRate = tutorProfile?.hourly_rate || 10; // Use 10 as fallback instead of 0
         const sessionDuration = bookingOffer.duration || 60; // in minutes
         const creditsUsed = hourlyRate * sessionDuration / 60;
         
@@ -1478,6 +1506,10 @@ app.get('/messaging/bookings', verifyToken, async (req, res) => {
 
 // System message endpoint (for other services to send messages with Socket.IO broadcast)
 app.post('/messaging/system-message', verifyToken, async (req, res) => {
+  console.log('📧 MESSAGING: System message endpoint called');
+  console.log('📧 MESSAGING: Request body:', req.body);
+  console.log('📧 MESSAGING: User ID:', req.user?.userId);
+  
   try {
     const { conversationId, content, messageType = 'text' } = req.body;
 
@@ -1485,25 +1517,40 @@ app.post('/messaging/system-message', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'conversationId and content are required' });
     }
 
-    // Verify user is participant in conversation
+    // Verify conversation exists
     const { data: conversation } = await supabase
       .from('conversations')
       .select('participant1_id, participant2_id')
       .eq('id', conversationId)
       .single();
 
-    if (!conversation || 
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // For system messages, allow sending regardless of user participation
+    // For regular messages, verify user is participant in conversation
+    const isSystemMessage = messageType === 'booking_cancelled' || 
+                           messageType === 'reschedule_request' || 
+                           messageType === 'reschedule_accepted' || 
+                           messageType === 'reschedule_rejected';
+
+    if (!isSystemMessage && 
         (conversation.participant1_id !== req.user.userId && 
          conversation.participant2_id !== req.user.userId)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
+
+    // For system messages, use the authenticated user's ID (the one who triggered the action)
+    // This ensures the foreign key constraint is satisfied
+    const senderId = req.user.userId;
 
     // Insert message into database
     const { data: message, error: insertError } = await supabase
       .from('messages')
       .insert({
         conversation_id: conversationId,
-        sender_id: req.user.userId,
+        sender_id: senderId,
         content: content,
         message_type: messageType,
         created_at: new Date().toISOString()
@@ -1531,6 +1578,7 @@ app.post('/messaging/system-message', verifyToken, async (req, res) => {
                               messageType === 'reschedule_request' ? 'Reschedule request sent' :
                               messageType === 'reschedule_accepted' ? 'Reschedule request accepted' :
                               messageType === 'reschedule_rejected' ? 'Reschedule request declined' : 
+                              messageType === 'booking_cancelled' ? 'Booking cancelled' :
                               'New message';
 
     await supabase
@@ -1546,7 +1594,13 @@ app.post('/messaging/system-message', verifyToken, async (req, res) => {
       data: message
     });
   } catch (error) {
-    console.error('System message error:', error);
+    console.error('📧 MESSAGING: System message error:', error);
+    console.error('📧 MESSAGING: Error details:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

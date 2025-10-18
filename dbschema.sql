@@ -190,7 +190,7 @@ CREATE TABLE public.messages (
   conversation_id uuid,
   sender_id uuid,
   content text NOT NULL,
-  message_type text DEFAULT 'text'::text CHECK (message_type = ANY (ARRAY['text'::text, 'image'::text, 'file'::text, 'document'::text, 'booking_offer'::text, 'booking_proposal'::text, 'booking_confirmation'::text, 'reschedule_request'::text, 'reschedule_accepted'::text, 'reschedule_rejected'::text])),
+  message_type text DEFAULT 'text'::text CHECK (message_type = ANY (ARRAY['text'::text, 'image'::text, 'file'::text, 'document'::text, 'booking_offer'::text, 'booking_proposal'::text, 'booking_confirmation'::text, 'reschedule_request'::text, 'reschedule_accepted'::text, 'reschedule_rejected'::text, 'booking_cancelled'::text])),
   file_name text,
   file_size integer,
   read_at timestamp with time zone,
@@ -405,6 +405,7 @@ CREATE TABLE public.tutor_profiles (
   monthly_package text DEFAULT ''::text,
   weekly_package text DEFAULT ''::text,
   bulk_package text DEFAULT ''::text,
+  penalty_points integer DEFAULT 0,
   CONSTRAINT tutor_profiles_pkey PRIMARY KEY (id),
   CONSTRAINT tutor_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
