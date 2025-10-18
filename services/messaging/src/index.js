@@ -1108,7 +1108,17 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       .eq('id', bookingOfferId)
       .single();
 
-    if (fetchError || !bookingOffer) {
+    if (fetchError) {
+      console.error('❌ Booking confirmation - Booking offer fetch error:', fetchError);
+      if (fetchError.code === 'PGRST116') {
+        return res.status(400).json({ 
+          error: 'Multiple booking offers found with same ID. Please contact support.' 
+        });
+      }
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (!bookingOffer) {
       return res.status(404).json({ error: 'Booking offer not found' });
     }
 

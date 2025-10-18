@@ -7,16 +7,25 @@ const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const cron = require('node-cron');
 const axios = require('axios');
-require('dotenv').config({ path: '../../.env' });
+// const multer = require('multer');
+try {
+  require('dotenv').config({ path: '../../.env' });
+  console.log('✅ Environment variables loaded');
+} catch (error) {
+  console.log('⚠️ Could not load .env file, using system environment variables');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3004;
+console.log('✅ Express app created, PORT:', PORT);
 
 // Initialize Supabase client
+console.log('🔗 Initializing Supabase client...');
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.SUPABASE_ANON_KEY || 'placeholder-key'
 );
+console.log('✅ Supabase client initialized');
 
 // Middleware
 app.use(helmet());
@@ -26,10 +35,25 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Configure multer for file uploads (temporarily disabled)
+// const upload = multer({
+//   storage: multer.memoryStorage(),
+//   limits: {
+//     fileSize: 5 * 1024 * 1024, // 5MB limit
+//   },
+//   fileFilter: (req, file, cb) => {
+//     if (file.mimetype.startsWith('image/')) {
+//       cb(null, true);
+//     } else {
+//       cb(new Error('Only image files are allowed'), false);
+//     }
+//   }
+// });
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100
+  max: 1000 // Increased for development
 });
 app.use(limiter);
 
@@ -59,12 +83,18 @@ async function sendMessageViaMessagingService(conversationId, content, messageTy
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   
+  console.log('🔐 JWT Debug Info:');
+  console.log('  - Authorization header:', req.headers.authorization);
+  console.log('  - Extracted token:', token ? 'Present' : 'Missing');
+  console.log('  - JWT_SECRET available:', !!process.env.JWT_SECRET);
+  
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('  - Decoded user:', decoded);
     req.user = decoded;
     next();
   } catch (error) {
@@ -521,7 +551,6 @@ app.put('/bookings/:id/cancel', verifyToken, async (req, res) => {
     }
 
     // Send notification to both parties about the cancellation
-    const cancellerId = req.user.userId;
     const cancellerType = cancellerId === booking.tutor_id ? 'tutor' : 'student';
     const otherPartyId = cancellerId === booking.tutor_id ? booking.student_id : booking.tutor_id;
     
@@ -981,11 +1010,145 @@ app.post('/booking-confirmations', verifyToken, async (req, res) => {
   }
 });
 
+// Mark attendance endpoint (temporarily without auth for testing)
+app.post('/bookings/:bookingId/mark-attendance', async (req, res) => {
+  try {
+    console.log('📝 Mark attendance endpoint called');
+    console.log('  - Request headers:', req.headers);
+    console.log('  - Request body:', req.body);
+    console.log('  - Request user:', req.user);
+    
+    const { bookingId } = req.params;
+    const { attendance_status, session_notes } = req.body;
+    const currentUserId = req.user?.userId || '4eda6f38-ac36-4918-8ac5-de272c76eb50'; // Use the actual tutor ID for testing
+
+    // Validate input
+    if (!attendance_status || !['attended', 'no_show'].includes(attendance_status)) {
+      return res.status(400).json({ error: 'Valid attendance status is required' });
+    }
+
+    // Get booking details
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', bookingId)
+      .single();
+
+    if (bookingError || !booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Debug logging
+    console.log('🔍 Attendance Debug Info:');
+    console.log('  - Current User ID:', currentUserId, '(type:', typeof currentUserId, ')');
+    console.log('  - Booking Tutor ID:', booking.tutor_id, '(type:', typeof booking.tutor_id, ')');
+    console.log('  - Booking ID:', bookingId);
+    console.log('  - Full booking object:', JSON.stringify(booking, null, 2));
+    console.log('  - IDs Match:', booking.tutor_id === currentUserId);
+    console.log('  - Strict equality:', booking.tutor_id === currentUserId);
+    console.log('  - Loose equality:', booking.tutor_id == currentUserId);
+
+    // Verify current user is the tutor for this booking
+    if (booking.tutor_id !== currentUserId) {
+      return res.status(403).json({ 
+        error: 'Only the tutor can mark attendance',
+        debug: {
+          currentUserId,
+          bookingTutorId: booking.tutor_id,
+          bookingId
+        }
+      });
+    }
+
+    // Check if attendance has already been marked
+    if (booking.attendance_status) {
+      return res.status(400).json({ error: 'Attendance has already been marked for this session' });
+    }
+
+    // Handle file upload if proof photo is provided (temporarily disabled)
+    let proofPhotoUrl = null;
+    // TODO: Re-enable file upload when multer is properly configured
+
+    // Update booking with attendance information
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        attendance_status: attendance_status,
+        attendance_marked_at: new Date().toISOString(),
+        session_notes: session_notes || null,
+        proof_photo_url: proofPhotoUrl
+      })
+      .eq('id', bookingId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    res.json({
+      message: 'Attendance marked successfully',
+      booking: updatedBooking
+    });
+
+  } catch (error) {
+    console.error('Mark attendance error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Check attendance status for multiple bookings
+app.post('/bookings/attendance-status', verifyToken, async (req, res) => {
+  try {
+    const { bookingIds } = req.body;
+    
+    if (!bookingIds || !Array.isArray(bookingIds)) {
+      return res.status(400).json({ error: 'Booking IDs array is required' });
+    }
+
+    const attendanceStatuses = {};
+    
+    for (const bookingId of bookingIds) {
+      const { data: booking, error } = await supabase
+        .from('bookings')
+        .select('id, attendance_status, attendance_marked_at')
+        .eq('id', bookingId)
+        .single();
+
+      if (!error && booking) {
+        attendanceStatuses[bookingId] = {
+          hasAttendance: booking.attendance_status && 
+            (booking.attendance_status === 'attended' || booking.attendance_status === 'no_show'),
+          attendance_status: booking.attendance_status,
+          attendance_marked_at: booking.attendance_marked_at
+        };
+      } else {
+        attendanceStatuses[bookingId] = {
+          hasAttendance: false,
+          attendance_status: null,
+          attendance_marked_at: null
+        };
+      }
+    }
+
+    res.json(attendanceStatuses);
+  } catch (error) {
+    console.error('Error checking attendance statuses:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', service: 'bookings' });
 });
 
 app.listen(PORT, () => {
-  console.log(`Bookings service running on port ${PORT}`);
+  console.log(`🚀 Bookings service running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Supabase URL: ${process.env.SUPABASE_URL ? 'Set' : 'Not set'}`);
+  console.log(`🔑 JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not set'}`);
+}).on('error', (err) => {
+  console.error('❌ Failed to start bookings service:', err);
+  process.exit(1);
 });

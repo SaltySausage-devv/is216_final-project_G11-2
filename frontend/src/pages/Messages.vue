@@ -427,6 +427,127 @@
                                 Session has been booked and added to calendar
                               </p>
                             </div>
+                            <!-- Mark Attendance Button for Tutors -->
+                            <div
+                              v-if="
+                                (authStore.user &&
+                                  authStore.user.user_type === 'tutor') ||
+                                canMarkAttendance(message) ||
+                                isAttendanceMarked(message)
+                              "
+                              class="booking-actions mt-3"
+                            >
+                              <!-- Button when attendance can be marked -->
+                              <button
+                                v-if="
+                                  canMarkAttendance(message) &&
+                                  !isAttendanceMarked(message)
+                                "
+                                class="btn btn-warning btn-sm"
+                                @click="showMarkAttendanceModal(message)"
+                              >
+                                <i class="fas fa-clipboard-check me-1"></i>
+                                Mark Attendance
+                              </button>
+
+                              <!-- Button when attendance has been marked -->
+                              <button
+                                v-if="isAttendanceMarked(message)"
+                                class="btn btn-success btn-sm"
+                                disabled
+                              >
+                                <i class="fas fa-check-circle me-1"></i>
+                                Attendance Marked
+                              </button>
+
+                              <!-- Button when session hasn't started yet -->
+                              <button
+                                v-if="
+                                  authStore.user &&
+                                  authStore.user.user_type === 'tutor' &&
+                                  !canMarkAttendance(message) &&
+                                  !isAttendanceMarked(message)
+                                "
+                                class="btn btn-secondary btn-sm"
+                                disabled
+                              >
+                                <i class="fas fa-clock me-1"></i>
+                                Session Not Started
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Attendance Marked Message -->
+                        <div
+                          v-else-if="
+                            message.messageType === 'attendance_marked'
+                          "
+                          class="message-content booking-message attendance-marked"
+                        >
+                          <div class="booking-header">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            <span class="booking-title">Attendance Marked</span>
+                          </div>
+                          <div class="booking-details">
+                            <div v-if="getAttendanceData(message)">
+                              <p class="mb-2">
+                                <strong>Status:</strong>
+                                <span
+                                  :class="
+                                    getAttendanceStatusClass(
+                                      getAttendanceData(message).status
+                                    )
+                                  "
+                                >
+                                  <i
+                                    :class="
+                                      getAttendanceStatusIcon(
+                                        getAttendanceData(message).status
+                                      )
+                                    "
+                                    class="me-1"
+                                  ></i>
+                                  {{
+                                    getAttendanceStatusText(
+                                      getAttendanceData(message).status
+                                    )
+                                  }}
+                                </span>
+                              </p>
+                              <p
+                                v-if="getAttendanceData(message).notes"
+                                class="mb-2"
+                              >
+                                <strong>Notes:</strong>
+                                {{ getAttendanceData(message).notes }}
+                              </p>
+                              <p
+                                v-if="
+                                  getAttendanceData(message).proof_photo_url
+                                "
+                                class="mb-2"
+                              >
+                                <strong>Proof Photo:</strong>
+                                <button
+                                  class="btn btn-sm btn-outline-primary ms-2"
+                                  @click="
+                                    viewProofPhoto(
+                                      getAttendanceData(message).proof_photo_url
+                                    )
+                                  "
+                                >
+                                  <i class="fas fa-image me-1"></i>View Photo
+                                </button>
+                              </p>
+                              <p class="mb-0 text-muted">
+                                <small>
+                                  <i class="fas fa-clock me-1"></i>
+                                  Marked on
+                                  {{ formatDateTime(message.created_at) }}
+                                </small>
+                              </p>
+                            </div>
                           </div>
                         </div>
 
@@ -1552,6 +1673,14 @@
         </div>
       </div>
     </div>
+
+    <!-- Mark Attendance Modal -->
+    <MarkAttendanceModal
+      v-if="markAttendanceModal && selectedBookingForAttendance"
+      :booking="selectedBookingForAttendance"
+      @close="markAttendanceModal = false"
+      @attendance-marked="handleAttendanceMarked"
+    />
   </div>
 </template>
 
@@ -1561,6 +1690,7 @@ import { useAuthStore } from "../stores/auth";
 import messagingService from "../services/messaging.js";
 import { useNotifications } from "../composables/useNotifications";
 import axios from "axios";
+import MarkAttendanceModal from "../components/calendar/MarkAttendanceModal.vue";
 
 export default {
   name: "Messages",
@@ -2213,6 +2343,22 @@ export default {
         messages.value.forEach((msg) => {
           inferBookingStatusFromMessage(msg);
         });
+
+        // Check attendance status for all booking confirmations (with delay to avoid rate limiting)
+        const bookingIds = [];
+        messages.value.forEach((message) => {
+          if (message.messageType === "booking_confirmation") {
+            const bookingData = getBookingData(message);
+            if (bookingData && bookingData.bookingId) {
+              bookingIds.push(bookingData.bookingId);
+            }
+          }
+        });
+
+        // Check attendance status in batch to avoid rate limiting
+        if (bookingIds.length > 0) {
+          checkAttendanceStatusBatch(bookingIds);
+        }
 
         await nextTick();
         scrollToBottom();
@@ -3797,6 +3943,289 @@ export default {
       }
     };
 
+    // Attendance marking functionality
+    const markAttendanceModal = ref(false);
+    const selectedBookingForAttendance = ref(null);
+    const attendanceMarkedBookings = ref(new Set());
+    const bookingAttendanceStatus = ref(new Map()); // Map of bookingId -> attendance status
+
+    // Check if current user can mark attendance for a booking
+    const canMarkAttendance = (message) => {
+      if (!authStore.user || authStore.user.user_type !== "tutor") {
+        console.log("🔍 canMarkAttendance: Not a tutor");
+        return false;
+      }
+
+      const bookingData = getBookingData(message);
+      if (!bookingData || !bookingData.bookingId) {
+        console.log("🔍 canMarkAttendance: No booking data");
+        return false;
+      }
+
+      // Check if the current time is past the session's start time
+      const sessionStartTime = new Date(bookingData.confirmedTime);
+      const currentTime = new Date();
+      const canMark = currentTime > sessionStartTime;
+
+      console.log("🔍 canMarkAttendance Debug:", {
+        sessionStartTime: sessionStartTime.toISOString(),
+        currentTime: currentTime.toISOString(),
+        canMark,
+        userType: authStore.user.user_type,
+      });
+
+      // Only allow marking attendance after the session has started
+      return canMark;
+    };
+
+    // Check attendance status for multiple bookings in batch
+    const checkAttendanceStatusBatch = async (bookingIds) => {
+      try {
+        const response = await fetch(
+          "http://localhost:3004/bookings/attendance-status",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authStore.token}`,
+            },
+            body: JSON.stringify({ bookingIds }),
+          }
+        );
+
+        if (response.ok) {
+          const attendanceStatuses = await response.json();
+
+          // Update the reactive map with all results
+          Object.entries(attendanceStatuses).forEach(([bookingId, status]) => {
+            bookingAttendanceStatus.value.set(bookingId, status.hasAttendance);
+          });
+
+          console.log("🔍 Batch Attendance Check:", attendanceStatuses);
+        } else {
+          console.error(
+            "Failed to fetch attendance statuses:",
+            response.status
+          );
+        }
+      } catch (error) {
+        console.error("Error checking attendance statuses:", error);
+      }
+    };
+
+    // Check attendance status from database and update reactive map
+    const checkAttendanceStatus = async (bookingId) => {
+      // Check if we already have the status cached
+      if (bookingAttendanceStatus.value.has(bookingId)) {
+        return bookingAttendanceStatus.value.get(bookingId);
+      }
+
+      try {
+        const response = await fetch(
+          `http://localhost:3004/bookings/${bookingId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const booking = await response.json();
+          const hasAttendance =
+            booking.attendance_status &&
+            (booking.attendance_status === "attended" ||
+              booking.attendance_status === "no_show");
+
+          // Update the reactive map
+          bookingAttendanceStatus.value.set(bookingId, hasAttendance);
+
+          console.log("🔍 Database Attendance Check:", {
+            bookingId,
+            attendance_status: booking.attendance_status,
+            attendance_marked_at: booking.attendance_marked_at,
+            hasAttendance,
+          });
+
+          return hasAttendance;
+        } else if (response.status === 429) {
+          console.warn(
+            "Rate limited, using cached data or defaulting to false"
+          );
+          bookingAttendanceStatus.value.set(bookingId, false);
+          return false;
+        } else {
+          console.error(
+            "Failed to fetch booking from database:",
+            response.status
+          );
+          bookingAttendanceStatus.value.set(bookingId, false);
+          return false;
+        }
+      } catch (error) {
+        console.error("Error checking attendance from database:", error);
+        bookingAttendanceStatus.value.set(bookingId, false);
+        return false;
+      }
+    };
+
+    // Check if attendance has already been marked for a booking (synchronous)
+    const isAttendanceMarked = (message) => {
+      const bookingData = getBookingData(message);
+      if (!bookingData || !bookingData.bookingId) {
+        return false;
+      }
+
+      // Check the reactive map first
+      const status = bookingAttendanceStatus.value.get(bookingData.bookingId);
+      if (status !== undefined) {
+        return status;
+      }
+
+      // If not in map, trigger async check
+      checkAttendanceStatus(bookingData.bookingId);
+      return false; // Return false initially, will update when async check completes
+    };
+
+    // Show mark attendance modal
+    const showMarkAttendanceModal = (message) => {
+      const bookingData = getBookingData(message);
+      if (!bookingData || !bookingData.bookingId) {
+        return;
+      }
+
+      // Check if attendance is already marked
+      if (isAttendanceMarked(message)) {
+        console.log(
+          "🚫 Attendance already marked, preventing modal from opening"
+        );
+        return;
+      }
+
+      // Create a booking object for the modal
+      selectedBookingForAttendance.value = {
+        id: bookingData.bookingId,
+        start_time: bookingData.confirmedTime,
+        end_time: new Date(
+          new Date(bookingData.confirmedTime).getTime() +
+            (bookingData.duration || 60) * 60000
+        ).toISOString(),
+        subject: bookingData.subject || "Tutoring Session",
+        student: {
+          first_name: message.sender?.first_name || "Student",
+          last_name: message.sender?.last_name || "",
+        },
+        tutor_id: authStore.user.id,
+      };
+
+      markAttendanceModal.value = true;
+    };
+
+    // Handle attendance marked event
+    const handleAttendanceMarked = async (attendanceData) => {
+      try {
+        // Send attendance message to the conversation
+        await messagingService.sendAttendanceMessage(
+          selectedConversation.value.id,
+          selectedBookingForAttendance.value.id,
+          attendanceData
+        );
+
+        // Update the booking confirmation message with attendance status
+        const bookingId = selectedBookingForAttendance.value.id;
+        const updatedMessages = messages.value.map((msg) => {
+          if (msg.messageType === "booking_confirmation") {
+            const bookingData = getBookingData(msg);
+            if (bookingData && bookingData.bookingId === bookingId) {
+              // Update the booking data with attendance status
+              const updatedBookingData = {
+                ...bookingData,
+                attendance_status: attendanceData.attendance_status,
+                attendance_marked_at: new Date().toISOString(),
+                session_notes: attendanceData.session_notes,
+              };
+              console.log(
+                "🔄 Updating booking data with attendance status:",
+                updatedBookingData
+              );
+              return {
+                ...msg,
+                content: JSON.stringify(updatedBookingData),
+              };
+            }
+          }
+          return msg;
+        });
+
+        messages.value = updatedMessages;
+        console.log("✅ Messages updated with attendance status");
+
+        // Add to tracked set
+        attendanceMarkedBookings.value.add(bookingId);
+
+        // Update the attendance status map
+        bookingAttendanceStatus.value.set(bookingId, true);
+
+        console.log("📝 Added booking to attendance marked set:", bookingId);
+        console.log("📝 Updated attendance status map for booking:", bookingId);
+
+        // Force reactive update
+        await nextTick();
+
+        // Also refresh messages to get the attendance_marked message
+        await loadMessages(selectedConversation.value.id);
+
+        markAttendanceModal.value = false;
+        selectedBookingForAttendance.value = null;
+      } catch (error) {
+        console.error("Error handling attendance marked:", error);
+      }
+    };
+
+    // Get attendance data from message
+    const getAttendanceData = (message) => {
+      try {
+        return JSON.parse(message.content);
+      } catch (error) {
+        console.error("Error parsing attendance data:", error);
+        return null;
+      }
+    };
+
+    // Get attendance status class
+    const getAttendanceStatusClass = (status) => {
+      const classes = {
+        attended: "text-success",
+        no_show: "text-danger",
+      };
+      return classes[status] || "text-muted";
+    };
+
+    // Get attendance status icon
+    const getAttendanceStatusIcon = (status) => {
+      const icons = {
+        attended: "fa-check-circle",
+        no_show: "fa-times-circle",
+      };
+      return icons[status] || "fa-question-circle";
+    };
+
+    // Get attendance status text
+    const getAttendanceStatusText = (status) => {
+      const texts = {
+        attended: "Attended",
+        no_show: "No Show",
+      };
+      return texts[status] || "Unknown";
+    };
+
+    // View proof photo
+    const viewProofPhoto = (photoUrl) => {
+      if (photoUrl) {
+        window.open(photoUrl, "_blank");
+      }
+    };
+
     return {
       authStore,
       currentUserId,
@@ -3894,7 +4323,24 @@ export default {
       // Booking cancellation helpers
       getBookingCancellationData,
       isBookingCancelledByMe,
+      // Attendance marking
+      showMarkAttendanceModal,
+      canMarkAttendance,
+      isAttendanceMarked,
+      checkAttendanceStatus,
+      getAttendanceData,
+      getAttendanceStatusClass,
+      getAttendanceStatusIcon,
+      getAttendanceStatusText,
+      viewProofPhoto,
+      handleAttendanceMarked,
+      markAttendanceModal,
+      selectedBookingForAttendance,
+      bookingAttendanceStatus,
     };
+  },
+  components: {
+    MarkAttendanceModal,
   },
 };
 </script>
@@ -5366,6 +5812,68 @@ i.text-primary {
 
 .booking-confirmation .booking-header i {
   color: #28a745;
+}
+
+.attendance-marked .booking-header {
+  background: rgba(255, 193, 7, 0.12);
+  border-bottom: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.attendance-marked .booking-header i {
+  color: #ffc107;
+}
+
+/* Attendance Button Styling */
+.btn-warning.btn-sm {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+  border: none !important;
+  color: #000000 !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-warning.btn-sm:hover {
+  background: linear-gradient(135deg, #e0a800 0%, #d39e00 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.btn-success.btn-sm {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.btn-success.btn-sm:disabled {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  opacity: 0.9;
+  cursor: not-allowed;
+}
+
+.btn-success.btn-sm:hover:disabled {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-secondary.btn-sm {
+  background: #6c757d !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.btn-secondary.btn-sm:disabled {
+  background: #6c757d !important;
+  border: none !important;
+  color: #ffffff !important;
+  opacity: 0.8;
+  cursor: not-allowed;
 }
 
 .reschedule-request .booking-header {

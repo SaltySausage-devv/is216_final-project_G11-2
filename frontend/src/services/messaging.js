@@ -324,6 +324,54 @@ class MessagingService {
       throw error
     }
   }
+
+  // Mark attendance for a booking
+  async markAttendance(bookingId, attendanceData) {
+    try {
+      const formData = new FormData()
+      formData.append('attendance_status', attendanceData.attendance_status)
+      formData.append('session_notes', attendanceData.session_notes || '')
+      formData.append('proof_photo', attendanceData.proof_photo)
+
+      const response = await fetch(`http://localhost:3004/bookings/${bookingId}/mark-attendance`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`
+        },
+        body: formData
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to mark attendance')
+      }
+      
+      return await response.json()
+    } catch (error) {
+      console.error('Error marking attendance:', error)
+      throw error
+    }
+  }
+
+  // Send attendance marked message
+  async sendAttendanceMessage(conversationId, bookingId, attendanceData) {
+    try {
+      const response = await messagingApi.post(`/messaging/conversations/${conversationId}/messages`, {
+        content: `Attendance marked: Student ${attendanceData.attendance_status === 'attended' ? 'attended' : 'did not attend'} the session`,
+        messageType: 'attendance_marked',
+        bookingId: bookingId,
+        attendanceData: {
+          status: attendanceData.attendance_status,
+          notes: attendanceData.session_notes,
+          proof_photo_url: attendanceData.proof_photo_url
+        }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error sending attendance message:', error)
+      throw error
+    }
+  }
 }
 
 // Create and export a singleton instance
