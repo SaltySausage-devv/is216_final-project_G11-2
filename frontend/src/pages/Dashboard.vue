@@ -54,6 +54,7 @@
               </div>
               <h4 class="fw-bold mb-1">{{ stat.value }}</h4>
               <p class="text-muted mb-0">{{ stat.label }}</p>
+              <button @click="setDataType(stat.label)">Show</button>
             </div>
           </div>
         </div>
@@ -66,7 +67,7 @@
         :transition="{ duration: 0.6, delay: 0.2 }"
         class="row"
       >
-        <div class="col-lg-8 mb-4">
+        <div display="inline-block"  class="col-lg-8 mb-4">
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-bottom">
               <h5 class="fw-bold mb-0">
@@ -103,8 +104,8 @@
             </div>
           </div>
         </div>
-
-        <div class="col-lg-4">
+        </motion.div>
+        <div display="inline-block" class="col-lg-4">
           <!-- Quick Actions -->
           <motion.div
             :initial="{ opacity: 0, y: 30 }"
@@ -140,23 +141,47 @@
             </div>
           </motion.div>
         </div>
-      </motion.div>
+        <!-- Student Retention Trend -->
+        <div class="col-lg-12">
+          <motion.div
+            :initial="{ opacity: 0, x: -30 }"
+            :animate="{ opacity: 1, x: 0 }"
+            :transition="{ duration: 0.6, delay: 0.2 }"
+            class="card border-0 shadow-sm h-100"
+          >
+            <div class="card-header bg-white border-bottom">
+              <h5 class="fw-bold mb-0">
+                <i class="fas fa-dollar-sign me-2 text-primary"></i>
+                {{ dataType }}
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="chart-container" style="height: 300px;width:auto;">
+                <LineChart :labels="labels" :datasets="datasets" />
+              </div>
+            </div>
+          </motion.div>
+        </div>
+        
+      </div>
     </div>
-  </div>
 </template>
 
 <script>
 import { ref, computed, onMounted, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
+import LineChart from '../components/LineChart.vue'
 
 export default {
   name: "Dashboard",
+  components: { LineChart },
   setup() {
     const authStore = useAuthStore();
 
     const user = computed(() => authStore.user);
     const userType = computed(() => authStore.userType);
-
+    const averageRating = ref(null);
+    const earnings = ref(null);
     const stats = ref([]);
     const recentActivity = ref([]);
 
@@ -172,11 +197,44 @@ export default {
           { icon: "fas fa-dollar-sign", label: "Total Spent", value: "$1,440" },
         ];
       } else if (userType.value === "tutor") {
+        // will need to include code when detecting tutor, query api into rating, total.
+        //query for ratings
+        try{
+          const response = await fetch(`http://localhost:3006/reviews/tutor/${user.value.id}`)
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch reviews')
+          }
+
+          const data = await response.json()
+          console.log('API Response:', data)
+
+          // Transform API data to frontend format
+          averageRating.value = data.stats.averageRating
+        } catch (error) {
+          console.error("Failed!", error)
+        }
+        // query for Earnings
+                try{
+          const response = await fetch(`http://localhost:3008/analytics/tutor/${user.value.id}`)
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch earnings')
+          }
+
+          const data = await response.json()
+          console.log('API Response:', data)
+
+          // Transform API data to frontend format
+          earnings.value = data.earnings
+        } catch (error) {
+          console.error("Failed!", error)
+        }
         stats.value = [
           { icon: "fas fa-users", label: "Total Students", value: "25" },
-          { icon: "fas fa-star", label: "Average Rating", value: "4.8" },
+          { icon: "fas fa-star", label: "Average Rating", value: averageRating.value },
           { icon: "fas fa-clock", label: "Hours This Month", value: "48" },
-          { icon: "fas fa-dollar-sign", label: "Earnings", value: "$2,880" },
+          { icon: "fas fa-dollar-sign", label: "Earnings", value: earnings.value },
         ];
       } else if (userType.value === "centre") {
         stats.value = [
@@ -215,6 +273,7 @@ export default {
       console.log("✅ Dashboard data loaded, stats count:", stats.value.length);
     };
 
+    const dataType = ref(null)
     // Watch for userType changes and reload data
     watch(
       userType,
@@ -226,6 +285,47 @@ export default {
       },
       { immediate: true }
     );
+    const charts = ref([])
+    const dates = ref([])
+    const labels = ref([])
+    const datasets = ref([])
+      // function to update chart whenever.
+    async function setDataType(label){
+      dataType.value = label
+      console.log(dataType.value)
+        try{
+          const response = await fetch(`http://localhost:3006/reviews/tutor/${user.value.id}`)
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch reviews')
+          }
+
+          const data = await response.json()
+          console.log('API Response:', data)
+
+          // Transform API data to frontend format
+          charts.value = data.reviews.map(reviews => ({
+            rating: reviews.rating
+          }))
+          dates.value = data.reviews.map(reviews => ({
+            date: reviews.created_at
+          }))
+          console.error("no")
+          labels.value = dates.value.map((item) =>{
+            return item.date
+          })
+          datasets.value = [{
+            label: label,
+            backgroundColor: "#f87979",
+            data: charts.value.map((item) => {
+              return item.rating
+            })
+          }]
+        } catch (error) {
+          console.error("Failed!", error)
+        }
+      
+    }
 
     onMounted(() => {
       console.log("🚀 Dashboard mounted, user type:", userType.value);
@@ -240,6 +340,13 @@ export default {
       userType,
       stats,
       recentActivity,
+      setDataType,
+      datasets,
+      dataType,
+      labels,
+      dates,
+      averageRating,
+      earnings
     };
   },
 };
