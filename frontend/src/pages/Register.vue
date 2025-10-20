@@ -134,7 +134,7 @@
                 </div>
 
                 <div class="mb-3">
-                  <label for="phone" class="cyberpunk-label">Singapore Phone Number *</label>
+                  <label for="phone" class="cyberpunk-label">Singapore Phone Number (Optional)</label>
                   <div class="cyberpunk-input-group">
                     <div class="cyberpunk-input-icon">
                       <i class="fas fa-phone"></i>
@@ -149,7 +149,6 @@
                       :class="{ 'is-invalid': errors.phone }"
                       maxlength="8"
                       :disabled="phoneVerified"
-                      required
                       @input="validatePhone"
                     />
                     <button
@@ -851,15 +850,13 @@ export default {
         errors.value.userType = 'Please select your role'
       }
 
-      // Phone validation
-      if (!form.phone) {
-        errors.value.phone = 'Phone number is required'
-      } else if (!validatePhoneNumber(form.phone)) {
+      // Phone validation (optional)
+      if (form.phone && !validatePhoneNumber(form.phone)) {
         errors.value.phone = 'Please enter a valid Singapore phone number'
       }
 
-      // OTP verification check
-      if (!phoneVerified.value) {
+      // OTP verification check (only if phone is provided)
+      if (form.phone && !phoneVerified.value) {
         errors.value.phone = 'Please verify your phone number'
         return false
       }

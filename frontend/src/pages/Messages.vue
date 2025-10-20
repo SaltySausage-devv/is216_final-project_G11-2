@@ -3,7 +3,10 @@
     <div class="container-fluid py-4 px-3 px-lg-5">
       <div class="row g-3 g-lg-4 messages-row">
         <!-- Conversations Sidebar -->
-        <div class="col-12 col-lg-4 conversations-col" :class="{ 'hide-on-mobile': showMobileChat }">
+        <div
+          class="col-12 col-lg-4 conversations-col"
+          :class="{ 'hide-on-mobile': showMobileChat }"
+        >
           <div class="card border-0 shadow-sm w-100 d-flex flex-column">
             <div class="card-header bg-white border-bottom">
               <div class="d-flex align-items-center justify-content-between">
@@ -135,7 +138,10 @@
         </div>
 
         <!-- Chat Area -->
-        <div class="col-12 col-lg-8 chat-col" :class="{ 'show-on-mobile': showMobileChat }">
+        <div
+          class="col-12 col-lg-8 chat-col"
+          :class="{ 'show-on-mobile': showMobileChat }"
+        >
           <div
             :initial="{ opacity: 0, x: 30 }"
             :animate="{ opacity: 1, x: 0 }"
@@ -282,7 +288,8 @@
                                 v-if="
                                   message.senderId !== currentUserId &&
                                   authStore.user?.user_type === 'tutor' &&
-                                  getBookingStatusValue(message) === 'awaiting_response'
+                                  getBookingStatusValue(message) ===
+                                    'awaiting_response'
                                 "
                                 class="btn btn-primary btn-sm me-2"
                                 @click="handleBookingOffer(message)"
@@ -291,10 +298,17 @@
                                 View & Respond
                               </button>
                               <span
-                                :class="['booking-status', getBookingStatusClass(message)]"
+                                :class="[
+                                  'booking-status',
+                                  getBookingStatusClass(message),
+                                ]"
                               >
                                 <i
-                                  :class="['fas', getBookingStatusIcon(message), 'me-1']"
+                                  :class="[
+                                    'fas',
+                                    getBookingStatusIcon(message),
+                                    'me-1',
+                                  ]"
                                 ></i>
                                 {{ getBookingStatusText(message) }}
                               </span>
@@ -328,6 +342,21 @@
                                 <strong>Location:</strong>
                                 {{ getBookingData(message).finalLocation }}
                               </p>
+                              <p
+                                v-if="getBookingData(message).creditsAmount"
+                                class="mb-2"
+                              >
+                                <strong
+                                  v-if="authStore.user?.user_type === 'tutor'"
+                                  >Credits earned:</strong
+                                >
+                                <strong v-else>Credits needed:</strong>
+                                <span class="text-warning fw-bold ms-1"
+                                  >${{
+                                    getBookingData(message).creditsAmount
+                                  }}</span
+                                >
+                              </p>
                             </div>
                             <div class="booking-actions">
                               <button
@@ -335,7 +364,8 @@
                                   message.senderId !== currentUserId &&
                                   (authStore.user?.user_type === 'student' ||
                                     authStore.user?.user_type === 'parent') &&
-                                  getBookingStatusValue(message) === 'pending_acceptance'
+                                  getBookingStatusValue(message) ===
+                                    'pending_acceptance'
                                 "
                                 class="btn btn-success btn-sm me-2"
                                 @click="confirmBooking(message)"
@@ -344,10 +374,17 @@
                                 Accept & Book
                               </button>
                               <span
-                                :class="['booking-status', getBookingStatusClass(message)]"
+                                :class="[
+                                  'booking-status',
+                                  getBookingStatusClass(message),
+                                ]"
                               >
                                 <i
-                                  :class="['fas', getBookingStatusIcon(message), 'me-1']"
+                                  :class="[
+                                    'fas',
+                                    getBookingStatusIcon(message),
+                                    'me-1',
+                                  ]"
                                 ></i>
                                 {{ getBookingStatusText(message) }}
                               </span>
@@ -388,6 +425,146 @@
                               <p class="mb-0 text-success">
                                 <i class="fas fa-check-circle me-1"></i>
                                 Session has been booked and added to calendar
+                              </p>
+                            </div>
+                            <!-- Mark Attendance Button for Tutors -->
+                            <div
+                              v-if="
+                                (authStore.user &&
+                                  authStore.user.user_type === 'tutor') ||
+                                canMarkAttendance(message) ||
+                                isAttendanceMarked(message)
+                              "
+                              class="booking-actions mt-3"
+                              :key="`attendance-${message.id}`"
+                            >
+                              <!-- Button when attendance can be marked -->
+                              <button
+                                v-if="
+                                  canMarkAttendance(message) &&
+                                  !isAttendanceMarked(message)
+                                "
+                                class="btn btn-warning btn-sm"
+                                @click="showMarkAttendanceModal(message)"
+                              >
+                                <i class="fas fa-clipboard-check me-1"></i>
+                                Mark Attendance
+                              </button>
+
+                              <!-- Button when attendance has been marked -->
+                              <button
+                                v-if="isAttendanceMarked(message)"
+                                class="btn btn-success btn-sm"
+                                disabled
+                              >
+                                <i class="fas fa-check-circle me-1"></i>
+                                Attendance Marked
+                              </button>
+
+                              <!-- Button when session hasn't started yet -->
+                              <button
+                                v-if="
+                                  authStore.user &&
+                                  authStore.user.user_type === 'tutor' &&
+                                  !canMarkAttendance(message) &&
+                                  !isAttendanceMarked(message)
+                                "
+                                class="btn btn-secondary btn-sm"
+                                disabled
+                              >
+                                <i class="fas fa-clock me-1"></i>
+                                Session Not Started
+                              </button>
+                            </div>
+
+                            <!-- Session End Button for Students -->
+                            <div
+                              v-if="
+                                authStore.user &&
+                                authStore.user.user_type === 'student' &&
+                                canShowSessionEndModal(message)
+                              "
+                              class="booking-actions mt-3"
+                            >
+                              <button
+                                class="btn btn-info btn-sm"
+                                @click="showSessionEndModal(message)"
+                              >
+                                <i class="fas fa-star me-1"></i>
+                                Session Ended - Leave Review
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Attendance Marked Message -->
+                        <div
+                          v-else-if="
+                            message.messageType === 'attendance_marked'
+                          "
+                          class="message-content booking-message attendance-marked"
+                        >
+                          <div class="booking-header">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            <span class="booking-title">Attendance Marked</span>
+                          </div>
+                          <div class="booking-details">
+                            <div v-if="getAttendanceData(message)">
+                              <p class="mb-2">
+                                <strong>Status:</strong>
+                                <span
+                                  :class="
+                                    getAttendanceStatusClass(
+                                      getAttendanceData(message).status
+                                    )
+                                  "
+                                >
+                                  <i
+                                    :class="
+                                      getAttendanceStatusIcon(
+                                        getAttendanceData(message).status
+                                      )
+                                    "
+                                    class="me-1"
+                                  ></i>
+                                  {{
+                                    getAttendanceStatusText(
+                                      getAttendanceData(message).status
+                                    )
+                                  }}
+                                </span>
+                              </p>
+                              <p
+                                v-if="getAttendanceData(message).notes"
+                                class="mb-2"
+                              >
+                                <strong>Notes:</strong>
+                                {{ getAttendanceData(message).notes }}
+                              </p>
+                              <p
+                                v-if="
+                                  getAttendanceData(message).proof_photo_url
+                                "
+                                class="mb-2"
+                              >
+                                <strong>Proof Photo:</strong>
+                                <button
+                                  class="btn btn-sm btn-outline-primary ms-2"
+                                  @click="
+                                    viewProofPhoto(
+                                      getAttendanceData(message).proof_photo_url
+                                    )
+                                  "
+                                >
+                                  <i class="fas fa-image me-1"></i>View Photo
+                                </button>
+                              </p>
+                              <p class="mb-0 text-muted">
+                                <small>
+                                  <i class="fas fa-clock me-1"></i>
+                                  Marked on
+                                  {{ formatDateTime(message.created_at) }}
+                                </small>
                               </p>
                             </div>
                           </div>
@@ -466,7 +643,7 @@
                                 }}
                                 -
                                 {{
-                                  formatTime(
+                                  formatTimeOnly(
                                     getBookingData(message).currentEndTime
                                   )
                                 }}
@@ -480,7 +657,7 @@
                                 }}
                                 -
                                 {{
-                                  formatTime(
+                                  formatTimeOnly(
                                     getBookingData(message).proposedEndTime
                                   )
                                 }}
@@ -491,6 +668,17 @@
                               >
                                 <strong>Reason:</strong>
                                 {{ getBookingData(message).reason }}
+                              </p>
+                              <p
+                                v-if="
+                                  getBookingData(message).proposedLocation &&
+                                  getBookingData(message).proposedLocation !==
+                                    getBookingData(message).currentLocation
+                                "
+                                class="mb-2 text-info"
+                              >
+                                <strong>New Location:</strong>
+                                {{ getBookingData(message).proposedLocation }}
                               </p>
                             </div>
                             <div class="booking-actions">
@@ -538,7 +726,9 @@
                                 }}
                                 -
                                 {{
-                                  formatTime(getBookingData(message).newEndTime)
+                                  formatTimeOnly(
+                                    getBookingData(message).newEndTime
+                                  )
                                 }}
                               </p>
                               <p
@@ -589,7 +779,7 @@
                                 }}
                                 -
                                 {{
-                                  formatTime(
+                                  formatTimeOnly(
                                     getBookingData(message).originalEndTime
                                   )
                                 }}
@@ -601,6 +791,122 @@
                                 <strong>Message:</strong>
                                 {{ getBookingData(message).responseMessage }}
                               </p>
+                            </div>
+                            <div class="booking-actions">
+                              <button
+                                class="btn btn-primary btn-sm"
+                                @click="$router.push('/calendar')"
+                              >
+                                <i class="fas fa-calendar me-1"></i>
+                                View Calendar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Booking Cancelled Message -->
+                        <div
+                          v-else-if="
+                            message.messageType === 'booking_cancelled'
+                          "
+                          class="message-content booking-message booking-cancelled"
+                        >
+                          <div class="booking-header">
+                            <i class="fas fa-times-circle me-2"></i>
+                            <span class="booking-title">Booking Cancelled</span>
+                          </div>
+                          <div class="booking-details">
+                            <div v-if="getBookingCancellationData(message)">
+                              <p class="mb-2 text-danger">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                <span v-if="isBookingCancelledByMe(message)">
+                                  You cancelled this booking
+                                </span>
+                                <span v-else> This booking was cancelled </span>
+                              </p>
+                              <p class="mb-2">
+                                <strong>Subject:</strong>
+                                {{
+                                  getBookingCancellationData(message).subject
+                                }}
+                              </p>
+                              <p class="mb-2">
+                                <strong>Original Time:</strong>
+                                {{
+                                  formatDateTime(
+                                    getBookingCancellationData(message)
+                                      .originalStartTime
+                                  )
+                                }}
+                                -
+                                {{
+                                  formatTimeOnly(
+                                    getBookingCancellationData(message)
+                                      .originalEndTime
+                                  )
+                                }}
+                              </p>
+                              <p class="mb-2">
+                                <strong>Location:</strong>
+                                {{
+                                  getBookingCancellationData(message)
+                                    .location || "Online"
+                                }}
+                              </p>
+                              <p class="mb-2">
+                                <strong>Reason:</strong>
+                                {{
+                                  getBookingCancellationData(message)
+                                    .cancellationReason
+                                }}
+                              </p>
+                              <div class="refund-info">
+                                <p class="mb-1">
+                                  <strong>Refund Policy:</strong>
+                                </p>
+                                <div
+                                  v-if="
+                                    getBookingCancellationData(message)
+                                      .refundPolicy.studentRefunded
+                                  "
+                                  class="text-success"
+                                >
+                                  <i class="fas fa-check-circle me-1"></i>
+                                  <span
+                                    v-if="
+                                      getBookingCancellationData(message)
+                                        .refundPolicy.isTutorCancelling
+                                    "
+                                  >
+                                    Student will receive
+                                    {{
+                                      getBookingCancellationData(message)
+                                        .refundPolicy.creditsToRefund
+                                    }}
+                                    credits back (tutor cancelled)
+                                  </span>
+                                  <span v-else>
+                                    Student will receive
+                                    {{
+                                      getBookingCancellationData(message)
+                                        .refundPolicy.creditsToRefund
+                                    }}
+                                    credits back (cancelled more than 24 hours
+                                    before)
+                                  </span>
+                                </div>
+                                <div v-else class="text-warning">
+                                  <i
+                                    class="fas fa-exclamation-triangle me-1"
+                                  ></i>
+                                  No refund (student cancelled less than 24
+                                  hours before session)
+                                </div>
+                                <div class="text-info">
+                                  <i class="fas fa-info-circle me-1"></i>
+                                  Tutor credits have been deducted
+                                </div>
+                              </div>
                             </div>
                             <div class="booking-actions">
                               <button
@@ -871,11 +1177,7 @@
     </div>
 
     <!-- Booking Offer Modal -->
-    <div
-      v-if="showBookingOfferModal"
-      class="modal-overlay"
-      @click="showBookingOfferModal = false"
-    >
+    <div v-if="showBookingOfferModal" class="modal-overlay">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>
@@ -920,13 +1222,41 @@
             <!-- Location (for on-site) -->
             <div v-if="!bookingOffer.isOnline" class="mb-3">
               <label class="form-label fw-bold">Preferred Location</label>
-              <input
-                type="text"
-                class="form-control"
-                v-model="bookingOffer.tuteeLocation"
-                placeholder="Enter your preferred location for the session"
-                required
-              />
+              <div class="position-relative">
+                <input
+                  type="text"
+                  class="form-control location-autocomplete-input"
+                  ref="tuteeLocationInput"
+                  v-model="bookingOffer.tuteeLocation"
+                  placeholder="Start typing an address in Singapore..."
+                  required
+                  @input="handleLocationInput('tutee', $event)"
+                  @keydown="handleKeyDown('tutee', $event)"
+                  @focus="handleInputFocus('tutee')"
+                  @blur="handleInputBlur('tutee')"
+                />
+                <div
+                  v-if="showDropdown.tutee && predictions.tutee.length > 0"
+                  ref="tuteeDropdown"
+                  class="custom-autocomplete-dropdown"
+                >
+                  <div
+                    v-for="(prediction, index) in predictions.tutee"
+                    :key="prediction.place_id"
+                    class="autocomplete-item"
+                    :class="{ active: selectedIndex.tutee === index }"
+                    @mousedown.prevent="selectPrediction('tutee', prediction)"
+                    @mouseenter="selectedIndex.tutee = index"
+                  >
+                    <div class="place-name">
+                      {{ prediction.structured_formatting.main_text }}
+                    </div>
+                    <div class="place-address">
+                      {{ prediction.structured_formatting.secondary_text }}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Notes -->
@@ -964,11 +1294,7 @@
     </div>
 
     <!-- Calendar Modal -->
-    <div
-      v-if="showCalendarModal"
-      class="modal-overlay"
-      @click="showCalendarModal = false"
-    >
+    <div v-if="showCalendarModal" class="modal-overlay">
       <div class="modal-content calendar-modal" @click.stop>
         <div class="modal-header">
           <h3>
@@ -1071,11 +1397,7 @@
     </div>
 
     <!-- Booking Proposal Modal -->
-    <div
-      v-if="showBookingProposalModal"
-      class="modal-overlay"
-      @click="showBookingProposalModal = false"
-    >
+    <div v-if="showBookingProposalModal" class="modal-overlay">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>
@@ -1095,17 +1417,19 @@
             <div class="summary-content">
               <span class="summary-item">
                 <i class="fas fa-laptop me-1"></i>
-                {{
-                  selectedBookingOffer.isOnline
-                    ? "Online"
-                    : "On-site"
-                }}
+                {{ selectedBookingOffer.isOnline ? "Online" : "On-site" }}
               </span>
-              <span v-if="selectedBookingOffer.tuteeLocation" class="summary-item">
+              <span
+                v-if="selectedBookingOffer.tuteeLocation"
+                class="summary-item"
+              >
                 <i class="fas fa-map-marker-alt me-1"></i>
                 {{ selectedBookingOffer.tuteeLocation }}
               </span>
-              <span v-if="selectedBookingOffer.notes" class="summary-item notes-item">
+              <span
+                v-if="selectedBookingOffer.notes"
+                class="summary-item notes-item"
+              >
                 <i class="fas fa-sticky-note me-1"></i>
                 {{ selectedBookingOffer.notes }}
               </span>
@@ -1144,7 +1468,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.duration === 30 }"
-                  @click="bookingProposal.duration = 30; bookingProposal.customDuration = ''"
+                  @click="
+                    bookingProposal.duration = 30;
+                    bookingProposal.customDuration = '';
+                  "
                 >
                   30 min
                 </button>
@@ -1152,7 +1479,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.duration === 60 }"
-                  @click="bookingProposal.duration = 60; bookingProposal.customDuration = ''"
+                  @click="
+                    bookingProposal.duration = 60;
+                    bookingProposal.customDuration = '';
+                  "
                 >
                   60 min
                 </button>
@@ -1160,7 +1490,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.duration === 90 }"
-                  @click="bookingProposal.duration = 90; bookingProposal.customDuration = ''"
+                  @click="
+                    bookingProposal.duration = 90;
+                    bookingProposal.customDuration = '';
+                  "
                 >
                   90 min
                 </button>
@@ -1168,7 +1501,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.duration === 120 }"
-                  @click="bookingProposal.duration = 120; bookingProposal.customDuration = ''"
+                  @click="
+                    bookingProposal.duration = 120;
+                    bookingProposal.customDuration = '';
+                  "
                 >
                   120 min
                 </button>
@@ -1176,7 +1512,10 @@
                   type="button"
                   class="btn btn-sm duration-btn"
                   :class="{ active: bookingProposal.customDuration !== '' }"
-                  @click="bookingProposal.duration = 0; bookingProposal.customDuration = '60'"
+                  @click="
+                    bookingProposal.duration = 0;
+                    bookingProposal.customDuration = '60';
+                  "
                 >
                   Custom
                 </button>
@@ -1194,9 +1533,16 @@
                   />
                   <span class="input-group-text">minutes</span>
                 </div>
-                <small class="text-muted">Min: 15 minutes, Max: 480 minutes (8 hours)</small>
+                <small class="text-muted"
+                  >Min: 15 minutes, Max: 480 minutes (8 hours)</small
+                >
               </div>
-              <div v-if="bookingProposal.proposedDate && bookingProposal.proposedTime" class="mt-2">
+              <div
+                v-if="
+                  bookingProposal.proposedDate && bookingProposal.proposedTime
+                "
+                class="mt-2"
+              >
                 <small class="text-muted">
                   <i class="fas fa-clock me-1"></i>
                   End time: {{ calculateEndTime() }}
@@ -1236,14 +1582,78 @@
               </div>
               <div
                 v-if="bookingProposal.locationChoice === 'tutor'"
-                class="mt-2"
+                class="mt-2 position-relative"
               >
                 <input
                   type="text"
-                  class="form-control"
+                  class="form-control location-autocomplete-input"
+                  ref="tutorLocationInput"
                   v-model="bookingProposal.tutorLocation"
-                  placeholder="Enter your location"
+                  placeholder="Start typing an address in Singapore..."
+                  @input="handleLocationInput('tutor', $event)"
+                  @keydown="handleKeyDown('tutor', $event)"
+                  @focus="handleInputFocus('tutor')"
+                  @blur="handleInputBlur('tutor')"
                 />
+                <div
+                  v-if="showDropdown.tutor && predictions.tutor.length > 0"
+                  ref="tutorDropdown"
+                  class="custom-autocomplete-dropdown"
+                >
+                  <div
+                    v-for="(prediction, index) in predictions.tutor"
+                    :key="prediction.place_id"
+                    class="autocomplete-item"
+                    :class="{ active: selectedIndex.tutor === index }"
+                    @mousedown.prevent="selectPrediction('tutor', prediction)"
+                    @mouseenter="selectedIndex.tutor = index"
+                  >
+                    <div class="place-name">
+                      {{ prediction.structured_formatting.main_text }}
+                    </div>
+                    <div class="place-address">
+                      {{ prediction.structured_formatting.secondary_text }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tutor Earnings Section -->
+            <div v-if="authStore.user?.user_type === 'tutor'" class="mb-3">
+              <div class="tutor-earnings-section">
+                <div class="earnings-header">
+                  <i class="fas fa-coins me-2 text-warning"></i>
+                  <span class="earnings-title">Session Earnings</span>
+                </div>
+                <div class="earnings-content">
+                  <div class="earnings-breakdown">
+                    <div class="earnings-item">
+                      <span class="earnings-label">Hourly Rate:</span>
+                      <span class="earnings-value"
+                        >${{
+                          (tutorProfile.hourlyRate || 0).toFixed(2)
+                        }}/hr</span
+                      >
+                    </div>
+                    <div class="earnings-item">
+                      <span class="earnings-label">Duration:</span>
+                      <span class="earnings-value"
+                        >{{ getEffectiveDuration() }} minutes</span
+                      >
+                    </div>
+                    <div class="earnings-item earnings-total">
+                      <span class="earnings-label">Total Earnings:</span>
+                      <span class="earnings-value earnings-amount"
+                        >${{ calculatedEarnings }}</span
+                      >
+                    </div>
+                  </div>
+                  <div v-if="tutorProfile.loading" class="earnings-loading">
+                    <i class="fas fa-spinner fa-spin me-2"></i>
+                    Loading rate information...
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1282,23 +1692,66 @@
         </div>
       </div>
     </div>
+
+    <!-- Mark Attendance Modal -->
+    <MarkAttendanceModal
+      v-if="markAttendanceModal && selectedBookingForAttendance"
+      :booking="selectedBookingForAttendance"
+      @close="markAttendanceModal = false"
+      @attendance-marked="handleAttendanceMarked"
+    />
+
+    <!-- Session End Modal -->
+    <SessionEndModal
+      v-if="sessionEndModal && selectedBookingForSessionEnd"
+      :booking="selectedBookingForSessionEnd"
+      @close="sessionEndModal = false"
+      @review-submitted="handleReviewSubmitted"
+      @absent-reported="handleAbsentReported"
+    />
+
+    <!-- Toast Notifications -->
+    <ToastNotifications />
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
 import messagingService from "../services/messaging.js";
 import { useNotifications } from "../composables/useNotifications";
+import { useCreditService } from "../services/creditService";
 import axios from "axios";
+import MarkAttendanceModal from "../components/calendar/MarkAttendanceModal.vue";
+import SessionEndModal from "../components/calendar/SessionEndModal.vue";
+import ToastNotifications from "../components/ToastNotifications.vue";
 
 export default {
   name: "Messages",
   setup() {
     const authStore = useAuthStore();
-    const { showMessageNotification } = useNotifications();
+    const creditService = useCreditService();
+    const { showMessageNotification, showNotification } = useNotifications();
 
     const currentUserId = computed(() => authStore.user?.id);
+
+    // Computed property to calculate earnings based on duration and hourly rate
+    const calculatedEarnings = computed(() => {
+      if (!tutorProfile.value.hourlyRate) return "0.00";
+
+      const durationInHours = getEffectiveDuration() / 60; // Convert minutes to hours
+      const total = tutorProfile.value.hourlyRate * durationInHours;
+      return total.toFixed(2); // Always show 2 decimal places
+    });
+
+    // Helper function to get the effective duration (either preset or custom)
+    const getEffectiveDuration = () => {
+      if (bookingProposal.value.customDuration !== "") {
+        return parseInt(bookingProposal.value.customDuration) || 60;
+      }
+      return bookingProposal.value.duration || 60;
+    };
+
     const searchQuery = ref("");
     const selectedConversation = ref(null);
     const conversations = ref([]);
@@ -1306,6 +1759,7 @@ export default {
     const newMessage = ref("");
     const isLoading = ref(false);
     const showMobileChat = ref(false); // Toggle for mobile view
+    const processedNotifications = ref(new Set()); // Track processed notifications to avoid duplicates
 
     // Delete modal variables
     const showDeleteModal = ref(false);
@@ -1341,11 +1795,330 @@ export default {
       notes: "",
     });
 
+    // Tutor profile data for earnings calculation
+    const tutorProfile = ref({
+      hourlyRate: 0,
+      loading: false,
+    });
+
     // Calendar variables
     const currentMonth = ref(new Date().getMonth());
     const currentYear = ref(new Date().getFullYear());
     const selectedDate = ref(null);
     const selectedTimeSlot = ref(null);
+
+    const tuteeLocationInput = ref(null);
+    const tutorLocationInput = ref(null);
+    const tuteeDropdown = ref(null);
+    const tutorDropdown = ref(null);
+
+    const googleMaps = ref(null);
+    const googleMapsReady = ref(false);
+    const googleMapsError = ref(null);
+
+    // Custom autocomplete state
+    const predictions = ref({
+      tutee: [],
+      tutor: [],
+    });
+    const showDropdown = ref({
+      tutee: false,
+      tutor: false,
+    });
+    const selectedIndex = ref({
+      tutee: -1,
+      tutor: -1,
+    });
+    const autocompleteService = ref(null);
+    const placesService = ref(null);
+    let inputTimeout = null;
+
+    watch(
+      () => showBookingOfferModal.value,
+      async (modalOpen) => {
+        if (!modalOpen) {
+          // Clear predictions and hide dropdown
+          predictions.value.tutee = [];
+          showDropdown.value.tutee = false;
+          selectedIndex.value.tutee = -1;
+        }
+      }
+    );
+
+    watch(
+      () => showBookingProposalModal.value,
+      async (modalOpen) => {
+        if (!modalOpen) {
+          // Clear predictions and hide dropdown
+          predictions.value.tutor = [];
+          showDropdown.value.tutor = false;
+          selectedIndex.value.tutor = -1;
+        }
+      }
+    );
+
+    watch(
+      () => [
+        bookingProposal.value.locationChoice,
+        selectedBookingOffer.value?.isOnline,
+      ],
+      async ([locationChoice, isOnline]) => {
+        if (
+          showBookingProposalModal.value &&
+          locationChoice === "tutor" &&
+          isOnline === false
+        ) {
+          await setupAutocomplete("tutor");
+        }
+      }
+    );
+
+    const ensureGoogleMapsLoaded = async () => {
+      if (googleMapsReady.value) {
+        return googleMaps.value;
+      }
+
+      if (googleMapsError.value) {
+        return null;
+      }
+
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        console.warn(
+          "VITE_GOOGLE_MAPS_API_KEY is not set. Location autocomplete will fall back to manual input."
+        );
+        googleMapsError.value = new Error("Missing Google Maps API key");
+        return null;
+      }
+
+      try {
+        // Set the API key globally for the loader
+        if (
+          !window.google ||
+          !window.google.maps ||
+          !window.google.maps.places
+        ) {
+          // Remove any existing script tags to avoid conflicts
+          const existingScript = document.querySelector(
+            'script[src*="maps.googleapis.com"]'
+          );
+          if (existingScript) {
+            existingScript.remove();
+          }
+
+          // Create callback function that will be called when Google Maps loads
+          window.initGoogleMaps = () => {
+            console.log("Google Maps loaded successfully");
+          };
+
+          // Load Google Maps with Places library
+          const script = document.createElement("script");
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps`;
+          script.async = true;
+          script.defer = true;
+
+          await new Promise((resolve, reject) => {
+            script.onload = () => {
+              // Wait a bit for the libraries to fully initialize
+              setTimeout(() => {
+                if (
+                  window.google &&
+                  window.google.maps &&
+                  window.google.maps.places
+                ) {
+                  resolve();
+                } else {
+                  reject(
+                    new Error("Google Maps Places library failed to load")
+                  );
+                }
+              }, 100);
+            };
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+
+        googleMaps.value = window.google;
+        googleMapsReady.value = true;
+        return googleMaps.value;
+      } catch (error) {
+        googleMapsError.value = error;
+        console.error("Failed to load Google Maps:", error);
+        return null;
+      }
+    };
+
+    // Initialize Google Maps services
+    const initializeGoogleServices = async () => {
+      const google = await ensureGoogleMapsLoaded();
+      if (!google) return false;
+
+      if (!autocompleteService.value) {
+        autocompleteService.value =
+          new google.maps.places.AutocompleteService();
+        console.log("✅ AutocompleteService initialized");
+      }
+
+      if (!placesService.value) {
+        // PlacesService needs a DOM element, using a hidden div
+        const div = document.createElement("div");
+        placesService.value = new google.maps.places.PlacesService(div);
+        console.log("✅ PlacesService initialized");
+      }
+
+      return true;
+    };
+
+    // Handle input changes and fetch predictions
+    const handleLocationInput = async (type, event) => {
+      const query = event.target.value;
+
+      if (!query || query.length < 3) {
+        predictions.value[type] = [];
+        showDropdown.value[type] = false;
+        return;
+      }
+
+      // Debounce the API calls
+      clearTimeout(inputTimeout);
+      inputTimeout = setTimeout(async () => {
+        const initialized = await initializeGoogleServices();
+        if (!initialized) return;
+
+        const request = {
+          input: query,
+          componentRestrictions: { country: "sg" },
+        };
+
+        autocompleteService.value.getPlacePredictions(
+          request,
+          (results, status) => {
+            console.log(`📍 Predictions for ${type}:`, results, status);
+
+            if (
+              status === window.google.maps.places.PlacesServiceStatus.OK &&
+              results
+            ) {
+              predictions.value[type] = results;
+              showDropdown.value[type] = true;
+              selectedIndex.value[type] = -1;
+            } else {
+              predictions.value[type] = [];
+              showDropdown.value[type] = false;
+            }
+          }
+        );
+      }, 300);
+    };
+
+    // Handle keyboard navigation
+    const handleKeyDown = (type, event) => {
+      if (!showDropdown.value[type] || predictions.value[type].length === 0)
+        return;
+
+      switch (event.key) {
+        case "ArrowDown":
+          event.preventDefault();
+          selectedIndex.value[type] = Math.min(
+            selectedIndex.value[type] + 1,
+            predictions.value[type].length - 1
+          );
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          selectedIndex.value[type] = Math.max(
+            selectedIndex.value[type] - 1,
+            -1
+          );
+          break;
+        case "Enter":
+          event.preventDefault();
+          if (selectedIndex.value[type] >= 0) {
+            selectPrediction(
+              type,
+              predictions.value[type][selectedIndex.value[type]]
+            );
+          }
+          break;
+        case "Escape":
+          showDropdown.value[type] = false;
+          selectedIndex.value[type] = -1;
+          break;
+      }
+    };
+
+    // Select a prediction and get detailed place info
+    const selectPrediction = async (type, prediction) => {
+      console.log(`📍 Selected prediction for ${type}:`, prediction);
+
+      const initialized = await initializeGoogleServices();
+      if (!initialized) return;
+
+      const request = {
+        placeId: prediction.place_id,
+        fields: ["name", "formatted_address", "address_components", "geometry"],
+      };
+
+      placesService.value.getDetails(request, (place, status) => {
+        console.log(`📍 Place details for ${type}:`, place, status);
+
+        if (
+          status === window.google.maps.places.PlacesServiceStatus.OK &&
+          place
+        ) {
+          let address = "";
+
+          // Combine name with formatted address
+          if (place.name && place.formatted_address) {
+            if (place.formatted_address.includes(place.name)) {
+              address = place.formatted_address;
+            } else {
+              address = `${place.name}, ${place.formatted_address}`;
+            }
+          } else if (place.formatted_address) {
+            address = place.formatted_address;
+          } else if (place.name) {
+            address = place.name;
+          }
+
+          console.log(`📍 Final address for ${type}:`, address);
+
+          // Update the input
+          if (type === "tutee") {
+            bookingOffer.value.tuteeLocation = address;
+          } else {
+            bookingProposal.value.tutorLocation = address;
+          }
+        }
+
+        // Hide dropdown
+        showDropdown.value[type] = false;
+        selectedIndex.value[type] = -1;
+        predictions.value[type] = [];
+      });
+    };
+
+    // Handle input focus
+    const handleInputFocus = (type) => {
+      const query =
+        type === "tutee"
+          ? bookingOffer.value.tuteeLocation
+          : bookingProposal.value.tutorLocation;
+
+      if (query && query.length >= 3 && predictions.value[type].length > 0) {
+        showDropdown.value[type] = true;
+      }
+    };
+
+    // Handle input blur
+    const handleInputBlur = (type) => {
+      // Delay to allow click events on dropdown items
+      setTimeout(() => {
+        showDropdown.value[type] = false;
+        selectedIndex.value[type] = -1;
+      }, 200);
+    };
 
     const filteredConversations = computed(() => {
       if (!searchQuery.value) return conversations.value;
@@ -1606,6 +2379,22 @@ export default {
         messages.value.forEach((msg) => {
           inferBookingStatusFromMessage(msg);
         });
+
+        // Check attendance status for all booking confirmations (with delay to avoid rate limiting)
+        const bookingIds = [];
+        messages.value.forEach((message) => {
+          if (message.messageType === "booking_confirmation") {
+            const bookingData = getBookingData(message);
+            if (bookingData && bookingData.bookingId) {
+              bookingIds.push(bookingData.bookingId);
+            }
+          }
+        });
+
+        // Check attendance status in batch to avoid rate limiting
+        if (bookingIds.length > 0) {
+          checkAttendanceStatusBatch(bookingIds);
+        }
 
         await nextTick();
         scrollToBottom();
@@ -1923,7 +2712,6 @@ export default {
         align-items: center;
         justify-content: center;
         z-index: 10000;
-        backdrop-filter: blur(5px);
       `;
 
       const modalContent = document.createElement("div");
@@ -2297,6 +3085,15 @@ export default {
     const createBookingOffer = async () => {
       if (!selectedConversation.value) return;
 
+      // Check if user is a student and validate credits
+      if (creditService.isStudent()) {
+        // For booking offers, we need to check if student has any credits at all
+        // since we don't know the exact cost until the tutor proposes
+        if (!creditService.hasAnyCredits()) {
+          return; // Stop execution if no credits - toast notification is shown by creditService
+        }
+      }
+
       isCreatingBooking.value = true;
       try {
         const response = await fetch("/api/messaging/booking-offers", {
@@ -2352,13 +3149,23 @@ export default {
       }
 
       // Validate duration
-      const effectiveDuration = bookingProposal.value.customDuration !== ''
-        ? bookingProposal.value.customDuration
-        : bookingProposal.value.duration;
+      const effectiveDuration =
+        bookingProposal.value.customDuration !== ""
+          ? bookingProposal.value.customDuration
+          : bookingProposal.value.duration;
 
       if (!effectiveDuration || effectiveDuration < 15) {
         alert("Please select a valid duration (minimum 15 minutes)");
         return;
+      }
+
+      // Check if user is a student and validate credits
+      if (creditService.isStudent()) {
+        // For booking proposals, we need to check if student has any credits at all
+        // since we don't know the exact cost until the tutor proposes
+        if (!creditService.hasAnyCredits()) {
+          return; // Stop execution if no credits - toast notification is shown by creditService
+        }
       }
 
       isCreatingProposal.value = true;
@@ -2373,7 +3180,9 @@ export default {
         }
 
         // Calculate end time
-        const endDateTime = new Date(proposedDateTime.getTime() + effectiveDuration * 60000);
+        const endDateTime = new Date(
+          proposedDateTime.getTime() + effectiveDuration * 60000
+        );
 
         let finalLocation = "";
         if (selectedBookingOffer.value.isOnline) {
@@ -2468,6 +3277,15 @@ export default {
     const sendBookingProposal = async () => {
       if (!selectedDate.value || !selectedTimeSlot.value) return;
 
+      // Check if user is a student and validate credits
+      if (creditService.isStudent()) {
+        // For booking proposals, we need to check if student has any credits at all
+        // since we don't know the exact cost until the tutor proposes
+        if (!creditService.hasAnyCredits()) {
+          return; // Stop execution if no credits - toast notification is shown by creditService
+        }
+      }
+
       isSendingProposal.value = true;
       try {
         const proposedDateTime = new Date(selectedDate.value);
@@ -2513,6 +3331,22 @@ export default {
         console.error("Error parsing booking data:", error);
         return null;
       }
+    };
+
+    // Helper methods for booking cancellation messages
+    const getBookingCancellationData = (message) => {
+      try {
+        return JSON.parse(message.content);
+      } catch (error) {
+        console.error("Error parsing booking cancellation data:", error);
+        return null;
+      }
+    };
+
+    const isBookingCancelledByMe = (message) => {
+      const cancellationData = getBookingCancellationData(message);
+      if (!cancellationData) return false;
+      return cancellationData.cancellerId === authStore.user?.id;
     };
 
     const resetBookingStatusState = () => {
@@ -2613,6 +3447,16 @@ export default {
       });
     };
 
+    const formatTimeOnly = (dateTimeString) => {
+      if (!dateTimeString) return "";
+      const date = new Date(dateTimeString);
+      if (isNaN(date.getTime())) return "";
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
     const handleBookingOffer = (message) => {
       const bookingData = getBookingData(message);
       if (bookingData) {
@@ -2623,6 +3467,40 @@ export default {
           notes: bookingData.notes,
         };
         showBookingProposalModal.value = true;
+        // Load tutor profile data when opening the modal
+        loadTutorProfile();
+      }
+    };
+
+    // Function to load tutor profile data for earnings calculation
+    const loadTutorProfile = async () => {
+      if (authStore.user?.user_type !== "tutor") return;
+
+      try {
+        tutorProfile.value.loading = true;
+        const response = await fetch(
+          `http://localhost:3003/profiles/tutor/${authStore.user.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const profile = data.profile;
+          tutorProfile.value.hourlyRate = profile.hourly_rate || 0;
+          console.log(
+            "Loaded tutor profile for earnings calculation:",
+            profile.hourly_rate
+          );
+        }
+      } catch (error) {
+        console.error("Error loading tutor profile for earnings:", error);
+      } finally {
+        tutorProfile.value.loading = false;
       }
     };
 
@@ -2630,20 +3508,66 @@ export default {
       const bookingData = getBookingData(message);
       if (!bookingData) return;
 
+      // Check if user is a student and validate credits before confirming
+      if (creditService.isStudent()) {
+        const creditsNeeded = bookingData.creditsAmount || 0;
+
+        if (!creditService.hasSufficientCredits(creditsNeeded, "booking")) {
+          return; // Stop execution if insufficient credits
+        }
+      }
+
       try {
+        const requestPayload = {
+          bookingOfferId: bookingData.bookingOfferId,
+        };
+
+        console.log("🔄 Confirming booking with payload:", requestPayload);
+        console.log("🔄 Booking data:", bookingData);
+
         const response = await fetch("/api/messaging/booking-confirmations", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${authStore.token}`,
           },
-          body: JSON.stringify({
-            bookingOfferId: bookingData.bookingOfferId,
-          }),
+          body: JSON.stringify(requestPayload),
         });
 
         if (!response.ok) {
-          throw new Error("Failed to confirm booking");
+          const errorData = await response.json();
+          console.error("❌ Booking confirmation error:", {
+            status: response.status,
+            statusText: response.statusText,
+            errorData: errorData,
+          });
+
+          // Handle insufficient credits error from backend
+          if (
+            response.status === 400 &&
+            errorData.error === "Insufficient credits"
+          ) {
+            const { requiredCredits, currentCredits, shortfall } =
+              errorData.details;
+            creditService.showInsufficientCreditsNotification(
+              requiredCredits,
+              currentCredits,
+              "booking"
+            );
+            return;
+          }
+
+          // Handle 500 errors with more details
+          if (response.status === 500) {
+            console.error("❌ Server error details:", errorData);
+            throw new Error(
+              `Server error: ${errorData.error || "Internal server error"}`
+            );
+          }
+
+          throw new Error(
+            `Failed to confirm booking: ${errorData.error || "Unknown error"}`
+          );
         }
 
         const data = await response.json();
@@ -2655,6 +3579,9 @@ export default {
           updateBookingStatus(bookingData.bookingOfferId, "accepted");
         }
 
+        // Refresh credit balance after successful booking confirmation
+        await creditService.refreshCredits();
+
         // Show success message
         alert(
           "Booking confirmed successfully! The session has been added to your calendar."
@@ -2665,7 +3592,6 @@ export default {
       }
     };
 
-  
     // Make functions globally available for context menu
     window.deleteMessage = deleteMessage;
     window.copyMessage = copyMessage;
@@ -2691,7 +3617,16 @@ export default {
         // Connect to messaging service only if not already connected
         if (!messagingService.isConnected) {
           console.log("🔌 RECEIVER: Connecting to messaging service...");
-          messagingService.connect(authStore.session.access_token);
+          console.log("🔌 RECEIVER: Auth store session:", authStore.session);
+          console.log(
+            "🔌 RECEIVER: Access token:",
+            authStore.session?.access_token
+          );
+          console.log(
+            "🔌 RECEIVER: Token exists:",
+            !!authStore.session?.access_token
+          );
+          messagingService.connect(authStore.session?.access_token);
         } else {
           console.log("🔌 RECEIVER: Already connected to messaging service");
         }
@@ -2702,6 +3637,8 @@ export default {
             "🔔 RECEIVER: Received new message via Socket.io:",
             message
           );
+          console.log("🔔 RECEIVER: Current user ID:", currentUserId.value);
+          console.log("🔔 RECEIVER: Message sender ID:", message.sender_id);
           console.log("🔔 RECEIVER: Message content:", message.content);
           console.log("🔔 RECEIVER: Message type:", message.message_type);
           console.log("🔔 RECEIVER: Message created_at:", message.created_at);
@@ -2713,14 +3650,42 @@ export default {
             "🔔 RECEIVER: Message conversation ID:",
             message.conversation_id
           );
-          console.log("🔔 RECEIVER: Current user ID:", currentUserId.value);
-          console.log("🔔 RECEIVER: Message sender ID:", message.sender_id);
+
+          // Check if we've already processed this notification
+          const notificationKey = `${message.id}-${message.conversation_id}`;
+          if (processedNotifications.value.has(notificationKey)) {
+            console.log(
+              "🔔 RECEIVER: Notification already processed, skipping:",
+              notificationKey
+            );
+            return;
+          }
 
           // Add message to current conversation if it's the one being viewed
           if (
             selectedConversation.value &&
             message.conversation_id === selectedConversation.value.id
           ) {
+            // Special handling for attendance notifications - show toast even when viewing conversation
+            if (message.message_type === "attendance_notification") {
+              console.log(
+                "🔔 ATTENDANCE NOTIFICATION: Showing toast for attendance notification"
+              );
+
+              // Mark notification as processed to prevent duplicates
+              const notificationKey = `${message.id}-${message.conversation_id}`;
+              if (!processedNotifications.value.has(notificationKey)) {
+                processedNotifications.value.add(notificationKey);
+
+                showMessageNotification({
+                  senderName: "System",
+                  message: message.content,
+                  conversationId: message.conversation_id,
+                });
+
+                console.log("✅ Attendance notification toast shown");
+              }
+            }
             console.log("Adding message to current conversation");
 
             // Validate message data
@@ -2769,10 +3734,19 @@ export default {
               deliveredAt: message.delivered_at,
               sender: message.sender
                 ? {
-                    name: `${message.sender.first_name} ${message.sender.last_name}`,
-                    type: message.sender.user_type,
+                    name:
+                      message.message_type === "booking_cancelled" ||
+                      message.message_type === "reschedule_request" ||
+                      message.message_type === "reschedule_accepted" ||
+                      message.message_type === "reschedule_rejected"
+                        ? "System"
+                        : `${message.sender.first_name} ${message.sender.last_name}`,
+                    type: message.sender.user_type || "system",
                   }
-                : null,
+                : {
+                    name: "System",
+                    type: "system",
+                  },
             };
 
             console.log(
@@ -2816,9 +3790,48 @@ export default {
             }
           } else {
             // Show notification if message is not in the currently viewed conversation
-            // and message is from another user
-            if (message.sender_id !== currentUserId.value && message.sender) {
-              const senderName = `${message.sender.first_name} ${message.sender.last_name}`;
+            // and message is from another user OR it's a system message
+            const isSystemMessage =
+              message.message_type === "booking_cancelled" ||
+              message.message_type === "reschedule_request" ||
+              message.message_type === "reschedule_accepted" ||
+              message.message_type === "reschedule_rejected" ||
+              message.message_type === "attendance_notification";
+
+            // For booking cancellations, only show notification to the receiver (not the sender)
+            const isBookingCancellation =
+              message.message_type === "booking_cancelled";
+            const shouldShowNotification = isBookingCancellation
+              ? message.sender_id !== currentUserId.value // Only show to receiver for cancellations
+              : message.sender_id !== currentUserId.value || isSystemMessage; // Normal logic for other messages
+
+            console.log("🔔 NOTIFICATION CHECK:", {
+              messageId: message.id,
+              messageType: message.message_type,
+              senderId: message.sender_id,
+              currentUserId: currentUserId.value,
+              isSystemMessage,
+              isBookingCancellation,
+              shouldShowNotification,
+              hasSender: !!message.sender,
+            });
+
+            // Special handling for attendance notifications - always show them
+            const isAttendanceNotification =
+              message.message_type === "attendance_notification";
+
+            if (
+              (shouldShowNotification && message.sender) ||
+              isAttendanceNotification
+            ) {
+              const senderName =
+                message.message_type === "booking_cancelled" ||
+                message.message_type === "reschedule_request" ||
+                message.message_type === "reschedule_accepted" ||
+                message.message_type === "reschedule_rejected" ||
+                message.message_type === "attendance_notification"
+                  ? "System"
+                  : `${message.sender.first_name} ${message.sender.last_name}`;
 
               // Generate user-friendly message preview based on message type
               let messagePreview;
@@ -2836,9 +3849,22 @@ export default {
                 messagePreview = "📝 Booking proposal";
               } else if (message.message_type === "booking_confirmation") {
                 messagePreview = "✅ Booking confirmed";
+              } else if (message.message_type === "booking_cancelled") {
+                messagePreview = "❌ Booking cancelled";
+              } else if (message.message_type === "attendance_notification") {
+                messagePreview = "📋 Attendance marked";
               } else {
                 messagePreview = message.content;
               }
+
+              console.log("🔔 SHOWING NOTIFICATION:", {
+                senderName,
+                message: messagePreview,
+                conversationId: message.conversation_id,
+              });
+
+              // Mark notification as processed to prevent duplicates
+              processedNotifications.value.add(notificationKey);
 
               showMessageNotification({
                 senderName,
@@ -3064,7 +4090,10 @@ export default {
 
     // Calculate end time based on start time and duration
     const calculateEndTime = () => {
-      if (!bookingProposal.value.proposedDate || !bookingProposal.value.proposedTime) {
+      if (
+        !bookingProposal.value.proposedDate ||
+        !bookingProposal.value.proposedTime
+      ) {
         return "N/A";
       }
 
@@ -3074,21 +4103,541 @@ export default {
         );
 
         // Get the effective duration (either from quick buttons or custom input)
-        const effectiveDuration = bookingProposal.value.customDuration !== ''
-          ? bookingProposal.value.customDuration
-          : bookingProposal.value.duration;
+        const effectiveDuration =
+          bookingProposal.value.customDuration !== ""
+            ? bookingProposal.value.customDuration
+            : bookingProposal.value.duration;
 
         // Add duration in minutes
-        const endDateTime = new Date(startDateTime.getTime() + effectiveDuration * 60000);
+        const endDateTime = new Date(
+          startDateTime.getTime() + effectiveDuration * 60000
+        );
 
         // Format as HH:MM
-        const hours = String(endDateTime.getHours()).padStart(2, '0');
-        const minutes = String(endDateTime.getMinutes()).padStart(2, '0');
+        const hours = String(endDateTime.getHours()).padStart(2, "0");
+        const minutes = String(endDateTime.getMinutes()).padStart(2, "0");
 
         return `${hours}:${minutes}`;
       } catch (error) {
         console.error("Error calculating end time:", error);
         return "N/A";
+      }
+    };
+
+    // Attendance marking functionality
+    const markAttendanceModal = ref(false);
+    const selectedBookingForAttendance = ref(null);
+    const attendanceMarkedBookings = ref(new Set());
+    const bookingAttendanceStatus = ref(new Map());
+    const checkingAttendanceStatus = ref(new Set());
+
+    // Session end functionality
+    const sessionEndModal = ref(false);
+    const selectedBookingForSessionEnd = ref(null);
+
+    // Check if current user can mark attendance for a booking
+    const canMarkAttendance = (message) => {
+      if (!authStore.user || authStore.user.user_type !== "tutor") {
+        console.log("🔍 canMarkAttendance: Not a tutor");
+        return false;
+      }
+
+      const bookingData = getBookingData(message);
+      if (!bookingData || !bookingData.bookingId) {
+        console.log("🔍 canMarkAttendance: No booking data");
+        return false;
+      }
+
+      // Check if the current time is past the session's start time
+      const sessionStartTime = new Date(bookingData.confirmedTime);
+      const currentTime = new Date();
+      const canMark = currentTime > sessionStartTime;
+
+      // Only allow marking attendance after the session has started
+      return canMark;
+    };
+
+    // Check attendance status for multiple bookings in batch
+    const checkAttendanceStatusBatch = async (bookingIds) => {
+      try {
+        // Filter out bookings that we've marked locally
+        const bookingsToCheck = bookingIds.filter((bookingId) => {
+          if (attendanceMarkedBookings.value.has(bookingId)) {
+            console.log(
+              "🚫 Skipping batch check - attendance marked locally for booking:",
+              bookingId
+            );
+            // Set the status to true for locally marked bookings
+            bookingAttendanceStatus.value.set(bookingId, true);
+            return false;
+          }
+          return true;
+        });
+
+        if (bookingsToCheck.length === 0) {
+          console.log(
+            "🚫 All bookings in batch are locally marked, skipping API call"
+          );
+          return;
+        }
+
+        const response = await fetch("/api/bookings/attendance-status", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authStore.token}`,
+          },
+          body: JSON.stringify({ bookingIds: bookingsToCheck }),
+        });
+
+        if (response.ok) {
+          const attendanceStatuses = await response.json();
+
+          // Update the reactive map with all results
+          Object.entries(attendanceStatuses).forEach(([bookingId, status]) => {
+            bookingAttendanceStatus.value.set(bookingId, status.hasAttendance);
+          });
+
+          console.log("🔍 Batch Attendance Check:", attendanceStatuses);
+        } else {
+          console.error(
+            "Failed to fetch attendance statuses:",
+            response.status
+          );
+        }
+      } catch (error) {
+        console.error("Error checking attendance statuses:", error);
+      }
+    };
+
+    // Check attendance status from database and update reactive map
+    const checkAttendanceStatus = async (bookingId) => {
+      // Check if we already have the status cached
+      if (bookingAttendanceStatus.value.has(bookingId)) {
+        return bookingAttendanceStatus.value.get(bookingId);
+      }
+
+      // Check if we're already checking this booking to prevent duplicate requests
+      if (checkingAttendanceStatus.value.has(bookingId)) {
+        return false;
+      }
+
+      // CRITICAL: If we've marked this attendance locally, don't fetch from database
+      if (attendanceMarkedBookings.value.has(bookingId)) {
+        console.log(
+          "🚫 Skipping database fetch - attendance marked locally for booking:",
+          bookingId
+        );
+        return true;
+      }
+
+      // Mark this booking as being checked
+      checkingAttendanceStatus.value.add(bookingId);
+
+      try {
+        const response = await fetch(`/api/bookings/${bookingId}`, {
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+          },
+        });
+
+        if (response.ok) {
+          const booking = await response.json();
+          const hasAttendance =
+            booking.attendance_status &&
+            (booking.attendance_status === "attended" ||
+              booking.attendance_status === "no_show");
+
+          // Update the reactive map
+          bookingAttendanceStatus.value.set(bookingId, hasAttendance);
+
+          console.log("🔍 Database Attendance Check:", {
+            bookingId,
+            attendance_status: booking.attendance_status,
+            attendance_marked_at: booking.attendance_marked_at,
+            hasAttendance,
+            wasInLocalSet: attendanceMarkedBookings.value.has(bookingId),
+          });
+
+          // If we had it in local set but server says false, keep local state
+          if (attendanceMarkedBookings.value.has(bookingId) && !hasAttendance) {
+            console.log(
+              "⚠️ Server says false but we have it locally - keeping local state true"
+            );
+            bookingAttendanceStatus.value.set(bookingId, true);
+            return true;
+          }
+
+          return hasAttendance;
+        } else if (response.status === 429) {
+          console.warn(
+            "Rate limited, using cached data or defaulting to false"
+          );
+          bookingAttendanceStatus.value.set(bookingId, false);
+          return false;
+        } else {
+          console.error(
+            "Failed to fetch booking from database:",
+            response.status
+          );
+          bookingAttendanceStatus.value.set(bookingId, false);
+          return false;
+        }
+      } catch (error) {
+        console.error("Error checking attendance from database:", error);
+        bookingAttendanceStatus.value.set(bookingId, false);
+        return false;
+      } finally {
+        // Remove from checking set
+        checkingAttendanceStatus.value.delete(bookingId);
+      }
+    };
+
+    // Check if attendance has already been marked for a booking (synchronous)
+    const isAttendanceMarked = (message) => {
+      const bookingData = getBookingData(message);
+      if (!bookingData || !bookingData.bookingId) {
+        return false;
+      }
+
+      // Check if we have the status in our reactive map first
+      const cachedStatus = bookingAttendanceStatus.value.get(
+        bookingData.bookingId
+      );
+      if (cachedStatus !== undefined) {
+        return cachedStatus;
+      }
+
+      // Fallback to message content
+      const isMarked =
+        bookingData.attendance_status === "attended" ||
+        bookingData.attendance_status === "no_show";
+
+      console.log("🔍 BUTTON CHECK:", {
+        bookingId: bookingData.bookingId,
+        attendance_status: bookingData.attendance_status,
+        isMarked: isMarked,
+      });
+
+      return isMarked;
+    };
+
+    // Show mark attendance modal
+    const showMarkAttendanceModal = (message) => {
+      const bookingData = getBookingData(message);
+      if (!bookingData || !bookingData.bookingId) {
+        return;
+      }
+
+      // Check if attendance is already marked
+      console.log(
+        "🔍 showMarkAttendanceModal: Checking attendance for booking:",
+        bookingData.bookingId
+      );
+      console.log("🔍 showMarkAttendanceModal: Booking data:", bookingData);
+      console.log("🔍 showMarkAttendanceModal: Message data:", {
+        senderId: message.senderId,
+        sender: message.sender,
+        content: message.content,
+      });
+
+      if (isAttendanceMarked(message)) {
+        console.log(
+          "🚫 Attendance already marked, preventing modal from opening"
+        );
+        return;
+      }
+
+      // Create a booking object for the modal
+      selectedBookingForAttendance.value = {
+        id: bookingData.bookingId,
+        start_time: bookingData.confirmedTime,
+        end_time: new Date(
+          new Date(bookingData.confirmedTime).getTime() +
+            (bookingData.duration || 60) * 60000
+        ).toISOString(),
+        subject: bookingData.subject || "Tutoring Session",
+        student: {
+          id: message.senderId || bookingData.student_id, // Include student ID
+          first_name: message.sender?.first_name || "Student",
+          last_name: message.sender?.last_name || "",
+        },
+        student_id: message.senderId || bookingData.student_id, // Also include as direct property
+        tutor_id: authStore.user.id,
+      };
+
+      markAttendanceModal.value = true;
+    };
+
+    // Handle attendance marked event
+    const handleAttendanceMarked = async (attendanceData) => {
+      try {
+        // Only send attendance message if it wasn't already marked
+        if (!attendanceData.already_marked) {
+          // Send attendance message to the conversation
+          await messagingService.sendAttendanceMessage(
+            selectedConversation.value.id,
+            selectedBookingForAttendance.value.id,
+            attendanceData
+          );
+        }
+
+        // Update the booking confirmation message with attendance status
+        const bookingId = selectedBookingForAttendance.value.id;
+        console.log(
+          "🔄 Looking for booking confirmation message with ID:",
+          bookingId
+        );
+
+        const updatedMessages = messages.value.map((msg) => {
+          if (msg.messageType === "booking_confirmation") {
+            const bookingData = getBookingData(msg);
+            console.log(
+              "🔄 Checking message with booking ID:",
+              bookingData?.bookingId
+            );
+
+            if (bookingData && bookingData.bookingId === bookingId) {
+              // Update the booking data with attendance status
+              const updatedBookingData = {
+                ...bookingData,
+                attendance_status: attendanceData.attendance_status,
+                attendance_marked_at: new Date().toISOString(),
+                session_notes: attendanceData.session_notes,
+              };
+              console.log(
+                "🔄 Updating booking data with attendance status:",
+                updatedBookingData
+              );
+              console.log("🔄 Original booking data:", bookingData);
+              console.log(
+                "🔄 New message content:",
+                JSON.stringify(updatedBookingData)
+              );
+
+              return {
+                ...msg,
+                content: JSON.stringify(updatedBookingData),
+              };
+            }
+          }
+          return msg;
+        });
+
+        messages.value = updatedMessages;
+        console.log("✅ Messages updated with attendance status");
+
+        console.log(
+          "✅ Attendance status updated in booking data for booking:",
+          bookingId
+        );
+
+        // Update the reactive map for immediate button updates
+        bookingAttendanceStatus.value.set(bookingId, true);
+        console.log("✅ Updated reactive map for booking:", bookingId);
+
+        // Send notification to student that attendance has been marked
+        try {
+          // Get the booking data from the selected booking
+          const bookingData = selectedBookingForAttendance.value;
+
+          console.log("🔔 ATTENDANCE NOTIFICATION DEBUG:", {
+            bookingData: bookingData,
+            student: bookingData.student,
+            student_id: bookingData.student_id,
+          });
+
+          // Get student ID from the booking data
+          const studentId = bookingData.student?.id || bookingData.student_id;
+
+          console.log(
+            "🔔 ATTENDANCE NOTIFICATION: Student ID found:",
+            studentId
+          );
+
+          if (studentId) {
+            const sessionDate = new Date(
+              bookingData.confirmedTime
+            ).toLocaleDateString();
+            const attendanceStatus =
+              attendanceData.attendance_status === "attended"
+                ? "Present"
+                : "Absent";
+
+            const notificationPayload = {
+              recipient_id: studentId,
+              title: "Attendance Marked",
+              message: `Your attendance has been marked as "${attendanceStatus}" for the session on ${sessionDate}`,
+              type: "attendance_marked",
+              booking_id: bookingId,
+            };
+
+            // Send system notification
+            await fetch("/api/notifications", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authStore.token}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+
+            console.log(
+              "✅ System notification sent to student about attendance marking"
+            );
+
+            // Also send a toast notification if the student is online
+            // We'll send this through the messaging system to the student's current session
+            try {
+              const notificationMessage = `📋 Your attendance has been marked as "${attendanceStatus}" for the session on ${sessionDate}`;
+
+              console.log(
+                "🔔 ATTENDANCE NOTIFICATION: Sending message via messaging service:",
+                {
+                  conversationId: selectedConversation.value.id,
+                  message: notificationMessage,
+                  messageType: "attendance_notification",
+                  messagingServiceConnected: messagingService.isConnected,
+                }
+              );
+
+              // Send a system message to notify the student
+              messagingService.sendMessage(
+                selectedConversation.value.id,
+                notificationMessage,
+                "attendance_notification"
+              );
+
+              console.log(
+                "✅ Toast notification sent to student via messaging system"
+              );
+            } catch (toastError) {
+              console.warn("⚠️ Could not send toast notification:", toastError);
+            }
+          } else {
+            console.warn("⚠️ Could not find student ID for notification");
+          }
+        } catch (error) {
+          console.error("Failed to send notification to student:", error);
+        }
+
+        // Force reactive update by triggering a re-render
+        await nextTick();
+
+        markAttendanceModal.value = false;
+        selectedBookingForAttendance.value = null;
+      } catch (error) {
+        console.error("Error handling attendance marked:", error);
+      }
+    };
+
+    // Session end functionality
+    const canShowSessionEndModal = (message) => {
+      if (!authStore.user || authStore.user.user_type !== "student") {
+        return false;
+      }
+
+      const bookingData = getBookingData(message);
+      if (!bookingData || !bookingData.bookingId) {
+        return false;
+      }
+
+      // Check if session has ended (current time is after end time)
+      const now = new Date();
+      const endTime = new Date(bookingData.confirmedTime);
+      endTime.setMinutes(endTime.getMinutes() + (bookingData.duration || 60));
+
+      return now > endTime;
+    };
+
+    const showSessionEndModal = (message) => {
+      const bookingData = getBookingData(message);
+      if (!bookingData || !bookingData.bookingId) {
+        return;
+      }
+
+      // Create a booking object for the modal
+      selectedBookingForSessionEnd.value = {
+        id: bookingData.bookingId,
+        start_time: bookingData.confirmedTime,
+        end_time: new Date(
+          new Date(bookingData.confirmedTime).getTime() +
+            (bookingData.duration || 60) * 60000
+        ).toISOString(),
+        subject: bookingData.subject || "Tutoring Session",
+        level: bookingData.level || "N/A",
+        tutor: {
+          first_name: message.recipient?.first_name || "Tutor",
+          last_name: message.recipient?.last_name || "",
+        },
+        tutor_id: message.recipient?.id,
+        student_id: authStore.user.id,
+      };
+
+      sessionEndModal.value = true;
+    };
+
+    const handleReviewSubmitted = async (reviewData) => {
+      try {
+        console.log("Review submitted:", reviewData);
+        // Refresh messages to show any updates
+        await loadMessages(selectedConversation.value.id);
+      } catch (error) {
+        console.error("Error handling review submission:", error);
+      }
+    };
+
+    const handleAbsentReported = async (absentData) => {
+      try {
+        console.log("Absent reported:", absentData);
+        // Refresh messages to show any updates
+        await loadMessages(selectedConversation.value.id);
+      } catch (error) {
+        console.error("Error handling absent report:", error);
+      }
+    };
+
+    // Get attendance data from message
+    const getAttendanceData = (message) => {
+      try {
+        return JSON.parse(message.content);
+      } catch (error) {
+        console.error("Error parsing attendance data:", error);
+        return null;
+      }
+    };
+
+    // Get attendance status class
+    const getAttendanceStatusClass = (status) => {
+      const classes = {
+        attended: "text-success",
+        no_show: "text-danger",
+      };
+      return classes[status] || "text-muted";
+    };
+
+    // Get attendance status icon
+    const getAttendanceStatusIcon = (status) => {
+      const icons = {
+        attended: "fa-check-circle",
+        no_show: "fa-times-circle",
+      };
+      return icons[status] || "fa-question-circle";
+    };
+
+    // Get attendance status text
+    const getAttendanceStatusText = (status) => {
+      const texts = {
+        attended: "Attended",
+        no_show: "No Show",
+      };
+      return texts[status] || "Unknown";
+    };
+
+    // View proof photo
+    const viewProofPhoto = (photoUrl) => {
+      if (photoUrl) {
+        window.open(photoUrl, "_blank");
       }
     };
 
@@ -3140,11 +4689,24 @@ export default {
       isSendingProposal,
       selectedBookingOffer,
       confirmedBookings,
+      tuteeLocationInput,
+      tutorLocationInput,
+      tuteeDropdown,
+      tutorDropdown,
       bookingOffer,
       bookingProposal,
       createBookingOffer,
       createBookingProposal,
       calculateEndTime,
+      // Custom autocomplete
+      predictions,
+      showDropdown,
+      selectedIndex,
+      handleLocationInput,
+      handleKeyDown,
+      selectPrediction,
+      handleInputFocus,
+      handleInputBlur,
       // Calendar related
       currentMonthYear,
       calendarDays,
@@ -3165,14 +4727,134 @@ export default {
       getBookingStatusClass,
       getBookingStatusIcon,
       formatDateTime,
+      formatTimeOnly,
       handleBookingOffer,
       confirmBooking,
+      // Tutor earnings
+      tutorProfile,
+      calculatedEarnings,
+      getEffectiveDuration,
+      loadTutorProfile,
+      // Booking cancellation helpers
+      getBookingCancellationData,
+      isBookingCancelledByMe,
+      // Attendance marking
+      showMarkAttendanceModal,
+      canMarkAttendance,
+      isAttendanceMarked,
+      attendanceMarkedBookings,
+      bookingAttendanceStatus,
+      checkingAttendanceStatus,
+      checkAttendanceStatus,
+      getAttendanceData,
+      getAttendanceStatusClass,
+      getAttendanceStatusIcon,
+      getAttendanceStatusText,
+      viewProofPhoto,
+      handleAttendanceMarked,
+      markAttendanceModal,
+      selectedBookingForAttendance,
+      bookingAttendanceStatus,
+      // Session end functionality
+      sessionEndModal,
+      selectedBookingForSessionEnd,
+      canShowSessionEndModal,
+      showSessionEndModal,
+      handleReviewSubmitted,
+      handleAbsentReported,
+      // Notification deduplication
+      processedNotifications,
     };
+  },
+  components: {
+    MarkAttendanceModal,
+    SessionEndModal,
+    ToastNotifications,
   },
 };
 </script>
 
 <style scoped>
+/* Tutor Earnings Section */
+.tutor-earnings-section {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 140, 66, 0.1) 0%,
+    rgba(255, 193, 7, 0.05) 100%
+  );
+  border: 1px solid rgba(255, 140, 66, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 15px rgba(255, 140, 66, 0.1);
+}
+
+.earnings-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 140, 66, 0.2);
+}
+
+.earnings-title {
+  font-weight: 600;
+  color: var(--cyber-orange);
+  font-size: 1rem;
+  text-shadow: 0 0 5px rgba(255, 140, 66, 0.3);
+}
+
+.earnings-content {
+  padding: 0.5rem 0;
+}
+
+.earnings-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.earnings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+}
+
+.earnings-item.earnings-total {
+  border-top: 1px solid rgba(255, 140, 66, 0.2);
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.earnings-label {
+  color: var(--cyber-text);
+  font-size: 0.9rem;
+}
+
+.earnings-value {
+  color: var(--cyber-orange);
+  font-weight: 500;
+  text-shadow: 0 0 3px rgba(255, 140, 66, 0.3);
+}
+
+.earnings-amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--cyber-orange);
+  text-shadow: 0 0 5px rgba(255, 140, 66, 0.4);
+}
+
+.earnings-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  color: var(--cyber-text);
+  font-size: 0.9rem;
+}
+
 /* Cyberpunk Messages Page */
 .messages-page {
   background: #1a1a1a !important;
@@ -3858,7 +5540,7 @@ i.text-primary {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3890,7 +5572,8 @@ i.text-primary {
   color: #ffffff;
   font-size: 20px;
   font-weight: 700;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   letter-spacing: 0.5px;
 }
 
@@ -4098,7 +5781,6 @@ i.text-primary {
   position: relative !important;
 }
 
-
 /* Modal Styles */
 .modal-overlay {
   position: fixed;
@@ -4106,12 +5788,11 @@ i.text-primary {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 99999;
-  backdrop-filter: blur(5px);
 }
 
 .modal-content {
@@ -4143,7 +5824,8 @@ i.text-primary {
   color: #ffffff;
   font-size: 20px;
   font-weight: 700;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   letter-spacing: 0.5px;
 }
 
@@ -4423,7 +6105,8 @@ i.text-primary {
 .form-label {
   color: #ffffff;
   font-weight: 600;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   letter-spacing: 0.3px;
   font-size: 14px;
 }
@@ -4474,7 +6157,8 @@ i.text-primary {
   border: 2px solid #424242 !important;
   color: #ffffff !important;
   font-weight: 600;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   letter-spacing: 0.3px;
   transition: all 0.3s ease;
 }
@@ -4558,6 +6242,68 @@ i.text-primary {
   color: #28a745;
 }
 
+.attendance-marked .booking-header {
+  background: rgba(255, 193, 7, 0.12);
+  border-bottom: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.attendance-marked .booking-header i {
+  color: #ffc107;
+}
+
+/* Attendance Button Styling */
+.btn-warning.btn-sm {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
+  border: none !important;
+  color: #000000 !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-warning.btn-sm:hover {
+  background: linear-gradient(135deg, #e0a800 0%, #d39e00 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.btn-success.btn-sm {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.btn-success.btn-sm:disabled {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  opacity: 0.9;
+  cursor: not-allowed;
+}
+
+.btn-success.btn-sm:hover:disabled {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-secondary.btn-sm {
+  background: #6c757d !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.btn-secondary.btn-sm:disabled {
+  background: #6c757d !important;
+  border: none !important;
+  color: #ffffff !important;
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
 .reschedule-request .booking-header {
   background: rgba(13, 110, 253, 0.12);
   border-bottom: 1px solid rgba(13, 110, 253, 0.3);
@@ -4592,6 +6338,23 @@ i.text-primary {
 
 .reschedule-rejected .booking-header i {
   color: #dc3545;
+}
+
+.booking-cancelled .booking-header {
+  background: rgba(220, 53, 69, 0.12);
+  border-bottom: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+.booking-cancelled .booking-header i {
+  color: #dc3545;
+}
+
+.refund-info {
+  background: rgba(108, 117, 125, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  border-left: 3px solid #6c757d;
 }
 
 .booking-title {
@@ -4757,5 +6520,78 @@ i.text-primary {
   .booking-actions .btn {
     width: 100%;
   }
+}
+</style>
+
+<style>
+/* Google Maps Autocomplete Dropdown - Global styles (not scoped) */
+/* Remove blue glow from location inputs */
+.location-autocomplete-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #4a4a4a !important;
+}
+
+/* Custom autocomplete dropdown styling */
+.custom-autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #1a1a1a;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  margin-top: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.autocomplete-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.active {
+  background-color: #2a2a2a;
+}
+
+.place-name {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.place-address {
+  color: #999999;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Custom scrollbar for dropdown */
+.custom-autocomplete-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-autocomplete-dropdown::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.custom-autocomplete-dropdown::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 4px;
+}
+
+.custom-autocomplete-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
 }
 </style>

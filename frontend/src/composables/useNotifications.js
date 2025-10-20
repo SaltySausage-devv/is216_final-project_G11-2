@@ -8,6 +8,8 @@ export function useNotifications() {
   const router = useRouter()
 
   const showNotification = ({ title, message, conversationId, onClick }) => {
+    console.log('🔔 TOAST: showNotification called with:', { title, message, conversationId })
+    
     const id = notificationId++
     const notification = {
       id,
@@ -19,9 +21,12 @@ export function useNotifications() {
     }
 
     notifications.value.push(notification)
+    console.log('🔔 TOAST: Notification added. Total notifications:', notifications.value.length)
+    console.log('🔔 TOAST: Current notifications:', notifications.value)
 
     // Auto-remove after 5 seconds
     setTimeout(() => {
+      console.log('🔔 TOAST: Auto-removing notification:', id)
       removeNotification(id)
     }, 5000)
 
@@ -45,6 +50,8 @@ export function useNotifications() {
   }
 
   const showMessageNotification = ({ senderName, message, conversationId }) => {
+    console.log('🔔 TOAST: showMessageNotification called with:', { senderName, message, conversationId })
+    
     return showNotification({
       title: `New message from ${senderName}`,
       message: message.substring(0, 50) + (message.length > 50 ? '...' : ''),

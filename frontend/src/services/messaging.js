@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/auth'
 
 // Create a separate API client for messaging service
 const messagingApi = axios.create({
-  baseURL: 'http://localhost:3005',
+  baseURL: '/api',
   timeout: 10000
 })
 
@@ -34,6 +34,8 @@ class MessagingService {
   // Initialize Socket.io connection
   connect(token) {
     console.log('🔌 MESSAGING SERVICE: connect() called');
+    console.log('🔌 MESSAGING SERVICE: Token provided:', !!token);
+    console.log('🔌 MESSAGING SERVICE: Token preview:', token ? token.substring(0, 20) + '...' : 'null');
     console.log('🔌 MESSAGING SERVICE: Has existing socket?', !!this.socket);
     console.log('🔌 MESSAGING SERVICE: Current isConnected?', this.isConnected);
     
@@ -42,7 +44,7 @@ class MessagingService {
       this.disconnect()
     }
 
-    console.log('🔌 MESSAGING SERVICE: Creating new socket connection to port 3005');
+    console.log('🔌 MESSAGING SERVICE: Creating new socket connection to http://localhost:3005');
     
     this.socket = io('http://localhost:3005', {
       auth: {
@@ -58,10 +60,19 @@ class MessagingService {
       this.isConnected = true
     })
 
-          this.socket.on('disconnect', () => {
-            console.log('Socket.io disconnected')
-            this.isConnected = false
-          })
+    this.socket.on('disconnect', () => {
+      console.log('🔌 MESSAGING SERVICE: Socket.io disconnected')
+      this.isConnected = false
+    })
+
+    this.socket.on('connect_error', (error) => {
+      console.error('🔌 MESSAGING SERVICE: Socket.io connection error:', error)
+      this.isConnected = false
+    })
+
+    this.socket.on('error', (error) => {
+      console.error('🔌 MESSAGING SERVICE: Socket.io error:', error)
+    })
 
           this.socket.on('reconnect', () => {
             this.isConnected = true
@@ -321,6 +332,54 @@ class MessagingService {
       return response.data
     } catch (error) {
       console.error('Error archiving conversation:', error)
+      throw error
+    }
+  }
+
+  // Mark attendance for a booking
+  async markAttendance(bookingId, attendanceData) {
+    try {
+      const formData = new FormData()
+      formData.append('attendance_status', attendanceData.attendance_status)
+      formData.append('session_notes', attendanceData.session_notes || '')
+      formData.append('proof_photo', attendanceData.proof_photo)
+
+      const response = await fetch(`/api/bookings/${bookingId}/mark-attendance`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`
+        },
+        body: formData
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to mark attendance')
+      }
+      
+      return await response.json()
+    } catch (error) {
+      console.error('Error marking attendance:', error)
+      throw error
+    }
+  }
+
+  // Send attendance marked message
+  async sendAttendanceMessage(conversationId, bookingId, attendanceData) {
+    try {
+      const response = await messagingApi.post(`/messaging/conversations/${conversationId}/messages`, {
+        content: `Attendance marked: Student ${attendanceData.attendance_status === 'attended' ? 'attended' : 'did not attend'} the session`,
+        messageType: 'attendance_marked',
+        bookingId: bookingId,
+        attendanceData: {
+          status: attendanceData.attendance_status,
+          notes: attendanceData.session_notes,
+          proof_photo_url: attendanceData.proof_photo_url
+        }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error sending attendance message:', error)
       throw error
     }
   }

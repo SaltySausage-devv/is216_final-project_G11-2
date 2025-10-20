@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
+const disableHmr = process.env.VITE_DISABLE_HMR === 'true'
+
 export default defineConfig({
   plugins: [vue()],
   server: {
     port: 3000,
+    hmr: disableHmr ? false : undefined,
     proxy: {
       '/api/auth': {
         target: 'http://localhost:3001',

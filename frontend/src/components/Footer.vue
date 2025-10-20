@@ -5,7 +5,7 @@
         <div class="col-lg-4 mb-4">
           <div class="d-flex align-items-center mb-3">
             <i class="fas fa-graduation-cap text-primary me-2 fs-4"></i>
-            <span class="fw-bold fs-4">TutorConnect</span>
+            <span class="fw-bold fs-4">OnlyTutor</span>
           </div>
           <p class="text-muted">
             Connecting students with the best tutors and tuition centres in Singapore. 
@@ -87,7 +87,7 @@
       <div class="row align-items-center">
         <div class="col-md-6">
           <p class="text-muted mb-0">
-            &copy; 2024 TutorConnect. All rights reserved.
+            &copy; 2024 OnlyTutor. All rights reserved.
           </p>
         </div>
         <div class="col-md-6 text-md-end">
