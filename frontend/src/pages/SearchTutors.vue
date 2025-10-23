@@ -237,29 +237,6 @@
                   </div>
                 </div>
               </div>
-
-              <!-- Availability Filter -->
-              <div class="mb-4">
-                <h6 class="cyberpunk-filter-label mb-3">Availability</h6>
-                <div class="cyberpunk-checkbox-group">
-                  <div class="cyberpunk-checkbox">
-                    <input class="cyberpunk-checkbox-input" type="checkbox" id="avail-now" value="now" v-model="filters.availability" />
-                    <label class="cyberpunk-checkbox-label" for="avail-now">Available Now</label>
-                </div>
-                </div>
-                <div class="cyberpunk-checkbox-group">
-                  <div class="cyberpunk-checkbox">
-                    <input class="cyberpunk-checkbox-input" type="checkbox" id="avail-week" value="week" v-model="filters.availability" />
-                    <label class="cyberpunk-checkbox-label" for="avail-week">This Week</label>
-                  </div>
-                </div>
-                <div class="cyberpunk-checkbox-group">
-                  <div class="cyberpunk-checkbox">
-                    <input class="cyberpunk-checkbox-input" type="checkbox" id="avail-weekend" value="weekend" v-model="filters.availability" />
-                    <label class="cyberpunk-checkbox-label" for="avail-weekend">Weekends</label>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -323,14 +300,14 @@
                     </div>
                   </div>
 
-                  <div class="mb-3">
+                  <div class="mb-3 flex-grow-1">
                     <p class="cyberpunk-text-muted mb-2">{{ tutor.bio }}</p>
                     <div class="d-flex flex-wrap gap-1">
                       <span v-for="level in tutor.levels" :key="level" class="cyberpunk-badge">{{ level }}</span>
                     </div>
                   </div>
 
-                  <div class="d-flex align-items-center justify-content-between">
+                  <div class="d-flex align-items-center justify-content-between mt-auto">
                     <div class="d-flex align-items-center cyberpunk-text-muted">
                       <i class="fas fa-map-marker-alt me-1"></i>
                       <small>{{ tutor.location }}</small>
@@ -1558,6 +1535,14 @@ select.cyberpunk-input option {
   overflow: hidden;
   position: relative;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+.cyberpunk-tutor-card .card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .cyberpunk-tutor-card:hover {

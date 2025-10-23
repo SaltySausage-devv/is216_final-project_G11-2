@@ -564,7 +564,7 @@ export default {
 .cyberpunk-hero-section {
   background: linear-gradient(135deg, var(--cyber-bg-dark) 0%, var(--cyber-bg) 100%);
   border-bottom: 2px solid var(--cyber-orange);
-  padding: 4rem 0;
+  padding: 1rem 0;
   position: relative;
   z-index: 2;
 }
@@ -592,7 +592,7 @@ export default {
 
 /* Content Section */
 .cyberpunk-content-section {
-  padding: 3rem 0;
+  padding: 2rem 0;
   position: relative;
   z-index: 2;
 }

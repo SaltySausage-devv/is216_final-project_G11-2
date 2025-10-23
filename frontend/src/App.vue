@@ -234,8 +234,16 @@ export default {
           "🌐 APP: Got conversations:",
           response.conversations?.length || 0
         );
+        
+        // Log all conversations with their unread counts for debugging
+        if (response.conversations) {
+          response.conversations.forEach((conv) => {
+            console.log(`🔔 APP: Conversation ${conv.id}: unreadCount = ${conv.unreadCount || 0}`);
+          });
+        }
 
         if (response.conversations && response.conversations.length > 0) {
+          // Join all conversation rooms (notification handling is now in Navbar.vue)
           response.conversations.forEach((conv) => {
             console.log("🌐 APP: Joining conversation room:", conv.id);
             messagingService.joinConversation(conv.id);
@@ -323,13 +331,27 @@ export default {
       }
     });
 
+    // Track if this is the initial load to avoid treating page refresh as a new login
+    let isInitialLoad = true;
+
     // Watch for auth changes to setup messaging when user logs in
     watch(
       () => authStore.isAuthenticated,
       (isAuth, oldIsAuth) => {
-        console.log("🌐 APP: Auth state changed:", { isAuth, oldIsAuth });
+        console.log("🌐 APP: Auth state changed:", { isAuth, oldIsAuth, isInitialLoad });
+        
+        // On initial load, if user is authenticated, we already set up messaging in onMounted
+        // So skip this watch trigger
+        if (isInitialLoad && isAuth) {
+          console.log("🌐 APP: Initial load with authenticated user, skipping watch setup");
+          isInitialLoad = false;
+          return;
+        }
+        
+        isInitialLoad = false;
+        
         if (isAuth && !oldIsAuth) {
-          // User just logged in
+          // User just logged in (actual login event, not page refresh)
           console.log("🌐 APP: User logged in, setting up messaging");
           setupGlobalMessaging();
         } else if (!isAuth && oldIsAuth) {

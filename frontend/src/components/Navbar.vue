@@ -359,6 +359,73 @@ export default {
       }
     };
 
+    // Load unread messages from conversations and add to notifications
+    const loadUnreadMessagesAsNotifications = async () => {
+      try {
+        console.log("🔔 NAVBAR: Loading unread messages from conversations...");
+        const response = await messagingService.getConversations();
+        
+        if (!response.conversations || response.conversations.length === 0) {
+          console.log("🔔 NAVBAR: No conversations found");
+          return;
+        }
+        
+        console.log(`🔔 NAVBAR: Found ${response.conversations.length} conversations`);
+        
+        // Find conversations with unread messages
+        const conversationsWithUnread = response.conversations.filter(
+          (conv) => conv.unreadCount > 0
+        );
+        
+        console.log(`🔔 NAVBAR: ${conversationsWithUnread.length} conversations have unread messages`);
+        
+        // Add notification for each conversation with unread messages
+        for (const conv of conversationsWithUnread) {
+          const otherParticipant =
+            conv.participant1_id === currentUserId.value
+              ? conv.participant2
+              : conv.participant1;
+          
+          const participantName = `${otherParticipant.first_name} ${otherParticipant.last_name}`;
+          
+          // Check if we already have a notification for this conversation
+          const existingNotification = notifications.value.find(
+            (n) => n.conversationId === conv.id
+          );
+          
+          if (!existingNotification) {
+            console.log(`🔔 NAVBAR: Adding notification for ${participantName} (${conv.unreadCount} unread)`);
+            
+            const notification = {
+              id: `conv_${conv.id}_${Date.now()}`, // Unique ID
+              icon: "fas fa-envelope",
+              title: `${conv.unreadCount} unread message${conv.unreadCount > 1 ? 's' : ''} from ${participantName}`,
+              message: conv.last_message_content || "New message",
+              time: formatTime(conv.last_message_at || conv.created_at),
+              timestamp: conv.last_message_at || conv.created_at,
+              conversationId: conv.id,
+              unread: true,
+            };
+            
+            notifications.value.unshift(notification);
+          }
+        }
+        
+        // Limit to last 20 notifications
+        if (notifications.value.length > 20) {
+          notifications.value = notifications.value.slice(0, 20);
+        }
+        
+        // Save to localStorage
+        if (conversationsWithUnread.length > 0) {
+          saveNotificationsToStorage();
+          console.log(`🔔 NAVBAR: ✅ Added ${conversationsWithUnread.length} notification(s) for unread messages`);
+        }
+      } catch (error) {
+        console.error("🔔 NAVBAR: Error loading unread messages:", error);
+      }
+    };
+
     const setupMessageNotifications = () => {
       console.log("🔔 NAVBAR: Setting up message notifications");
       console.log("🔔 NAVBAR: Current userId:", currentUserId.value);
@@ -508,16 +575,21 @@ export default {
         // Try to set up notifications even if not connected yet
         // The messaging service will be connected by App.vue
         setupMessageNotifications();
+        
+        // Load unread messages as notifications
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await loadUnreadMessagesAsNotifications();
 
         // Retry setup after a delay if service isn't connected
         if (!messagingService.isConnected) {
           console.log("🔔 NAVBAR: Messaging not connected, retrying in 2s...");
-          setTimeout(() => {
+          setTimeout(async () => {
             if (messagingService.isConnected) {
               console.log(
                 "🔔 NAVBAR: Retry successful, setting up notifications"
               );
               setupMessageNotifications();
+              await loadUnreadMessagesAsNotifications();
             }
           }, 2000);
         }
@@ -527,15 +599,18 @@ export default {
     // Watch for auth state changes to set up notifications
     watch(
       () => authStore.isAuthenticated,
-      (isAuth) => {
+      async (isAuth) => {
         console.log("🔔 NAVBAR: Auth state changed:", isAuth);
         if (isAuth) {
           console.log("🔔 NAVBAR: User logged in, setting up notifications");
           // Load notifications from storage
           loadNotificationsFromStorage();
           // Wait a bit for messaging service to connect
-          setTimeout(() => {
+          setTimeout(async () => {
             setupMessageNotifications();
+            // Load unread messages as notifications after a short delay
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await loadUnreadMessagesAsNotifications();
           }, 1000);
         } else {
           // Clean up on logout
@@ -742,9 +817,6 @@ export default {
 
   /* Adjust notification badge position for mobile */
   .navbar-collapse .notification-badge {
-    position: relative !important;
-    top: auto !important;
-    right: auto !important;
     margin-left: auto;
   }
 
@@ -784,6 +856,13 @@ export default {
   }
 }
 
+/* Add right margin to navbar items on larger screens */
+@media (min-width: 992px) {
+  .navbar-nav {
+    margin-right: 1rem;
+  }
+}
+
 /* Notification text - hide on desktop, show on mobile */
 .notification-text {
   display: none;
@@ -794,21 +873,24 @@ export default {
   display: inline;
 }
 
-/* Notification Badge */
+/* Notification Badge - Redesigned to be less intrusive */
 .notification-badge {
-  position: absolute;
-  top: -5px;
-  right: -8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--cyber-orange, #ff8c42);
   color: white;
-  font-size: 0.65rem;
-  font-weight: bold;
-  padding: 2px 5px;
-  border-radius: 10px;
-  min-width: 18px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 12px;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 6px;
   text-align: center;
-  box-shadow: 0 0 10px rgba(255, 140, 66, 0.6);
+  box-shadow: 0 0 8px rgba(255, 140, 66, 0.4);
   animation: pulse 2s infinite;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Notifications Dropdown */

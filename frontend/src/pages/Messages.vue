@@ -1,6 +1,6 @@
 <template>
   <div class="messages-page">
-    <div class="container-fluid py-4 px-3 px-lg-5">
+    <div class="container-fluid pt-2 pb-4 px-3 px-lg-5">
       <div class="row g-3 g-lg-4 messages-row">
         <!-- Conversations Sidebar -->
         <div
@@ -970,12 +970,6 @@
                               title="Read"
                               >✓✓</span
                             >
-                            <span
-                              v-else-if="message.deliveredAt"
-                              class="status-delivered"
-                              title="Delivered"
-                              >✓✓</span
-                            >
                             <span v-else class="status-sent" title="Sent"
                               >✓</span
                             >
@@ -1717,6 +1711,7 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { useRoute } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import messagingService from "../services/messaging.js";
 import { useNotifications } from "../composables/useNotifications";
@@ -1729,6 +1724,7 @@ import ToastNotifications from "../components/ToastNotifications.vue";
 export default {
   name: "Messages",
   setup() {
+    const route = useRoute();
     const authStore = useAuthStore();
     const creditService = useCreditService();
     const { showMessageNotification, showNotification } = useNotifications();
@@ -2365,6 +2361,8 @@ export default {
           content: msg.content,
           messageType: msg.message_type,
           createdAt: msg.created_at,
+          // Trust backend's read_at value - backend only sets it when recipient reads the message
+          // Backend ensures messages we send don't get marked as read when we open the conversation
           readAt: msg.read_at,
           deliveredAt: msg.delivered_at,
           sender: msg.sender
@@ -4004,14 +4002,25 @@ export default {
         // Handle messages read status update
         messageHandlers.messagesRead = (data) => {
           console.log("✅ RECEIVER: Messages read via Socket.io:", data);
+          console.log("✅ RECEIVER: readBy:", data.readBy, "currentUserId:", currentUserId.value);
+          
+          // CRITICAL: Only update read status if someone ELSE read the messages
+          // If we read our own messages, don't mark our sent messages as read
+          if (data.readBy === currentUserId.value) {
+            console.log("✅ RECEIVER: Ignoring messages_read event - we read our own messages");
+            return;
+          }
+          
           // Update read status for messages in the current conversation
           if (
             selectedConversation.value &&
             selectedConversation.value.id === data.conversationId
           ) {
+            console.log("✅ RECEIVER: Updating read status for messages sent by us that were read by recipient");
             messages.value = messages.value.map((msg) => {
               // Update read status for messages sent by current user that were read by the other person
               if (msg.senderId === currentUserId.value && !msg.readAt) {
+                console.log("✅ RECEIVER: Marking message as read:", msg.id);
                 return { ...msg, readAt: data.readAt };
               }
               return msg;
@@ -4051,6 +4060,28 @@ export default {
       console.log("🔄 Loading conversations first...");
       await loadConversations();
       console.log("✅ Conversations loaded:", conversations.value.length);
+      
+      // Check if there's a conversation ID in the query params (from notification click)
+      const conversationIdFromQuery = route.query.conversation;
+      if (conversationIdFromQuery) {
+        console.log("🔔 Messages: Opening conversation from notification:", conversationIdFromQuery);
+        
+        // Find the conversation in the list
+        const conversation = conversations.value.find(
+          (conv) => conv.id === conversationIdFromQuery
+        );
+        
+        if (conversation) {
+          console.log("🔔 Messages: Found conversation, selecting it");
+          await selectConversationWithRoom(conversation);
+        } else {
+          console.warn("🔔 Messages: Conversation not found in list:", conversationIdFromQuery);
+        }
+      }
+      
+      // Don't show offline notifications on Messages page - user can see unread badges
+      // App.vue will handle offline notifications globally
+      
       console.log("🔌 Setting up messaging...");
       setupMessaging();
 
@@ -4862,6 +4893,46 @@ export default {
   color: var(--cyber-text, #ffffff);
 }
 
+/* Override Bootstrap primary color to match theme */
+.messages-page .text-primary {
+  color: var(--cyber-orange, #ff8c42) !important;
+}
+
+.messages-page .bg-primary {
+  background-color: rgba(255, 140, 66, 0.2) !important;
+}
+
+.messages-page .btn-primary {
+  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+  border: 2px solid var(--cyber-orange, #ff8c42) !important;
+  color: white !important;
+  box-shadow: 0 0 10px rgba(255, 140, 66, 0.3);
+  font-weight: 600;
+}
+
+.messages-page .btn-primary:hover {
+  background: linear-gradient(45deg, #e85a2a, #e8bb2f) !important;
+  border-color: #e85a2a !important;
+  box-shadow: 0 0 20px rgba(255, 140, 66, 0.5);
+  transform: translateY(-1px);
+}
+
+.messages-page .btn-outline-primary {
+  border-color: var(--cyber-orange, #ff8c42) !important;
+  color: var(--cyber-orange, #ff8c42) !important;
+  background: transparent !important;
+}
+
+.messages-page .btn-outline-primary:hover {
+  background: var(--cyber-orange, #ff8c42) !important;
+  color: white !important;
+  box-shadow: 0 0 15px rgba(255, 140, 66, 0.4);
+}
+
+.messages-page .badge.bg-danger {
+  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+}
+
 /* Cards */
 .card {
   background: rgba(26, 26, 26, 0.85) !important;
@@ -4907,12 +4978,37 @@ h6 {
 /* Layout improvements */
 .messages-row {
   min-height: calc(100vh - 200px);
+  align-items: stretch !important;
 }
 
 .conversations-col,
 .chat-col {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+}
+
+.conversations-col .card,
+.chat-col .card {
+  height: calc(100vh - 170px);
+  max-height: calc(100vh - 170px);
+  margin-top: 0 !important;
+}
+
+.chat-card {
+  position: relative;
+}
+
+.chat-card .card-body {
+  position: relative;
+  padding-bottom: 60px !important;
+}
+
+/* Ensure both columns start at same height */
+.conversations-col,
+.chat-col {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
 }
 
 /* Conversation Items */
@@ -4983,7 +5079,7 @@ h6 {
   overflow-y: auto !important;
   overflow-x: hidden !important;
   margin: 0 !important;
-  padding: 15px 15px 80px 15px !important;
+  padding: 15px 15px 5px 15px !important;
   border-bottom: none !important;
   margin-bottom: 0px !important;
 }
@@ -5015,12 +5111,14 @@ h6 {
 .message-bubble.sent {
   background: linear-gradient(
     135deg,
-    var(--cyber-orange, #ff8c42),
-    var(--cyber-yellow, #ffd23f)
+    #2a2a2a,
+    #3a3a3a
   );
-  color: white;
+  color: var(--cyber-orange, #ff8c42);
   margin-left: auto;
-  border: 1px solid var(--cyber-orange, #ff8c42);
+  border: 2px solid var(--cyber-orange, #ff8c42);
+  font-weight: 500;
+  box-shadow: 0 2px 12px rgba(255, 140, 66, 0.3);
 }
 
 /* Remove orange styling for image messages */
@@ -5066,9 +5164,10 @@ h6 {
 }
 
 .message-bubble.received {
-  background: rgba(42, 42, 42, 0.8);
+  background: rgba(42, 42, 42, 0.9);
   color: var(--cyber-text, #ffffff);
-  border: 1px solid var(--cyber-grey-light, #4a4a4a);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .message-footer {
@@ -5083,21 +5182,37 @@ h6 {
   opacity: 0.8;
 }
 
+.message-bubble.sent .message-time {
+  color: rgba(255, 140, 66, 0.6);
+  opacity: 1;
+}
+
+.message-bubble.received .message-time {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .message-status {
   font-size: 0.75rem;
   margin-left: 8px;
 }
 
 .status-sent {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 140, 66, 0.7);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .status-delivered {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 210, 63, 0.8);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .status-read {
-  color: #4caf50;
+  color: var(--cyber-yellow, #ffd23f);
+  font-weight: bold;
+  font-size: 0.85rem;
+  text-shadow: 0 0 8px rgba(255, 210, 63, 0.5);
 }
 
 /* Message Input */
@@ -5106,7 +5221,7 @@ h6 {
   border-top: 1px solid var(--cyber-orange, #ff8c42) !important;
   flex-shrink: 0 !important;
   margin: 0 !important;
-  padding: 10px 15px !important;
+  padding: 8px 15px !important;
   margin-top: auto !important;
   position: absolute !important;
   bottom: 0 !important;

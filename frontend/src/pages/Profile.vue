@@ -466,8 +466,8 @@ export default {
 /* Avatar Styles */
 .cyberpunk-avatar {
   position: relative;
-  width: 100px !important;
-  height: 100px !important;
+  width: 120px !important;
+  height: 120px !important;
   background: rgba(255, 140, 66, 0.2) !important;
   border: 3px solid var(--cyber-orange) !important;
   border-radius: 50% !important;
@@ -481,9 +481,10 @@ export default {
 }
 
 .avatar-image {
-  width: 100%;
-  height: 100%;
+  width: 100% !important;
+  height: 100% !important;
   object-fit: cover;
+  aspect-ratio: 1 / 1;
 }
 
 .avatar-placeholder {
@@ -654,8 +655,7 @@ export default {
 .cyberpunk-input-icon {
   position: absolute;
   left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0.75rem;
   color: var(--cyber-text-muted);
   font-size: 0.875rem;
 }
@@ -773,6 +773,7 @@ export default {
   .cyberpunk-avatar {
     width: 80px !important;
     height: 80px !important;
+    border-radius: 50% !important;
   }
 
   .cyberpunk-name {
@@ -794,6 +795,7 @@ export default {
   .cyberpunk-avatar {
     width: 60px !important;
     height: 60px !important;
+    border-radius: 50% !important;
   }
 
   .cyberpunk-name {
@@ -837,7 +839,7 @@ export default {
 .cyberpunk-avatar {
   width: 120px;
   height: 120px;
-  border-radius: 16px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #ffc107, #ff9800);
   display: flex;
   align-items: center;
@@ -846,7 +848,8 @@ export default {
   font-size: 3rem;
   font-weight: 600;
   flex-shrink: 0;
-  border: 3px solid rgba(255, 152, 0, 0.3);
+  border: 3px solid var(--cyber-orange);
+  overflow: hidden;
 }
 
 .profile-info {
@@ -1010,8 +1013,8 @@ export default {
   }
 
   .cyberpunk-avatar {
-    width: 100px;
-    height: 100px;
+    width: 100px !important;
+    height: 100px !important;
     font-size: 2.5rem;
   }
 
@@ -1043,8 +1046,8 @@ export default {
   }
 
   .cyberpunk-avatar {
-    width: 80px;
-    height: 80px;
+    width: 80px !important;
+    height: 80px !important;
     font-size: 2rem;
   }
 

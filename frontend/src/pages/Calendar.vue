@@ -1,15 +1,15 @@
 <template>
-  <div class="calendar-page container-fluid py-4">
-    <div class="row">
-      <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="calendar-page container-fluid p-0 m-0">
+    <div class="row g-0">
+      <div class="col-12 px-3 pt-2">
+        <div class="d-flex justify-content-between align-items-center mb-2">
           <h1 class="h3 mb-0">My Calendar</h1>
         </div>
 
         <!-- Calendar Container -->
         <div class="calendar-container">
           <div v-if="loading" class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
+            <div class="spinner-border" style="color: var(--cyber-orange)" role="status">
               <span class="visually-hidden">Loading...</span>
             </div>
           </div>
@@ -80,7 +80,7 @@ export default {
       eventDrop: handleEventDrop,
       eventResize: handleEventResize,
       eventDidMount: handleEventDidMount,
-      height: "700px",
+      height: "630px",
       aspectRatio: 1.5,
       eventTimeFormat: {
         hour: "2-digit",
@@ -171,10 +171,10 @@ export default {
     }
 
     function getEventColor(status) {
-      if (status === "confirmed") return "#ff6b35"; // Orange - matches theme
-      if (status === "completed") return "#4ecdc4"; // Teal - nice contrast
+      if (status === "confirmed") return "#ff8c42"; // Orange - matches theme
+      if (status === "completed") return "#2ecc71"; // Green - success color
       if (status === "cancelled") return "#6c757d"; // Grey
-      if (status === "pending") return "#ffa726"; // Light orange
+      if (status === "pending") return "#ffd23f"; // Yellow - matches theme
       return "#8e8ea0"; // Default grey
     }
 
@@ -291,24 +291,33 @@ export default {
 };
 </script>
 
+<style>
+/* Override main padding for calendar page only */
+main:has(.calendar-page) {
+  padding-top: 70px !important;
+}
+</style>
+
 <style scoped>
 .calendar-page {
   min-height: calc(100vh - 200px);
-  background: #1a1a2e;
+  background: transparent;
 }
 
 .calendar-container {
-  background: #2d2d44;
+  background: rgba(26, 26, 26, 0.9);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  padding: 1.5rem;
-  border: 1px solid rgba(255, 107, 53, 0.2);
-  min-height: 750px;
+  padding: 1rem;
+  border: 2px solid var(--cyber-orange);
+  min-height: 675px;
+  backdrop-filter: blur(10px);
 }
 
 h1 {
-  color: #ff6b35;
+  color: var(--cyber-orange);
   font-weight: 700;
+  text-shadow: 0 0 10px rgba(255, 140, 66, 0.5);
 }
 
 /* FullCalendar custom styles */
@@ -317,31 +326,44 @@ h1 {
   height: 100% !important;
 }
 
+/* Override any blue colors from FullCalendar */
+:deep(.fc a) {
+  color: inherit !important;
+  text-decoration: none !important;
+}
+
+:deep(.fc a:not(.fc-event):hover) {
+  color: var(--cyber-orange) !important;
+}
+
 :deep(.fc .fc-view-harness) {
-  height: 650px !important;
-  min-height: 650px;
+  height: 585px !important;
+  min-height: 585px;
 }
 
 :deep(.fc-toolbar-title) {
   color: #ffffff;
   font-weight: 700;
-  font-size: 1.75rem;
+  font-size: 1.5rem;
 }
 
 :deep(.fc-button-primary) {
-  background: #ff6b35 !important;
-  border: 1px solid #ff6b35 !important;
+  background: var(--cyber-orange) !important;
+  border: 2px solid var(--cyber-orange) !important;
   font-weight: 600;
-  font-size: 0.875rem;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
   transition: all 0.2s ease;
   color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(255, 140, 66, 0.3);
 }
 
 :deep(.fc-button-primary:hover) {
   background: #e85a2a !important;
   border-color: #e85a2a !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 20px rgba(255, 140, 66, 0.5);
 }
 
 :deep(.fc-button-primary:disabled) {
@@ -351,8 +373,10 @@ h1 {
 }
 
 :deep(.fc-button-active) {
-  background: #d14a20 !important;
-  border-color: #d14a20 !important;
+  background: var(--cyber-orange) !important;
+  border-color: var(--cyber-orange) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 20px rgba(255, 140, 66, 0.5);
 }
 
 :deep(.fc-toolbar-chunk) {
@@ -362,13 +386,17 @@ h1 {
 }
 
 :deep(.fc-today-button) {
-  background: #4ecdc4 !important;
-  border: 1px solid #4ecdc4 !important;
+  background: var(--cyber-orange) !important;
+  border: 2px solid var(--cyber-orange) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(255, 140, 66, 0.3);
 }
 
 :deep(.fc-today-button:hover) {
-  background: #3dbdb5 !important;
-  border-color: #3dbdb5 !important;
+  background: #e85a2a !important;
+  border-color: #e85a2a !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 20px rgba(255, 140, 66, 0.5);
 }
 
 :deep(.booking-event) {
@@ -395,30 +423,47 @@ h1 {
 }
 
 :deep(.fc-daygrid-day-number) {
-  color: #ffffff;
+  color: #ffffff !important;
   font-weight: 600;
-  padding: 8px;
+  padding: 6px;
+  font-size: 0.9rem;
+  text-decoration: none !important;
+}
+
+:deep(.fc-daygrid-day-number:hover) {
+  color: var(--cyber-orange) !important;
 }
 
 :deep(.fc-col-header-cell) {
-  background: #3a3a52;
-  color: #ffffff;
+  background: rgba(255, 140, 66, 0.1);
+  color: var(--cyber-orange) !important;
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.875rem;
-  padding: 1rem 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
+  padding: 0.75rem 0.5rem;
+  border: 1px solid rgba(255, 140, 66, 0.2);
+}
+
+:deep(.fc-col-header-cell-cushion) {
+  color: var(--cyber-orange) !important;
+  text-decoration: none !important;
+}
+
+:deep(.fc-col-header-cell a) {
+  color: var(--cyber-orange) !important;
+  text-decoration: none !important;
 }
 
 :deep(.fc-day-today) {
-  background-color: rgba(255, 107, 53, 0.1) !important;
+  background-color: rgba(255, 140, 66, 0.15) !important;
+  border: 1px solid rgba(255, 140, 66, 0.3) !important;
 }
 
 :deep(.fc-scrollgrid) {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 140, 66, 0.2);
   border-radius: 8px;
   overflow: hidden;
-  background: #2d2d44;
+  background: rgba(42, 42, 42, 0.8);
 }
 
 :deep(.fc-theme-standard td),
@@ -427,11 +472,13 @@ h1 {
 }
 
 :deep(.fc-daygrid-day) {
-  background: #2d2d44;
+  background: rgba(26, 26, 26, 0.6);
+  transition: all 0.2s ease;
 }
 
 :deep(.fc-daygrid-day:hover) {
-  background: rgba(255, 107, 53, 0.05);
+  background: rgba(255, 140, 66, 0.08);
+  border-color: rgba(255, 140, 66, 0.3) !important;
 }
 
 :deep(.fc-day-other .fc-daygrid-day-number) {
@@ -440,34 +487,36 @@ h1 {
 
 /* More events popup */
 :deep(.fc-more-popover) {
-  background: #2d2d44 !important;
-  border: 1px solid rgba(255, 107, 53, 0.3) !important;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  background: rgba(26, 26, 26, 0.95) !important;
+  border: 2px solid var(--cyber-orange) !important;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
 }
 
 :deep(.fc-more-popover .fc-popover-header) {
-  background: #3a3a52 !important;
-  color: #ff6b35 !important;
+  background: rgba(255, 140, 66, 0.1) !important;
+  color: var(--cyber-orange) !important;
   font-weight: 700;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255, 107, 53, 0.2);
+  border-bottom: 1px solid var(--cyber-orange);
 }
 
 :deep(.fc-more-popover .fc-popover-body) {
-  background: #2d2d44 !important;
+  background: rgba(26, 26, 26, 0.9) !important;
   padding: 0.5rem;
 }
 
 :deep(.fc-more-popover .fc-popover-close) {
-  color: #ffffff !important;
+  color: var(--cyber-text-muted) !important;
   opacity: 0.7;
   font-size: 1.5rem;
+  transition: all 0.2s ease;
 }
 
 :deep(.fc-more-popover .fc-popover-close:hover) {
   opacity: 1;
-  color: #ff6b35 !important;
+  color: var(--cyber-orange) !important;
 }
 
 :deep(.fc-more-popover .fc-event) {
@@ -481,17 +530,20 @@ h1 {
 
 /* More link styling */
 :deep(.fc-daygrid-more-link) {
-  color: #ff6b35 !important;
+  color: var(--cyber-orange) !important;
   font-weight: 600;
-  background: rgba(255, 107, 53, 0.1);
+  background: rgba(255, 140, 66, 0.1);
   padding: 2px 6px;
   border-radius: 4px;
   transition: all 0.2s ease;
+  border: 1px solid rgba(255, 140, 66, 0.2);
 }
 
 :deep(.fc-daygrid-more-link:hover) {
-  background: rgba(255, 107, 53, 0.2);
-  color: #ff8c5a !important;
+  background: rgba(255, 140, 66, 0.2);
+  color: #ffffff !important;
+  border-color: var(--cyber-orange);
+  box-shadow: 0 0 10px rgba(255, 140, 66, 0.3);
 }
 
 /* Loading spinner */
