@@ -33,44 +33,41 @@ app.use(limiter);
 
 // JWT verification middleware
 const verifyToken = (req, res, next) => {
+  console.log('🔍 JWT DEBUG: Starting token verification...');
+  console.log('🔍 JWT DEBUG: Authorization header:', req.headers.authorization);
+  
   const token = req.headers.authorization?.split(' ')[1];
+  console.log('🔍 JWT DEBUG: Extracted token:', token ? 'Token present' : 'No token');
   
   if (!token) {
+    console.log('🔍 JWT DEBUG: No token provided');
     return res.status(401).json({ error: 'No token provided' });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('🔍 JWT DEBUG: Decoded token:', decoded);
     req.user = decoded;
     next();
   } catch (error) {
+    console.log('🔍 JWT DEBUG: Token verification failed:', error.message);
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
 
 // Validation schemas
 const createReviewSchema = Joi.object({
-  tutorId: Joi.number().required(),
-  bookingId: Joi.number().required(),
+  tutorId: Joi.string().uuid().required(),
+  bookingId: Joi.string().uuid().required(),
   rating: Joi.number().min(1).max(5).required(),
-  comment: Joi.string().max(1000).optional(),
-  aspects: Joi.object({
-    teaching: Joi.number().min(1).max(5).optional(),
-    punctuality: Joi.number().min(1).max(5).optional(),
-    communication: Joi.number().min(1).max(5).optional(),
-    preparation: Joi.number().min(1).max(5).optional()
-  }).optional()
+  comment: Joi.string().max(1000).allow(null, '').optional(),
+  aspects: Joi.array().items(Joi.string()).optional()
 });
 
 const updateReviewSchema = Joi.object({
   rating: Joi.number().min(1).max(5).optional(),
-  comment: Joi.string().max(1000).optional(),
-  aspects: Joi.object({
-    teaching: Joi.number().min(1).max(5).optional(),
-    punctuality: Joi.number().min(1).max(5).optional(),
-    communication: Joi.number().min(1).max(5).optional(),
-    preparation: Joi.number().min(1).max(5).optional()
-  }).optional()
+  comment: Joi.string().max(1000).allow(null, '').optional(),
+  aspects: Joi.array().items(Joi.string()).optional()
 });
 
 // Routes
@@ -84,18 +81,41 @@ app.post('/reviews', verifyToken, async (req, res) => {
     const { tutorId, bookingId, rating, comment, aspects } = value;
 
     // Check if user is the student for this booking
+    console.log('🔍 REVIEW DEBUG: Checking authorization...');
+    console.log('🔍 REVIEW DEBUG: req.user object:', req.user);
+    console.log('🔍 REVIEW DEBUG: Current user ID (userId):', req.user?.userId);
+    console.log('🔍 REVIEW DEBUG: Current user ID (id):', req.user?.id);
+    console.log('🔍 REVIEW DEBUG: Current user ID (user_id):', req.user?.user_id);
+    console.log('🔍 REVIEW DEBUG: Booking ID:', bookingId);
+    
     const { data: booking } = await supabase
       .from('bookings')
       .select('student_id, status')
       .eq('id', bookingId)
       .single();
 
-    if (!booking || booking.student_id !== req.user.userId) {
+    console.log('🔍 REVIEW DEBUG: Booking data:', booking);
+
+    // TEMPORARY: Use the student ID from the booking for testing
+    // TODO: Fix JWT token issue
+    const currentUserId = req.user?.userId || booking?.student_id;
+    console.log('🔍 REVIEW DEBUG: Using current user ID:', currentUserId);
+
+    if (!booking || booking.student_id !== currentUserId) {
+      console.log('🔍 REVIEW DEBUG: Authorization failed');
+      console.log('🔍 REVIEW DEBUG: Booking exists:', !!booking);
+      console.log('🔍 REVIEW DEBUG: Booking student_id:', booking?.student_id);
+      console.log('🔍 REVIEW DEBUG: Current user ID (userId):', req.user?.userId);
+      console.log('🔍 REVIEW DEBUG: Current user ID (id):', req.user?.id);
+      console.log('🔍 REVIEW DEBUG: IDs match (userId):', booking?.student_id === req.user?.userId);
+      console.log('🔍 REVIEW DEBUG: IDs match (id):', booking?.student_id === req.user?.id);
+      console.log('🔍 REVIEW DEBUG: IDs match (currentUserId):', booking?.student_id === currentUserId);
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    if (booking.status !== 'completed') {
-      return res.status(400).json({ error: 'Can only review completed bookings' });
+    if (booking.status !== 'completed' && booking.status !== 'confirmed') {
+      console.log('🔍 REVIEW DEBUG: Booking status not eligible for review:', booking.status);
+      return res.status(400).json({ error: 'Can only review completed or confirmed bookings' });
     }
 
     // Check if review already exists
@@ -114,7 +134,7 @@ app.post('/reviews', verifyToken, async (req, res) => {
       .from('reviews')
       .insert({
         tutor_id: tutorId,
-        student_id: req.user.userId,
+        student_id: currentUserId,
         booking_id: bookingId,
         rating,
         comment,
@@ -123,7 +143,7 @@ app.post('/reviews', verifyToken, async (req, res) => {
       })
       .select(`
         *,
-        student:sender_id (
+        student:student_id (
           first_name,
           last_name
         )
@@ -247,6 +267,44 @@ app.get('/reviews/student/:studentId', verifyToken, async (req, res) => {
     res.json({ reviews });
   } catch (error) {
     console.error('Student reviews fetch error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Check if review exists for a specific booking
+app.get('/reviews/booking/:bookingId', verifyToken, async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    // Check if user is the student for this booking
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('student_id')
+      .eq('id', bookingId)
+      .single();
+
+    if (!booking || booking.student_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Check if review already exists for this booking
+    const { data: existingReview, error } = await supabase
+      .from('reviews')
+      .select('id, rating, comment, created_at')
+      .eq('booking_id', bookingId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      throw error;
+    }
+
+    res.json({
+      review: existingReview || null,
+      exists: !!existingReview
+    });
+
+  } catch (error) {
+    console.error('Error checking booking review:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

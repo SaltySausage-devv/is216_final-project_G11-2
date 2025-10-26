@@ -4002,21 +4002,30 @@ export default {
         // Handle messages read status update
         messageHandlers.messagesRead = (data) => {
           console.log("✅ RECEIVER: Messages read via Socket.io:", data);
-          console.log("✅ RECEIVER: readBy:", data.readBy, "currentUserId:", currentUserId.value);
-          
+          console.log(
+            "✅ RECEIVER: readBy:",
+            data.readBy,
+            "currentUserId:",
+            currentUserId.value
+          );
+
           // CRITICAL: Only update read status if someone ELSE read the messages
           // If we read our own messages, don't mark our sent messages as read
           if (data.readBy === currentUserId.value) {
-            console.log("✅ RECEIVER: Ignoring messages_read event - we read our own messages");
+            console.log(
+              "✅ RECEIVER: Ignoring messages_read event - we read our own messages"
+            );
             return;
           }
-          
+
           // Update read status for messages in the current conversation
           if (
             selectedConversation.value &&
             selectedConversation.value.id === data.conversationId
           ) {
-            console.log("✅ RECEIVER: Updating read status for messages sent by us that were read by recipient");
+            console.log(
+              "✅ RECEIVER: Updating read status for messages sent by us that were read by recipient"
+            );
             messages.value = messages.value.map((msg) => {
               // Update read status for messages sent by current user that were read by the other person
               if (msg.senderId === currentUserId.value && !msg.readAt) {
@@ -4060,28 +4069,34 @@ export default {
       console.log("🔄 Loading conversations first...");
       await loadConversations();
       console.log("✅ Conversations loaded:", conversations.value.length);
-      
+
       // Check if there's a conversation ID in the query params (from notification click)
       const conversationIdFromQuery = route.query.conversation;
       if (conversationIdFromQuery) {
-        console.log("🔔 Messages: Opening conversation from notification:", conversationIdFromQuery);
-        
+        console.log(
+          "🔔 Messages: Opening conversation from notification:",
+          conversationIdFromQuery
+        );
+
         // Find the conversation in the list
         const conversation = conversations.value.find(
           (conv) => conv.id === conversationIdFromQuery
         );
-        
+
         if (conversation) {
           console.log("🔔 Messages: Found conversation, selecting it");
           await selectConversationWithRoom(conversation);
         } else {
-          console.warn("🔔 Messages: Conversation not found in list:", conversationIdFromQuery);
+          console.warn(
+            "🔔 Messages: Conversation not found in list:",
+            conversationIdFromQuery
+          );
         }
       }
-      
+
       // Don't show offline notifications on Messages page - user can see unread badges
       // App.vue will handle offline notifications globally
-      
+
       console.log("🔌 Setting up messaging...");
       setupMessaging();
 
@@ -4587,6 +4602,35 @@ export default {
         return;
       }
 
+      // Debug: Log conversation participants
+      console.log(
+        "🔍 DEBUG: Selected conversation:",
+        selectedConversation.value
+      );
+      console.log(
+        "🔍 DEBUG: Participant:",
+        selectedConversation.value?.participant
+      );
+      console.log("🔍 DEBUG: Current user:", authStore.user);
+
+      // Get tutor ID from conversation participant
+      // The conversation.participant is the OTHER participant (not the current user)
+      const tutorId =
+        selectedConversation.value?.participant?.type === "tutor"
+          ? selectedConversation.value.participant.id
+          : null;
+
+      console.log("🔍 DEBUG: Found tutor ID:", tutorId);
+
+      if (!tutorId) {
+        console.error("Could not find tutor ID for review submission");
+        console.error(
+          "Participant info:",
+          selectedConversation.value?.participant
+        );
+        return;
+      }
+
       // Create a booking object for the modal
       selectedBookingForSessionEnd.value = {
         id: bookingData.bookingId,
@@ -4598,10 +4642,13 @@ export default {
         subject: bookingData.subject || "Tutoring Session",
         level: bookingData.level || "N/A",
         tutor: {
-          first_name: message.recipient?.first_name || "Tutor",
-          last_name: message.recipient?.last_name || "",
+          first_name:
+            selectedConversation.value?.participant?.name?.split(" ")[0] ||
+            "Tutor",
+          last_name:
+            selectedConversation.value?.participant?.name?.split(" ")[1] || "",
         },
-        tutor_id: message.recipient?.id,
+        tutor_id: tutorId,
         student_id: authStore.user.id,
       };
 
@@ -4903,7 +4950,11 @@ export default {
 }
 
 .messages-page .btn-primary {
-  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+  background: linear-gradient(
+    45deg,
+    var(--cyber-orange, #ff8c42),
+    var(--cyber-yellow, #ffd23f)
+  ) !important;
   border: 2px solid var(--cyber-orange, #ff8c42) !important;
   color: white !important;
   box-shadow: 0 0 10px rgba(255, 140, 66, 0.3);
@@ -4930,7 +4981,11 @@ export default {
 }
 
 .messages-page .badge.bg-danger {
-  background: linear-gradient(45deg, var(--cyber-orange, #ff8c42), var(--cyber-yellow, #ffd23f)) !important;
+  background: linear-gradient(
+    45deg,
+    var(--cyber-orange, #ff8c42),
+    var(--cyber-yellow, #ffd23f)
+  ) !important;
 }
 
 /* Cards */
@@ -5109,11 +5164,7 @@ h6 {
 }
 
 .message-bubble.sent {
-  background: linear-gradient(
-    135deg,
-    #2a2a2a,
-    #3a3a3a
-  );
+  background: linear-gradient(135deg, #2a2a2a, #3a3a3a);
   color: var(--cyber-orange, #ff8c42);
   margin-left: auto;
   border: 2px solid var(--cyber-orange, #ff8c42);

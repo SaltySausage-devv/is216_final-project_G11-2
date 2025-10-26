@@ -1,32 +1,118 @@
 <template>
-  <div class="search-page min-vh-100 position-relative" style="background: #1a1a1a !important;">
+  <div
+    class="search-page min-vh-100 position-relative"
+    style="background: #1a1a1a !important"
+  >
     <!-- Animated World Globe Background -->
     <div class="globe-background">
-      <svg class="world-globe" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet">
+      <svg
+        class="world-globe"
+        viewBox="0 0 1000 1000"
+        preserveAspectRatio="xMidYMid meet"
+      >
         <!-- Main Globe Circle -->
-        <circle ref="globeCircle" class="globe-circle" cx="500" cy="500" r="400" fill="none" stroke="rgba(200,200,200,0.3)" stroke-width="2"/>
-        
+        <circle
+          ref="globeCircle"
+          class="globe-circle"
+          cx="500"
+          cy="500"
+          r="400"
+          fill="none"
+          stroke="rgba(200,200,200,0.3)"
+          stroke-width="2"
+        />
+
         <!-- Continental paths removed - keeping only clean lines -->
-        
+
         <!-- Longitude Lines -->
-        <path ref="longitude1" class="longitude" d="M500,100 Q520,300 500,500 Q480,700 500,900" stroke="rgba(200,200,200,0.2)" stroke-width="1" fill="none"/>
-        <path ref="longitude2" class="longitude" d="M300,500 Q400,480 500,500 Q600,520 700,500" stroke="rgba(200,200,200,0.2)" stroke-width="1" fill="none"/>
-        <path ref="longitude3" class="longitude" d="M200,300 Q350,400 500,500 Q650,600 800,700" stroke="rgba(200,200,200,0.2)" stroke-width="1" fill="none"/>
-        
+        <path
+          ref="longitude1"
+          class="longitude"
+          d="M500,100 Q520,300 500,500 Q480,700 500,900"
+          stroke="rgba(200,200,200,0.2)"
+          stroke-width="1"
+          fill="none"
+        />
+        <path
+          ref="longitude2"
+          class="longitude"
+          d="M300,500 Q400,480 500,500 Q600,520 700,500"
+          stroke="rgba(200,200,200,0.2)"
+          stroke-width="1"
+          fill="none"
+        />
+        <path
+          ref="longitude3"
+          class="longitude"
+          d="M200,300 Q350,400 500,500 Q650,600 800,700"
+          stroke="rgba(200,200,200,0.2)"
+          stroke-width="1"
+          fill="none"
+        />
+
         <!-- Latitude Lines -->
-        <path ref="latitude1" class="latitude" d="M200,300 Q500,300 800,300" stroke="rgba(200,200,200,0.2)" stroke-width="1" fill="none"/>
-        <path ref="latitude2" class="latitude" d="M200,500 Q500,500 800,500" stroke="rgba(200,200,200,0.2)" stroke-width="1" fill="none"/>
-        <path ref="latitude3" class="latitude" d="M200,700 Q500,700 800,700" stroke="rgba(200,200,200,0.2)" stroke-width="1" fill="none"/>
-        
+        <path
+          ref="latitude1"
+          class="latitude"
+          d="M200,300 Q500,300 800,300"
+          stroke="rgba(200,200,200,0.2)"
+          stroke-width="1"
+          fill="none"
+        />
+        <path
+          ref="latitude2"
+          class="latitude"
+          d="M200,500 Q500,500 800,500"
+          stroke="rgba(200,200,200,0.2)"
+          stroke-width="1"
+          fill="none"
+        />
+        <path
+          ref="latitude3"
+          class="latitude"
+          d="M200,700 Q500,700 800,700"
+          stroke="rgba(200,200,200,0.2)"
+          stroke-width="1"
+          fill="none"
+        />
+
         <!-- Orbital Path for Animation -->
-        <path ref="orbitPath" class="orbit-path" d="M100,500 Q500,100 900,500 Q500,900 100,500" stroke="rgba(200,200,200,0.1)" stroke-width="1" fill="none"/>
-        
+        <path
+          ref="orbitPath"
+          class="orbit-path"
+          d="M100,500 Q500,100 900,500 Q500,900 100,500"
+          stroke="rgba(200,200,200,0.1)"
+          stroke-width="1"
+          fill="none"
+        />
+
         <!-- Additional Motion Paths for Different Elements -->
-        <path ref="motionPath1" class="motion-path" d="M200,200 Q400,300 600,200 Q800,100 1000,200" stroke="rgba(200,200,200,0.05)" stroke-width="1" fill="none"/>
-        <path ref="motionPath2" class="motion-path" d="M100,400 Q300,500 500,400 Q700,300 900,400" stroke="rgba(200,200,200,0.05)" stroke-width="1" fill="none"/>
-        <path ref="motionPath3" class="motion-path" d="M300,600 Q500,700 700,600 Q900,500 1100,600" stroke="rgba(200,200,200,0.05)" stroke-width="1" fill="none"/>
+        <path
+          ref="motionPath1"
+          class="motion-path"
+          d="M200,200 Q400,300 600,200 Q800,100 1000,200"
+          stroke="rgba(200,200,200,0.05)"
+          stroke-width="1"
+          fill="none"
+        />
+        <path
+          ref="motionPath2"
+          class="motion-path"
+          d="M100,400 Q300,500 500,400 Q700,300 900,400"
+          stroke="rgba(200,200,200,0.05)"
+          stroke-width="1"
+          fill="none"
+        />
+        <path
+          ref="motionPath3"
+          class="motion-path"
+          d="M300,600 Q500,700 700,600 Q900,500 1100,600"
+          stroke="rgba(200,200,200,0.05)"
+          stroke-width="1"
+          fill="none"
+        />
       </svg>
-      
+
       <!-- No emojis - just pure globe and line animations -->
     </div>
 
@@ -34,32 +120,23 @@
       <!-- Search Header -->
       <div class="row mb-5">
         <div class="col-12">
-          <div 
+          <div
             ref="searchCard"
             class="cyberpunk-search-card border-0 shadow-sm"
           >
             <div class="card-body p-4">
               <div class="text-center mb-4">
-                <div 
-                  ref="searchIcon"
-                  class="cyberpunk-search-icon"
-                >
+                <div ref="searchIcon" class="cyberpunk-search-icon">
                   <i class="fas fa-search"></i>
                 </div>
-                <h2 
-                  ref="searchTitle"
-                  class="cyberpunk-search-title"
-                >
-                Find Your Perfect Tutor
-              </h2>
-                <p 
-                  ref="searchSubtitle"
-                  class="cyberpunk-search-subtitle"
-                >
+                <h2 ref="searchTitle" class="cyberpunk-search-title">
+                  Find Your Perfect Tutor
+                </h2>
+                <p ref="searchSubtitle" class="cyberpunk-search-subtitle">
                   Discover expert tutors tailored to your needs
                 </p>
               </div>
-              
+
               <!-- Search Form -->
               <form @submit.prevent="searchTutors" class="row g-3">
                 <div class="col-md-6">
@@ -73,15 +150,17 @@
                       v-model="filters.subject"
                       class="cyberpunk-input"
                     >
-                    <option value="">All Subjects</option>
-                    <option value="Mathematics">Mathematics</option>
-                    <option value="English">English</option>
-                    <option value="Science">Science</option>
-                    <option value="Physics">Physics</option>
-                    <option value="Chemistry">Chemistry</option>
-                    <option value="Biology">Biology</option>
-                    <option value="Additional Mathematics">Additional Mathematics</option>
-                  </select>
+                      <option value="">All Subjects</option>
+                      <option value="Mathematics">Mathematics</option>
+                      <option value="English">English</option>
+                      <option value="Science">Science</option>
+                      <option value="Physics">Physics</option>
+                      <option value="Chemistry">Chemistry</option>
+                      <option value="Biology">Biology</option>
+                      <option value="Additional Mathematics">
+                        Additional Mathematics
+                      </option>
+                    </select>
                   </div>
                 </div>
 
@@ -96,13 +175,13 @@
                       v-model="filters.level"
                       class="cyberpunk-input"
                     >
-                    <option value="">All Levels</option>
-                    <option value="Primary">Primary</option>
-                    <option value="Secondary">Secondary</option>
-                    <option value="JC">JC</option>
-                    <option value="IB">IB</option>
-                    <option value="IGCSE">IGCSE</option>
-                  </select>
+                      <option value="">All Levels</option>
+                      <option value="Primary">Primary</option>
+                      <option value="Secondary">Secondary</option>
+                      <option value="JC">JC</option>
+                      <option value="IB">IB</option>
+                      <option value="IGCSE">IGCSE</option>
+                    </select>
                   </div>
                 </div>
 
@@ -112,13 +191,13 @@
                     <div class="cyberpunk-input-icon">
                       <i class="fas fa-map-marker-alt"></i>
                     </div>
-                  <input
+                    <input
                       ref="locationField"
-                    type="text"
-                    v-model="filters.location"
+                      type="text"
+                      v-model="filters.location"
                       class="cyberpunk-input"
-                    placeholder="Enter location or postal code"
-                  />
+                      placeholder="Enter location or postal code"
+                    />
                   </div>
                 </div>
 
@@ -128,13 +207,13 @@
                     <div class="cyberpunk-input-icon">
                       <i class="fas fa-dollar-sign"></i>
                     </div>
-                  <input
+                    <input
                       ref="minRateField"
-                    type="number"
-                    v-model="filters.minRate"
+                      type="number"
+                      v-model="filters.minRate"
                       class="cyberpunk-input"
-                    placeholder="0"
-                  />
+                      placeholder="0"
+                    />
                   </div>
                 </div>
 
@@ -144,31 +223,34 @@
                     <div class="cyberpunk-input-icon">
                       <i class="fas fa-dollar-sign"></i>
                     </div>
-                  <input
+                    <input
                       ref="maxRateField"
-                    type="number"
-                    v-model="filters.maxRate"
+                      type="number"
+                      v-model="filters.maxRate"
                       class="cyberpunk-input"
-                    placeholder="100"
-                  />
+                      placeholder="100"
+                    />
                   </div>
                 </div>
-                
+
                 <div class="col-12">
-                  <button 
+                  <button
                     ref="searchButton"
-                    type="submit" 
-                    class="cyberpunk-search-btn" 
+                    type="submit"
+                    class="cyberpunk-search-btn"
                     :disabled="isLoading"
                   >
-                    <span v-if="isLoading" class="cyberpunk-spinner me-2"></span>
+                    <span
+                      v-if="isLoading"
+                      class="cyberpunk-spinner me-2"
+                    ></span>
                     <i v-else class="fas fa-search me-2"></i>
-                    {{ isLoading ? 'Searching...' : 'SEARCH TUTORS' }}
+                    {{ isLoading ? "Searching..." : "SEARCH TUTORS" }}
                   </button>
-                  <button 
+                  <button
                     ref="clearButton"
-                    type="button" 
-                    @click="clearFilters" 
+                    type="button"
+                    @click="clearFilters"
                     class="cyberpunk-clear-btn ms-2"
                   >
                     <i class="fas fa-times me-2"></i>
@@ -185,7 +267,7 @@
       <div class="row">
         <!-- Filters Sidebar -->
         <div class="col-lg-3 mb-4">
-          <div 
+          <div
             ref="filtersCard"
             class="cyberpunk-filters-card border-0 shadow-sm"
           >
@@ -196,21 +278,38 @@
               <!-- Rating Filter -->
               <div class="mb-4">
                 <h6 class="cyberpunk-filter-label mb-3">Rating</h6>
-                <div class="cyberpunk-checkbox-group" v-for="rating in [5, 4, 3, 2, 1]" :key="rating">
+                <div
+                  class="cyberpunk-checkbox-group"
+                  v-for="rating in [5, 4, 3, 2, 1]"
+                  :key="rating"
+                >
                   <div class="cyberpunk-checkbox">
-                  <input
+                    <input
                       class="cyberpunk-checkbox-input"
-                    type="checkbox"
-                    :id="`rating-${rating}`"
-                    :value="rating"
-                    v-model="filters.ratings"
-                  />
-                    <label class="cyberpunk-checkbox-label d-flex align-items-center" :for="`rating-${rating}`">
+                      type="checkbox"
+                      :id="`rating-${rating}`"
+                      :value="rating"
+                      v-model="filters.ratings"
+                    />
+                    <label
+                      class="cyberpunk-checkbox-label d-flex align-items-center"
+                      :for="`rating-${rating}`"
+                    >
                       <div class="cyberpunk-rating me-2">
-                        <i v-for="i in 5" :key="i" :class="i <= rating ? 'fas fa-star cyberpunk-star' : 'far fa-star cyberpunk-star-empty'"></i>
-                    </div>
-                      <span class="cyberpunk-text-muted">({{ getRatingCount(rating) }})</span>
-                  </label>
+                        <i
+                          v-for="i in 5"
+                          :key="i"
+                          :class="
+                            i <= rating
+                              ? 'fas fa-star cyberpunk-star'
+                              : 'far fa-star cyberpunk-star-empty'
+                          "
+                        ></i>
+                      </div>
+                      <span class="cyberpunk-text-muted"
+                        >({{ getRatingCount(rating) }})</span
+                      >
+                    </label>
                   </div>
                 </div>
               </div>
@@ -220,20 +319,44 @@
                 <h6 class="cyberpunk-filter-label mb-3">Experience</h6>
                 <div class="cyberpunk-checkbox-group">
                   <div class="cyberpunk-checkbox">
-                    <input class="cyberpunk-checkbox-input" type="checkbox" id="exp-1" value="1-2" v-model="filters.experience" />
-                    <label class="cyberpunk-checkbox-label" for="exp-1">1-2 years</label>
-                </div>
-                </div>
-                <div class="cyberpunk-checkbox-group">
-                  <div class="cyberpunk-checkbox">
-                    <input class="cyberpunk-checkbox-input" type="checkbox" id="exp-2" value="3-5" v-model="filters.experience" />
-                    <label class="cyberpunk-checkbox-label" for="exp-2">3-5 years</label>
+                    <input
+                      class="cyberpunk-checkbox-input"
+                      type="checkbox"
+                      id="exp-1"
+                      value="1-2"
+                      v-model="filters.experience"
+                    />
+                    <label class="cyberpunk-checkbox-label" for="exp-1"
+                      >1-2 years</label
+                    >
                   </div>
                 </div>
                 <div class="cyberpunk-checkbox-group">
                   <div class="cyberpunk-checkbox">
-                    <input class="cyberpunk-checkbox-input" type="checkbox" id="exp-3" value="5+" v-model="filters.experience" />
-                    <label class="cyberpunk-checkbox-label" for="exp-3">5+ years</label>
+                    <input
+                      class="cyberpunk-checkbox-input"
+                      type="checkbox"
+                      id="exp-2"
+                      value="3-5"
+                      v-model="filters.experience"
+                    />
+                    <label class="cyberpunk-checkbox-label" for="exp-2"
+                      >3-5 years</label
+                    >
+                  </div>
+                </div>
+                <div class="cyberpunk-checkbox-group">
+                  <div class="cyberpunk-checkbox">
+                    <input
+                      class="cyberpunk-checkbox-input"
+                      type="checkbox"
+                      id="exp-3"
+                      value="5+"
+                      v-model="filters.experience"
+                    />
+                    <label class="cyberpunk-checkbox-label" for="exp-3"
+                      >5+ years</label
+                    >
                   </div>
                 </div>
               </div>
@@ -249,23 +372,32 @@
             </h5>
             <div class="d-flex align-items-center gap-3">
               <span class="cyberpunk-text-muted">Sort by:</span>
-              <div class="cyberpunk-input-group" style="width: auto;">
-                <select v-model="sortBy" class="cyberpunk-input" style="width: auto;">
-                <option value="rating">Rating</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="experience">Experience</option>
-                <option value="distance">Distance</option>
-              </select>
+              <div class="cyberpunk-input-group" style="width: auto">
+                <select
+                  v-model="sortBy"
+                  class="cyberpunk-input"
+                  style="width: auto"
+                >
+                  <option value="rating">Rating</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                  <option value="experience">Experience</option>
+                  <option value="distance">Distance</option>
+                </select>
               </div>
             </div>
           </div>
 
           <!-- Tutor Cards -->
-          <div v-if="tutors.length === 0 && !isLoading" class="text-center py-5">
+          <div
+            v-if="tutors.length === 0 && !isLoading"
+            class="text-center py-5"
+          >
             <i class="fas fa-search cyberpunk-text-muted fs-1 mb-3"></i>
             <h5 class="cyberpunk-text-muted">No tutors found</h5>
-            <p class="cyberpunk-text-muted">Try adjusting your search criteria</p>
+            <p class="cyberpunk-text-muted">
+              Try adjusting your search criteria
+            </p>
           </div>
 
           <div v-else class="row g-4">
@@ -279,35 +411,58 @@
                 <div class="card-body p-4">
                   <div class="d-flex align-items-start mb-3">
                     <div class="cyberpunk-tutor-avatar me-3">
-                      <img 
-                        :src="tutor.avatar" 
+                      <img
+                        :src="tutor.avatar"
                         :alt="tutor.name"
                         class="cyberpunk-avatar-img"
-                      >
+                      />
                     </div>
                     <div class="flex-grow-1">
-                      <h6 class="cyberpunk-tutor-name mb-1">{{ tutor.name }}</h6>
-                      <p class="cyberpunk-text-muted mb-2">{{ tutor.subjects.join(', ') }}</p>
+                      <h6 class="cyberpunk-tutor-name mb-1">
+                        {{ tutor.name }}
+                      </h6>
+                      <p class="cyberpunk-text-muted mb-2">
+                        {{ tutor.subjects.join(", ") }}
+                      </p>
                       <div class="d-flex align-items-center mb-2">
                         <div class="cyberpunk-rating me-2">
-                          <i v-for="i in 5" :key="i" :class="i <= tutor.rating ? 'fas fa-star cyberpunk-star' : 'far fa-star cyberpunk-star-empty'"></i>
+                          <i
+                            v-for="i in 5"
+                            :key="i"
+                            :class="
+                              i <= tutor.rating
+                                ? 'fas fa-star cyberpunk-star'
+                                : 'far fa-star cyberpunk-star-empty'
+                            "
+                          ></i>
                         </div>
-                        <span class="cyberpunk-text-muted">({{ tutor.reviews }} reviews)</span>
+                        <span class="cyberpunk-text-muted"
+                          >({{ tutor.reviews }} reviews)</span
+                        >
                       </div>
                     </div>
                     <div class="text-end">
-                      <h5 class="cyberpunk-tutor-rate mb-0">${{ tutor.hourlyRate }}/hr</h5>
+                      <h5 class="cyberpunk-tutor-rate mb-0">
+                        ${{ tutor.hourlyRate }}/hr
+                      </h5>
                     </div>
                   </div>
 
                   <div class="mb-3 flex-grow-1">
                     <p class="cyberpunk-text-muted mb-2">{{ tutor.bio }}</p>
                     <div class="d-flex flex-wrap gap-1">
-                      <span v-for="level in tutor.levels" :key="level" class="cyberpunk-badge">{{ level }}</span>
+                      <span
+                        v-for="level in tutor.levels"
+                        :key="level"
+                        class="cyberpunk-badge"
+                        >{{ level }}</span
+                      >
                     </div>
                   </div>
 
-                  <div class="d-flex align-items-center justify-content-between mt-auto">
+                  <div
+                    class="d-flex align-items-center justify-content-between mt-auto"
+                  >
                     <div class="d-flex align-items-center cyberpunk-text-muted">
                       <i class="fas fa-map-marker-alt me-1"></i>
                       <small>{{ tutor.location }}</small>
@@ -316,7 +471,10 @@
                       <button class="cyberpunk-favorite-btn">
                         <i class="fas fa-heart"></i>
                       </button>
-                      <router-link :to="`/tutor/${tutor.id}`" class="cyberpunk-view-btn">
+                      <router-link
+                        :to="`/tutor/${tutor.id}`"
+                        class="cyberpunk-view-btn"
+                      >
                         View Profile
                       </router-link>
                     </div>
@@ -349,138 +507,148 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, nextTick, watch, computed } from 'vue'
-import { createTimeline, animate, createAnimatable, utils, svg } from 'animejs'
+import { ref, reactive, onMounted, nextTick, watch, computed } from "vue";
+import { createTimeline, animate, createAnimatable, utils, svg } from "animejs";
 
 export default {
-  name: 'SearchTutors',
+  name: "SearchTutors",
   setup() {
     // Template refs for animations
-    const searchCard = ref(null)
-    const searchIcon = ref(null)
-    const searchTitle = ref(null)
-    const searchSubtitle = ref(null)
-    const subjectField = ref(null)
-    const levelField = ref(null)
-    const locationField = ref(null)
-    const minRateField = ref(null)
-    const maxRateField = ref(null)
-    const searchButton = ref(null)
-    const clearButton = ref(null)
-    const filtersCard = ref(null)
-    const loadMoreButton = ref(null)
-    
+    const searchCard = ref(null);
+    const searchIcon = ref(null);
+    const searchTitle = ref(null);
+    const searchSubtitle = ref(null);
+    const subjectField = ref(null);
+    const levelField = ref(null);
+    const locationField = ref(null);
+    const minRateField = ref(null);
+    const maxRateField = ref(null);
+    const searchButton = ref(null);
+    const clearButton = ref(null);
+    const filtersCard = ref(null);
+    const loadMoreButton = ref(null);
+
     // Globe SVG refs for animations
-    const globeCircle = ref(null)
-    const longitude1 = ref(null)
-    const longitude2 = ref(null)
-    const longitude3 = ref(null)
-    const latitude1 = ref(null)
-    const latitude2 = ref(null)
-    const latitude3 = ref(null)
-    const orbitPath = ref(null)
-    const motionPath1 = ref(null)
-    const motionPath2 = ref(null)
-    const motionPath3 = ref(null)
+    const globeCircle = ref(null);
+    const longitude1 = ref(null);
+    const longitude2 = ref(null);
+    const longitude3 = ref(null);
+    const latitude1 = ref(null);
+    const latitude2 = ref(null);
+    const latitude3 = ref(null);
+    const orbitPath = ref(null);
+    const motionPath1 = ref(null);
+    const motionPath2 = ref(null);
+    const motionPath3 = ref(null);
 
     const filters = reactive({
-      subject: '',
-      level: '',
-      location: '',
-      minRate: '',
-      maxRate: '',
+      subject: "",
+      level: "",
+      location: "",
+      minRate: "",
+      maxRate: "",
       ratings: [],
       experience: [],
-      availability: []
-    })
+      availability: [],
+    });
 
-    const sortBy = ref('rating')
-    const tutors = ref([])
-    const allTutors = ref([])
-    const isLoading = ref(false)
-    const currentPage = ref(1)
-    const tutorsPerPage = 8
-    const totalFilteredTutors = ref(0)
+    const sortBy = ref("rating");
+    const tutors = ref([]);
+    const allTutors = ref([]);
+    const isLoading = ref(false);
+    const currentPage = ref(1);
+    const tutorsPerPage = 8;
+    const totalFilteredTutors = ref(0);
 
     // Computed property to check if there are more tutors to load
     const hasMoreTutors = computed(() => {
-      return tutors.value.length < totalFilteredTutors.value
-    })
+      return tutors.value.length < totalFilteredTutors.value;
+    });
 
     // Advanced Anime.js v4 Search Page Animations
     const initSearchAnimations = async () => {
-      await nextTick()
-      
+      await nextTick();
+
       // Create main timeline with optimized settings (removed excessive callbacks)
       const searchTimeline = createTimeline({
-        defaults: { 
+        defaults: {
           duration: 800,
-          ease: 'out(3)',
-          frameRate: 60
+          ease: "out(3)",
+          frameRate: 60,
         },
         playbackRate: 1,
         onComplete: (self) => {
           if (searchCard.value) {
-            searchCard.value.style.borderColor = 'var(--cyber-orange)'
+            searchCard.value.style.borderColor = "var(--cyber-orange)";
           }
-        }
-      })
+        },
+      });
 
       // Initialize beautiful world globe animations
-      initGlobeAnimations()
+      initGlobeAnimations();
 
       // Search card entrance with 3D effects
       if (searchCard.value) {
-        searchTimeline
-          .label('card-entrance', 0)
-          .add(searchCard.value, {
+        searchTimeline.label("card-entrance", 0).add(
+          searchCard.value,
+          {
             opacity: [0, 1],
             y: [100, 0],
             scale: [0.8, 1],
             rotateX: [30, 0],
             rotateY: [15, 0],
-            filter: ['blur(10px)', 'blur(0px)'],
+            filter: ["blur(10px)", "blur(0px)"],
             boxShadow: [
-              '0 0 0 rgba(255, 140, 66, 0)',
-              '0 0 50px rgba(255, 140, 66, 0.5)'
-            ]
-          }, 'card-entrance')
+              "0 0 0 rgba(255, 140, 66, 0)",
+              "0 0 50px rgba(255, 140, 66, 0.5)",
+            ],
+          },
+          "card-entrance"
+        );
       }
 
       // Header elements with staggered 3D animations
       if (searchIcon.value) {
-        searchTimeline
-          .label('icon-animation', 200)
-          .add(searchIcon.value, {
+        searchTimeline.label("icon-animation", 200).add(
+          searchIcon.value,
+          {
             scale: [0, 1.2, 1],
             opacity: [0, 1],
-            filter: ['blur(5px)', 'blur(0px)']
-          }, 'icon-animation')
+            filter: ["blur(5px)", "blur(0px)"],
+          },
+          "icon-animation"
+        );
       }
 
       if (searchTitle.value) {
-        searchTimeline
-          .add(searchTitle.value, {
+        searchTimeline.add(
+          searchTitle.value,
+          {
             y: [50, 0],
             opacity: [0, 1],
             scale: [0.9, 1],
             rotateX: [20, 0],
             textShadow: [
-              '0 0 0 rgba(255, 140, 66, 0)',
-              '0 0 20px rgba(255, 140, 66, 0.8)'
-            ]
-          }, '+=200')
+              "0 0 0 rgba(255, 140, 66, 0)",
+              "0 0 20px rgba(255, 140, 66, 0.8)",
+            ],
+          },
+          "+=200"
+        );
       }
 
       if (searchSubtitle.value) {
-        searchTimeline
-          .add(searchSubtitle.value, {
+        searchTimeline.add(
+          searchSubtitle.value,
+          {
             y: [30, 0],
             opacity: [0, 1],
             scale: [0.95, 1],
             rotateY: [-15, 0],
-            filter: ['blur(3px)', 'blur(0px)']
-          }, '+=100')
+            filter: ["blur(3px)", "blur(0px)"],
+          },
+          "+=100"
+        );
       }
 
       // Form fields with staggered animations
@@ -492,546 +660,647 @@ export default {
         { ref: maxRateField, delay: 650 },
         { ref: searchButton, delay: 700 },
         { ref: clearButton, delay: 750 },
-        { ref: filtersCard, delay: 800 }
-      ]
+        { ref: filtersCard, delay: 800 },
+      ];
 
       formFields.forEach(({ ref: fieldRef, delay }) => {
         if (fieldRef.value) {
-          searchTimeline
-            .add(fieldRef.value, {
+          searchTimeline.add(
+            fieldRef.value,
+            {
               x: [-50, 0],
               y: [30, 0],
               opacity: [0, 1],
               scale: [0.9, 1],
               rotateY: [-10, 0],
               rotateX: [5, 0],
-              filter: ['blur(3px)', 'blur(0px)'],
+              filter: ["blur(3px)", "blur(0px)"],
               boxShadow: [
-                '0 0 0 rgba(255, 140, 66, 0)',
-                '0 0 15px rgba(255, 140, 66, 0.3)'
-              ]
-            }, `+=${delay}`)
+                "0 0 0 rgba(255, 140, 66, 0)",
+                "0 0 15px rgba(255, 140, 66, 0.3)",
+              ],
+            },
+            `+=${delay}`
+          );
         }
-      })
+      });
 
       // Advanced input focus animations
-      const inputFields = [subjectField, levelField, locationField, minRateField, maxRateField]
-      
-      inputFields.forEach(fieldRef => {
+      const inputFields = [
+        subjectField,
+        levelField,
+        locationField,
+        minRateField,
+        maxRateField,
+      ];
+
+      inputFields.forEach((fieldRef) => {
         if (fieldRef.value) {
           const focusTimeline = createTimeline({
-            defaults: { duration: 200, ease: 'out(2)' }
-          })
-          
-          fieldRef.value.addEventListener('focus', () => {
-            focusTimeline
-              .add(fieldRef.value, {
+            defaults: { duration: 200, ease: "out(2)" },
+          });
+
+          fieldRef.value.addEventListener("focus", () => {
+            focusTimeline.add(
+              fieldRef.value,
+              {
                 scale: [1, 1.02],
                 boxShadow: [
-                  '0 0 0 rgba(255, 140, 66, 0)',
-                  '0 0 20px rgba(255, 140, 66, 0.5)'
+                  "0 0 0 rgba(255, 140, 66, 0)",
+                  "0 0 20px rgba(255, 140, 66, 0.5)",
                 ],
-                borderColor: ['var(--cyber-orange)', 'var(--cyber-yellow)']
-              }, 0)
-          })
-          
-          fieldRef.value.addEventListener('blur', () => {
-            focusTimeline
-              .add(fieldRef.value, {
+                borderColor: ["var(--cyber-orange)", "var(--cyber-yellow)"],
+              },
+              0
+            );
+          });
+
+          fieldRef.value.addEventListener("blur", () => {
+            focusTimeline.add(
+              fieldRef.value,
+              {
                 scale: [1.02, 1],
                 boxShadow: [
-                  '0 0 20px rgba(255, 140, 66, 0.5)',
-                  '0 0 0 rgba(255, 140, 66, 0)'
+                  "0 0 20px rgba(255, 140, 66, 0.5)",
+                  "0 0 0 rgba(255, 140, 66, 0)",
                 ],
-                borderColor: ['var(--cyber-yellow)', 'var(--cyber-orange)']
-              }, 0)
-          })
+                borderColor: ["var(--cyber-yellow)", "var(--cyber-orange)"],
+              },
+              0
+            );
+          });
         }
-      })
+      });
 
       // Advanced button hover/click animations
       if (searchButton.value) {
         const buttonHoverTimeline = createTimeline({
-          defaults: { duration: 300, ease: 'out(2)' }
-        })
-        
+          defaults: { duration: 300, ease: "out(2)" },
+        });
+
         const buttonClickTimeline = createTimeline({
-          defaults: { duration: 150, ease: 'out(3)' }
-        })
+          defaults: { duration: 150, ease: "out(3)" },
+        });
 
-        searchButton.value.addEventListener('mouseenter', () => {
+        searchButton.value.addEventListener("mouseenter", () => {
           buttonHoverTimeline
-            .add(searchButton.value, {
-              scale: [1, 1.08],
-              boxShadow: [
-                '0 0 0 rgba(255, 140, 66, 0)',
-                '0 0 35px rgba(255, 140, 66, 0.6)'
-              ],
-              rotateX: [0, -5]
-            }, 0)
-            .add(searchButton.value, {
-              y: [0, -3]
-            }, 0)
-        })
+            .add(
+              searchButton.value,
+              {
+                scale: [1, 1.08],
+                boxShadow: [
+                  "0 0 0 rgba(255, 140, 66, 0)",
+                  "0 0 35px rgba(255, 140, 66, 0.6)",
+                ],
+                rotateX: [0, -5],
+              },
+              0
+            )
+            .add(
+              searchButton.value,
+              {
+                y: [0, -3],
+              },
+              0
+            );
+        });
 
-        searchButton.value.addEventListener('mouseleave', () => {
+        searchButton.value.addEventListener("mouseleave", () => {
           buttonHoverTimeline
-            .add(searchButton.value, {
-              scale: [1.08, 1],
-              boxShadow: [
-                '0 0 35px rgba(255, 140, 66, 0.6)',
-                '0 0 0 rgba(255, 140, 66, 0)'
-              ],
-              rotateX: [-5, 0]
-            }, 0)
-            .add(searchButton.value, {
-              y: [-3, 0]
-            }, 0)
-        })
+            .add(
+              searchButton.value,
+              {
+                scale: [1.08, 1],
+                boxShadow: [
+                  "0 0 35px rgba(255, 140, 66, 0.6)",
+                  "0 0 0 rgba(255, 140, 66, 0)",
+                ],
+                rotateX: [-5, 0],
+              },
+              0
+            )
+            .add(
+              searchButton.value,
+              {
+                y: [-3, 0],
+              },
+              0
+            );
+        });
 
-        searchButton.value.addEventListener('mousedown', () => {
-          buttonClickTimeline
-            .add(searchButton.value, {
+        searchButton.value.addEventListener("mousedown", () => {
+          buttonClickTimeline.add(
+            searchButton.value,
+            {
               scale: [1.08, 0.95],
-              rotateX: [5, -5]
-            }, 0)
-        })
+              rotateX: [5, -5],
+            },
+            0
+          );
+        });
 
-        searchButton.value.addEventListener('mouseup', () => {
-          buttonClickTimeline
-            .add(searchButton.value, {
+        searchButton.value.addEventListener("mouseup", () => {
+          buttonClickTimeline.add(
+            searchButton.value,
+            {
               scale: [0.95, 1.08],
-              rotateX: [-5, 5]
-            }, 0)
-        })
+              rotateX: [-5, 5],
+            },
+            0
+          );
+        });
       }
 
       // Add continuous subtle animations for cyberpunk feel
       const continuousTimeline = createTimeline({
         loop: true,
         alternate: true,
-        playbackRate: 0.3
-      })
+        playbackRate: 0.3,
+      });
 
       if (searchCard.value) {
-        continuousTimeline
-          .add(searchCard.value, {
+        continuousTimeline.add(
+          searchCard.value,
+          {
             boxShadow: [
-              '0 0 30px rgba(255, 140, 66, 0.3)',
-              '0 0 50px rgba(255, 140, 66, 0.5)'
-            ]
-          }, 0)
+              "0 0 30px rgba(255, 140, 66, 0.3)",
+              "0 0 50px rgba(255, 140, 66, 0.5)",
+            ],
+          },
+          0
+        );
       }
 
       // Create Animatable instances for interactive effects
       if (searchIcon.value) {
         logoAnimatable = createAnimatable(searchIcon.value, {
-          x: { duration: 300, ease: 'out(2)' },
-          y: { duration: 300, ease: 'out(2)' },
-          scale: { duration: 200, ease: 'out(3)' },
-          rotate: { duration: 400, ease: 'out(2)' }
-        })
+          x: { duration: 300, ease: "out(2)" },
+          y: { duration: 300, ease: "out(2)" },
+          scale: { duration: 200, ease: "out(3)" },
+          rotate: { duration: 400, ease: "out(2)" },
+        });
       }
 
       if (searchCard.value) {
         cardAnimatable = createAnimatable(searchCard.value, {
-          x: { duration: 200, ease: 'out(2)' },
-          y: { duration: 200, ease: 'out(2)' },
-          rotateX: { duration: 300, ease: 'out(2)' },
-          rotateY: { duration: 300, ease: 'out(2)' },
-          scale: { duration: 150, ease: 'out(3)' }
-        })
+          x: { duration: 200, ease: "out(2)" },
+          y: { duration: 200, ease: "out(2)" },
+          rotateX: { duration: 300, ease: "out(2)" },
+          rotateY: { duration: 300, ease: "out(2)" },
+          scale: { duration: 150, ease: "out(3)" },
+        });
       }
-
-    }
+    };
 
     // Optimized World Globe Animations - removed duplicate animations to reduce lag
     const initGlobeAnimations = async () => {
-      await nextTick()
+      await nextTick();
 
       // Simple globe rotation (removed conflicting pulsing animation)
       if (globeCircle.value) {
         animate(globeCircle.value, {
           rotate: [0, 360],
-          ease: 'linear',
+          ease: "linear",
           duration: 30000,
-          loop: true
-        })
+          loop: true,
+        });
       }
 
       // Drawable longitude and latitude lines (optimized durations)
-      const longitudeLines = [longitude1.value, longitude2.value, longitude3.value].filter(Boolean)
+      const longitudeLines = [
+        longitude1.value,
+        longitude2.value,
+        longitude3.value,
+      ].filter(Boolean);
       longitudeLines.forEach((line, index) => {
-        const drawable = svg.createDrawable(line)[0]
+        const drawable = svg.createDrawable(line)[0];
         animate(drawable, {
-          draw: ['0 0', '0 1', '1 1'],
-          ease: 'inOutQuad',
+          draw: ["0 0", "0 1", "1 1"],
+          ease: "inOutQuad",
           duration: 4000,
           delay: index * 600,
-          loop: true
-        })
-      })
+          loop: true,
+        });
+      });
 
-      const latitudeLines = [latitude1.value, latitude2.value, latitude3.value].filter(Boolean)
+      const latitudeLines = [
+        latitude1.value,
+        latitude2.value,
+        latitude3.value,
+      ].filter(Boolean);
       latitudeLines.forEach((line, index) => {
-        const drawable = svg.createDrawable(line)[0]
+        const drawable = svg.createDrawable(line)[0];
         animate(drawable, {
-          draw: ['0 0', '0 1', '1 1'],
-          ease: 'inOutQuad',
+          draw: ["0 0", "0 1", "1 1"],
+          ease: "inOutQuad",
           duration: 5000,
           delay: index * 800,
-          loop: true
-        })
-      })
+          loop: true,
+        });
+      });
 
       // Removed conflicting motion path animations for globe elements
       // Only animate the motion paths themselves (drawing effect)
-      const motionPaths = [orbitPath.value, motionPath1.value, motionPath2.value, motionPath3.value].filter(Boolean)
+      const motionPaths = [
+        orbitPath.value,
+        motionPath1.value,
+        motionPath2.value,
+        motionPath3.value,
+      ].filter(Boolean);
       motionPaths.forEach((path, index) => {
         if (path) {
-          const drawable = svg.createDrawable(path)[0]
+          const drawable = svg.createDrawable(path)[0];
           animate(drawable, {
-            draw: '0 1',
-            ease: 'linear',
+            draw: "0 1",
+            ease: "linear",
             duration: 12000,
             loop: true,
-            delay: index * 1500
-          })
+            delay: index * 1500,
+          });
         }
-      })
-    }
+      });
+    };
 
     const searchTutors = async () => {
-      isLoading.value = true
-      currentPage.value = 1
+      isLoading.value = true;
+      currentPage.value = 1;
 
       // Advanced loading animation for button
       if (searchButton.value) {
         const loadingTimeline = createTimeline({
           loop: true,
-          playbackRate: 1.5
-        })
+          playbackRate: 1.5,
+        });
 
         loadingTimeline
-          .add(searchButton.value, {
-            scale: [1, 0.95, 1],
-            rotateX: [0, 5, 0],
-            boxShadow: [
-              '0 0 20px rgba(255, 140, 66, 0.3)',
-              '0 0 30px rgba(255, 140, 66, 0.5)',
-              '0 0 20px rgba(255, 140, 66, 0.3)'
-            ]
-          }, 0)
-          .add(searchButton.value, {
-            y: [0, -2, 0]
-          }, 0)
+          .add(
+            searchButton.value,
+            {
+              scale: [1, 0.95, 1],
+              rotateX: [0, 5, 0],
+              boxShadow: [
+                "0 0 20px rgba(255, 140, 66, 0.3)",
+                "0 0 30px rgba(255, 140, 66, 0.5)",
+                "0 0 20px rgba(255, 140, 66, 0.3)",
+              ],
+            },
+            0
+          )
+          .add(
+            searchButton.value,
+            {
+              y: [0, -2, 0],
+            },
+            0
+          );
       }
 
       try {
         // Build query parameters
-        const params = new URLSearchParams()
-        params.append('type', 'tutor')
-        params.append('page', currentPage.value)
-        params.append('limit', tutorsPerPage)
+        const params = new URLSearchParams();
+        params.append("type", "tutor");
+        params.append("page", currentPage.value);
+        params.append("limit", tutorsPerPage);
 
-        if (filters.subject) params.append('subject', filters.subject)
-        if (filters.level) params.append('level', filters.level)
-        if (filters.location) params.append('location', filters.location)
-        if (filters.minRate) params.append('minRate', filters.minRate)
-        if (filters.maxRate) params.append('maxRate', filters.maxRate)
+        if (filters.subject) params.append("subject", filters.subject);
+        if (filters.level) params.append("level", filters.level);
+        if (filters.location) params.append("location", filters.location);
+        if (filters.minRate) params.append("minRate", filters.minRate);
+        if (filters.maxRate) params.append("maxRate", filters.maxRate);
 
         // Fetch tutors from API
-        const response = await fetch(`http://localhost:3003/profiles/search?${params}`)
+        const response = await fetch(
+          `http://localhost:3003/profiles/search?${params}`
+        );
         if (!response.ok) {
-          throw new Error('Failed to fetch tutors')
+          throw new Error("Failed to fetch tutors");
         }
 
-        const data = await response.json()
-        console.log('API Response:', data)
+        const data = await response.json();
+        console.log("API Response:", data);
 
         // Transform API data to frontend format
-        allTutors.value = data.profiles.map(profile => ({
+        allTutors.value = data.profiles.map((profile) => ({
           id: profile.user_id,
-          name: `${profile.users?.first_name || ''} ${profile.users?.last_name || ''}`.trim() || 'Unknown Tutor',
+          name:
+            `${profile.users?.first_name || ""} ${
+              profile.users?.last_name || ""
+            }`.trim() || "Unknown Tutor",
           subjects: profile.subjects || [],
           levels: profile.levels || [],
-          rating: 5, // TODO: Get from reviews system
-          reviews: 0, // TODO: Get from reviews system
+          rating: profile.average_rating || 0,
+          reviews: profile.total_reviews || 0,
           hourlyRate: profile.hourly_rate || 0,
-          experience: profile.experience_years >= 5 ? '5+' : profile.experience_years >= 3 ? '3-5' : '1-2',
-          bio: profile.bio || profile.headline || 'No bio available',
-          location: profile.location?.address || profile.preferred_locations?.[0] || 'Singapore',
-          teachingMode: profile.teaching_mode?.[0] || 'both',
-          availability: ['now'], // TODO: Get from availability system
-          avatar: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE0MCIgcj0iNTUiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE2MCAyNDBDMTYwIDIyMC45MDkgMTgwLjkwOSAyMDAgMjA3IDIwMEgyMTlDMjQ1LjA5MSAyMDAgMjY2IDIyMC45MDkgMjY2IDI0MFYzMjBIMTYwVjI0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg=='
-        }))
+          experience:
+            profile.experience_years >= 5
+              ? "5+"
+              : profile.experience_years >= 3
+              ? "3-5"
+              : "1-2",
+          bio: profile.bio || profile.headline || "No bio available",
+          location:
+            profile.location?.address ||
+            profile.preferred_locations?.[0] ||
+            "Singapore",
+          teachingMode: profile.teaching_mode?.[0] || "both",
+          availability: ["now"], // TODO: Get from availability system
+          avatar:
+            "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDQwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE0MCIgcj0iNTUiIGZpbGw9IiM5Q0EzQUYiLz4KPHBhdGggZD0iTTE2MCAyNDBDMTYwIDIyMC45MDkgMTgwLjkwOSAyMDAgMjA3IDIwMEgyMTlDMjQ1LjA5MSAyMDAgMjY2IDIyMC45MDkgMjY2IDI0MFYzMjBIMTYwVjI0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg==",
+        }));
 
         // Apply client-side filters for ratings, experience, availability
-        let filtered = allTutors.value
+        let filtered = allTutors.value;
 
         // Rating filter
         if (filters.ratings.length > 0) {
-          filtered = filtered.filter(tutor =>
+          filtered = filtered.filter((tutor) =>
             filters.ratings.includes(tutor.rating)
-          )
+          );
         }
 
         // Experience filter
         if (filters.experience.length > 0) {
-          filtered = filtered.filter(tutor =>
+          filtered = filtered.filter((tutor) =>
             filters.experience.includes(tutor.experience)
-          )
+          );
         }
 
         // Availability filter
         if (filters.availability.length > 0) {
-          filtered = filtered.filter(tutor =>
-            filters.availability.some(avail => tutor.availability.includes(avail))
-          )
+          filtered = filtered.filter((tutor) =>
+            filters.availability.some((avail) =>
+              tutor.availability.includes(avail)
+            )
+          );
         }
 
         // Apply sorting
-        if (sortBy.value === 'rating') {
-          filtered.sort((a, b) => b.rating - a.rating)
-        } else if (sortBy.value === 'price-low') {
-          filtered.sort((a, b) => a.hourlyRate - b.hourlyRate)
-        } else if (sortBy.value === 'price-high') {
-          filtered.sort((a, b) => b.hourlyRate - a.hourlyRate)
-        } else if (sortBy.value === 'experience') {
-          const expOrder = { '5+': 3, '3-5': 2, '1-2': 1 }
-          filtered.sort((a, b) => expOrder[b.experience] - expOrder[a.experience])
+        if (sortBy.value === "rating") {
+          filtered.sort((a, b) => b.rating - a.rating);
+        } else if (sortBy.value === "price-low") {
+          filtered.sort((a, b) => a.hourlyRate - b.hourlyRate);
+        } else if (sortBy.value === "price-high") {
+          filtered.sort((a, b) => b.hourlyRate - a.hourlyRate);
+        } else if (sortBy.value === "experience") {
+          const expOrder = { "5+": 3, "3-5": 2, "1-2": 1 };
+          filtered.sort(
+            (a, b) => expOrder[b.experience] - expOrder[a.experience]
+          );
         }
 
         // Paginate results
-        totalFilteredTutors.value = filtered.length
-        tutors.value = filtered.slice(0, tutorsPerPage)
-        console.log(`Found ${filtered.length} tutors after filtering, showing ${tutors.value.length}`)
+        totalFilteredTutors.value = filtered.length;
+        tutors.value = filtered.slice(0, tutorsPerPage);
+        console.log(
+          `Found ${filtered.length} tutors after filtering, showing ${tutors.value.length}`
+        );
 
         // Animate tutor cards entrance
-        animateTutorCards()
+        animateTutorCards();
       } catch (error) {
-        console.error('Error fetching tutors:', error)
-        tutors.value = []
-        allTutors.value = []
-        totalFilteredTutors.value = 0
+        console.error("Error fetching tutors:", error);
+        tutors.value = [];
+        allTutors.value = [];
+        totalFilteredTutors.value = 0;
       } finally {
-        isLoading.value = false
+        isLoading.value = false;
       }
-    }
+    };
 
     // Get dynamic count of tutors by rating
     const getRatingCount = (rating) => {
-      return allTutors.value.filter(tutor => tutor.rating === rating).length
-    }
+      return allTutors.value.filter((tutor) => tutor.rating === rating).length;
+    };
 
     // Animate tutor cards entrance
     const animateTutorCards = async () => {
-      await nextTick()
-      
-      const tutorCards = document.querySelectorAll('.cyberpunk-tutor-card')
+      await nextTick();
+
+      const tutorCards = document.querySelectorAll(".cyberpunk-tutor-card");
       tutorCards.forEach((card, index) => {
         const cardTimeline = createTimeline({
-          defaults: { duration: 600, ease: 'out(3)' }
-        })
-        
-        cardTimeline
-          .add(card, {
+          defaults: { duration: 600, ease: "out(3)" },
+        });
+
+        cardTimeline.add(
+          card,
+          {
             opacity: [0, 1],
             y: [50, 0],
             scale: [0.9, 1],
             rotateX: [15, 0],
             rotateY: [10, 0],
-            filter: ['blur(5px)', 'blur(0px)'],
+            filter: ["blur(5px)", "blur(0px)"],
             boxShadow: [
-              '0 0 0 rgba(255, 140, 66, 0)',
-              '0 0 20px rgba(255, 140, 66, 0.3)'
-            ]
-          }, index * 200)
-      })
-    }
+              "0 0 0 rgba(255, 140, 66, 0)",
+              "0 0 20px rgba(255, 140, 66, 0.3)",
+            ],
+          },
+          index * 200
+        );
+      });
+    };
 
     const clearFilters = () => {
-      Object.keys(filters).forEach(key => {
+      Object.keys(filters).forEach((key) => {
         if (Array.isArray(filters[key])) {
-          filters[key] = []
+          filters[key] = [];
         } else {
-          filters[key] = ''
+          filters[key] = "";
         }
-      })
-    }
+      });
+    };
 
     const loadMore = () => {
       // Apply client-side filters for ratings, experience, availability
-      let filtered = allTutors.value
+      let filtered = allTutors.value;
 
       // Rating filter
       if (filters.ratings.length > 0) {
-        filtered = filtered.filter(tutor =>
+        filtered = filtered.filter((tutor) =>
           filters.ratings.includes(tutor.rating)
-        )
+        );
       }
 
       // Experience filter
       if (filters.experience.length > 0) {
-        filtered = filtered.filter(tutor =>
+        filtered = filtered.filter((tutor) =>
           filters.experience.includes(tutor.experience)
-        )
+        );
       }
 
       // Availability filter
       if (filters.availability.length > 0) {
-        filtered = filtered.filter(tutor =>
-          filters.availability.some(avail => tutor.availability.includes(avail))
-        )
+        filtered = filtered.filter((tutor) =>
+          filters.availability.some((avail) =>
+            tutor.availability.includes(avail)
+          )
+        );
       }
 
       // Apply sorting
-      if (sortBy.value === 'rating') {
-        filtered.sort((a, b) => b.rating - a.rating)
-      } else if (sortBy.value === 'price-low') {
-        filtered.sort((a, b) => a.hourlyRate - b.hourlyRate)
-      } else if (sortBy.value === 'price-high') {
-        filtered.sort((a, b) => b.hourlyRate - a.hourlyRate)
-      } else if (sortBy.value === 'experience') {
-        const expOrder = { '5+': 3, '3-5': 2, '1-2': 1 }
-        filtered.sort((a, b) => expOrder[b.experience] - expOrder[a.experience])
+      if (sortBy.value === "rating") {
+        filtered.sort((a, b) => b.rating - a.rating);
+      } else if (sortBy.value === "price-low") {
+        filtered.sort((a, b) => a.hourlyRate - b.hourlyRate);
+      } else if (sortBy.value === "price-high") {
+        filtered.sort((a, b) => b.hourlyRate - a.hourlyRate);
+      } else if (sortBy.value === "experience") {
+        const expOrder = { "5+": 3, "3-5": 2, "1-2": 1 };
+        filtered.sort(
+          (a, b) => expOrder[b.experience] - expOrder[a.experience]
+        );
       }
 
       // Load next page
-      currentPage.value++
-      const startIndex = (currentPage.value - 1) * tutorsPerPage
-      const endIndex = currentPage.value * tutorsPerPage
-      const newTutors = filtered.slice(startIndex, endIndex)
+      currentPage.value++;
+      const startIndex = (currentPage.value - 1) * tutorsPerPage;
+      const endIndex = currentPage.value * tutorsPerPage;
+      const newTutors = filtered.slice(startIndex, endIndex);
 
-      tutors.value.push(...newTutors)
+      tutors.value.push(...newTutors);
 
       // Animate new tutor cards
       setTimeout(() => {
-        animateTutorCards()
-      }, 100)
-    }
+        animateTutorCards();
+      }, 100);
+    };
 
     // Dynamic speed control for animations
-    let searchTimeline = null
-    
+    let searchTimeline = null;
+
     // Animatable instances for interactive animations
-    let logoAnimatable = null
-    let cardAnimatable = null
-    
+    let logoAnimatable = null;
+    let cardAnimatable = null;
+
     const adjustAnimationSpeed = (speed) => {
       if (searchTimeline) {
-        searchTimeline.speed = speed
+        searchTimeline.speed = speed;
       }
-    }
+    };
 
     // Add keyboard controls for animation speed
     const handleKeyPress = (event) => {
-      switch(event.key) {
-        case '1':
-          adjustAnimationSpeed(0.5) // Slow
-          break
-        case '2':
-          adjustAnimationSpeed(1.0) // Normal
-          break
-        case '3':
-          adjustAnimationSpeed(2.0) // Fast
-          break
-        case 'p':
+      switch (event.key) {
+        case "1":
+          adjustAnimationSpeed(0.5); // Slow
+          break;
+        case "2":
+          adjustAnimationSpeed(1.0); // Normal
+          break;
+        case "3":
+          adjustAnimationSpeed(2.0); // Fast
+          break;
+        case "p":
           if (searchTimeline) {
-            searchTimeline.paused ? searchTimeline.resume() : searchTimeline.pause()
+            searchTimeline.paused
+              ? searchTimeline.resume()
+              : searchTimeline.pause();
           }
-          break
+          break;
       }
-    }
+    };
 
     // Optimized Interactive mouse movement handlers with throttling
-    let lastMouseMoveTime = 0
-    const throttleDelay = 16 // ~60fps
-    
+    let lastMouseMoveTime = 0;
+    const throttleDelay = 16; // ~60fps
+
     const handleMouseMove = (event) => {
-      const now = Date.now()
-      if (now - lastMouseMoveTime < throttleDelay) return
-      lastMouseMoveTime = now
-      
-      const { clientX, clientY } = event
-      const { innerWidth, innerHeight } = window
-      
+      const now = Date.now();
+      if (now - lastMouseMoveTime < throttleDelay) return;
+      lastMouseMoveTime = now;
+
+      const { clientX, clientY } = event;
+      const { innerWidth, innerHeight } = window;
+
       // Calculate normalized mouse position (-1 to 1)
-      const mouseX = (clientX / innerWidth) * 2 - 1
-      const mouseY = (clientY / innerHeight) * 2 - 1
-      
+      const mouseX = (clientX / innerWidth) * 2 - 1;
+      const mouseY = (clientY / innerHeight) * 2 - 1;
+
       // Logo interactive animation with circular boundary
       if (logoAnimatable && searchIcon.value) {
-        const logoRect = searchIcon.value.getBoundingClientRect()
-        const logoCenterX = logoRect.left + logoRect.width / 2
-        const logoCenterY = logoRect.top + logoRect.height / 2
-        
-        const deltaX = clientX - logoCenterX
-        const deltaY = clientY - logoCenterY
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-        
+        const logoRect = searchIcon.value.getBoundingClientRect();
+        const logoCenterX = logoRect.left + logoRect.width / 2;
+        const logoCenterY = logoRect.top + logoRect.height / 2;
+
+        const deltaX = clientX - logoCenterX;
+        const deltaY = clientY - logoCenterY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
         if (distance > 0) {
-          const maxMovement = 8
-          const movementRatio = Math.min(distance / 200, 1)
-          const constrainedMovement = movementRatio * maxMovement
-          
-          const angle = Math.atan2(deltaY, deltaX)
-          const constrainedX = Math.cos(angle) * constrainedMovement
-          const constrainedY = Math.sin(angle) * constrainedMovement
-          
-          const scale = 1 + (movementRatio * 0.1)
-          const rotate = constrainedX * 0.5
-          
-          logoAnimatable.x(constrainedX).y(constrainedY).scale(scale).rotate(rotate)
+          const maxMovement = 8;
+          const movementRatio = Math.min(distance / 200, 1);
+          const constrainedMovement = movementRatio * maxMovement;
+
+          const angle = Math.atan2(deltaY, deltaX);
+          const constrainedX = Math.cos(angle) * constrainedMovement;
+          const constrainedY = Math.sin(angle) * constrainedMovement;
+
+          const scale = 1 + movementRatio * 0.1;
+          const rotate = constrainedX * 0.5;
+
+          logoAnimatable
+            .x(constrainedX)
+            .y(constrainedY)
+            .scale(scale)
+            .rotate(rotate);
         }
       }
-      
+
       // Card interactive animation (simplified - removed scale)
       if (cardAnimatable) {
-        const cardX = mouseX * 5
-        const cardY = mouseY * 3
-        const cardRotateX = mouseY * 2
-        const cardRotateY = mouseX * 3
-        
-        cardAnimatable.x(cardX).y(cardY).rotateX(cardRotateX).rotateY(cardRotateY)
+        const cardX = mouseX * 5;
+        const cardY = mouseY * 3;
+        const cardRotateX = mouseY * 2;
+        const cardRotateY = mouseX * 3;
+
+        cardAnimatable
+          .x(cardX)
+          .y(cardY)
+          .rotateX(cardRotateX)
+          .rotateY(cardRotateY);
       }
-      
+
       // Globe interactive animation (simplified)
       if (globeCircle.value) {
-        const globeRotateY = mouseX * 3
-        
-        globeCircle.value.style.transform = `rotateY(${globeRotateY}deg)`
+        const globeRotateY = mouseX * 3;
+
+        globeCircle.value.style.transform = `rotateY(${globeRotateY}deg)`;
       }
-    }
+    };
 
     // Mouse leave handler to reset animations
     const handleMouseLeave = () => {
       if (logoAnimatable) {
-        logoAnimatable.x(0).y(0).scale(1).rotate(0)
+        logoAnimatable.x(0).y(0).scale(1).rotate(0);
       }
       if (cardAnimatable) {
-        cardAnimatable.x(0).y(0).rotateX(0).rotateY(0)
+        cardAnimatable.x(0).y(0).rotateX(0).rotateY(0);
       }
       if (globeCircle.value) {
-        globeCircle.value.style.transform = 'rotateY(0deg)'
+        globeCircle.value.style.transform = "rotateY(0deg)";
       }
-    }
+    };
 
     // Watch filters and sortBy to trigger automatic search
-    let searchTimeout = null
-    watch([filters, sortBy], () => {
-      // Debounce search to avoid too many calls
-      if (searchTimeout) clearTimeout(searchTimeout)
-      searchTimeout = setTimeout(() => {
-        console.log('Filters changed, searching...', filters)
-        searchTutors()
-      }, 300)
-    }, { deep: true })
+    let searchTimeout = null;
+    watch(
+      [filters, sortBy],
+      () => {
+        // Debounce search to avoid too many calls
+        if (searchTimeout) clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          console.log("Filters changed, searching...", filters);
+          searchTutors();
+        }, 300);
+      },
+      { deep: true }
+    );
 
     onMounted(() => {
       // All animations disabled
-      searchTutors()
-    })
+      searchTutors();
+    });
 
     return {
       // Template refs
@@ -1070,10 +1339,10 @@ export default {
       searchTutors,
       clearFilters,
       loadMore,
-      getRatingCount
-    }
-  }
-}
+      getRatingCount,
+    };
+  },
+};
 </script>
 
 <style scoped>
@@ -1194,13 +1463,13 @@ export default {
 
 .orbit-path {
   opacity: 0.1;
-  stroke-dasharray: 5,5;
+  stroke-dasharray: 5, 5;
   animation: dash 20s linear infinite;
 }
 
 .motion-path {
   opacity: 0.05;
-  stroke-dasharray: 3,3;
+  stroke-dasharray: 3, 3;
   animation: dash 15s linear infinite reverse;
 }
 
@@ -1223,13 +1492,18 @@ export default {
 }
 
 .cyberpunk-search-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(45deg, transparent, rgba(255, 140, 66, 0.05), transparent);
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 140, 66, 0.05),
+    transparent
+  );
   pointer-events: none;
 }
 
@@ -1357,13 +1631,18 @@ select.cyberpunk-input option {
 }
 
 .cyberpunk-search-btn::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
   transition: left 0.5s ease;
 }
 
@@ -1497,7 +1776,7 @@ select.cyberpunk-input option {
 }
 
 .cyberpunk-checkbox-input:checked::after {
-  content: '✓';
+  content: "✓";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -1652,8 +1931,12 @@ select.cyberpunk-input option {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive Design */
@@ -1662,23 +1945,23 @@ select.cyberpunk-input option {
     margin: 1rem;
     border-radius: 15px;
   }
-  
+
   .cyberpunk-search-title {
     font-size: 2rem;
   }
-  
+
   .cyberpunk-search-icon {
     width: 60px;
     height: 60px;
     font-size: 1.5rem;
   }
-  
+
   /* Removed unused floating-icon styles */
-  
+
   .cyberpunk-tutor-card .card-body {
     padding: 1.5rem !important;
   }
-  
+
   /* Avatar dimensions are now consistent across all screen sizes */
 }
 </style>

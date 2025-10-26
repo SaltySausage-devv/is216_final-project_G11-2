@@ -373,11 +373,13 @@ app.post('/messaging/conversations', verifyToken, async (req, res) => {
         last_message_at, 
         last_message_content,
         participant1:participant1_id (
+          id,
           first_name,
           last_name,
           user_type
         ),
         participant2:participant2_id (
+          id,
           first_name,
           last_name,
           user_type
@@ -415,11 +417,13 @@ app.post('/messaging/conversations', verifyToken, async (req, res) => {
         last_message_at, 
         last_message_content,
         participant1:participant1_id (
+          id,
           first_name,
           last_name,
           user_type
         ),
         participant2:participant2_id (
+          id,
           first_name,
           last_name,
           user_type
@@ -458,11 +462,13 @@ app.get('/messaging/conversations', verifyToken, async (req, res) => {
       .select(`
         *,
         participant1:participant1_id (
+          id,
           first_name,
           last_name,
           user_type
         ),
         participant2:participant2_id (
+          id,
           first_name,
           last_name,
           user_type

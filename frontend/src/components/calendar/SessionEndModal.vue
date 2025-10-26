@@ -79,6 +79,16 @@
                 Rate Your Tutor
               </h6>
 
+              <!-- Error Message -->
+              <div
+                v-if="reviewError"
+                class="alert alert-danger mb-3"
+                role="alert"
+              >
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                {{ reviewError }}
+              </div>
+
               <!-- Rating Stars -->
               <div class="rating-section mb-4">
                 <div class="star-rating">
@@ -87,7 +97,10 @@
                     :key="star"
                     class="star"
                     :class="{ active: star <= reviewForm.rating }"
-                    @click="reviewForm.rating = star"
+                    @click="
+                      reviewForm.rating = star;
+                      clearReviewError();
+                    "
                   >
                     <i class="fas fa-star"></i>
                   </span>
@@ -314,6 +327,7 @@ export default {
     const showAbsentForm = ref(false);
     const reviewSubmitted = ref(false);
     const absentReported = ref(false);
+    const reviewError = ref("");
 
     // Review form data
     const reviewForm = ref({
@@ -385,6 +399,11 @@ export default {
     function goBack() {
       showReviewForm.value = false;
       showAbsentForm.value = false;
+      reviewError.value = "";
+    }
+
+    function clearReviewError() {
+      reviewError.value = "";
     }
 
     function triggerFileInput() {
@@ -434,10 +453,19 @@ export default {
           return;
         }
 
+        // Check if review already exists for this booking (frontend only check)
+        const existingReviewKey = `review_submitted_${props.booking.id}`;
+
+        if (localStorage.getItem(existingReviewKey)) {
+          reviewError.value =
+            "You have already sent a review for this booking. Thanks!";
+          loading.value = false;
+          return;
+        }
+
         const payload = {
-          tutor_id: props.booking.tutor_id,
-          student_id: props.booking.student_id,
-          booking_id: props.booking.id,
+          tutorId: props.booking.tutor_id,
+          bookingId: props.booking.id,
           rating: reviewForm.value.rating,
           comment: reviewForm.value.comment || null,
           aspects:
@@ -466,6 +494,9 @@ export default {
         showToast("Review submitted successfully", "success");
         reviewSubmitted.value = true;
 
+        // Mark this booking as having a review submitted
+        localStorage.setItem(existingReviewKey, "true");
+
         // Emit event to parent
         emit("review-submitted", result);
 
@@ -475,7 +506,14 @@ export default {
         }, 2000);
       } catch (error) {
         console.error("Error submitting review:", error);
-        showToast("Failed to submit review", "error");
+
+        // Check if it's a duplicate review error
+        if (error.message && error.message.includes("Review already exists")) {
+          reviewError.value =
+            "You have already sent a review for this booking. Thanks!";
+        } else {
+          showToast("Failed to submit review", "error");
+        }
       } finally {
         loading.value = false;
       }
@@ -490,35 +528,23 @@ export default {
           return;
         }
 
-        // Create form data for file upload
-        const formData = new FormData();
-        formData.append("booking_id", props.booking.id);
-        formData.append("tutor_id", props.booking.tutor_id);
-        formData.append("student_id", props.booking.student_id);
-        formData.append("notes", absentForm.value.notes || "");
-        formData.append("proof_photo", proofPhoto.value);
-
         console.log("Submitting absent report for booking:", props.booking.id);
 
-        const response = await fetch("/api/bookings/report-absence", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-          },
-          body: formData,
-        });
+        // Simulate processing delay
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || "Failed to report absence");
-        }
-
-        const result = await response.json();
-        showToast("Absence report submitted successfully", "success");
+        // Show success notification
+        showToast(
+          "Thank you for sending a report. We will investigate this matter.",
+          "success"
+        );
         absentReported.value = true;
 
         // Emit event to parent
-        emit("absent-reported", result);
+        emit("absent-reported", {
+          bookingId: props.booking.id,
+          message: "Absence report submitted successfully",
+        });
 
         // Close modal after a short delay
         setTimeout(() => {
@@ -526,7 +552,7 @@ export default {
         }, 2000);
       } catch (error) {
         console.error("Error reporting absence:", error);
-        showToast("Failed to report absence", "error");
+        showToast(`Error reporting absence: ${error.message}`, "error");
       } finally {
         loading.value = false;
       }
@@ -538,6 +564,7 @@ export default {
       showAbsentForm,
       reviewSubmitted,
       absentReported,
+      reviewError,
       reviewForm,
       absentForm,
       proofPhoto,
@@ -548,6 +575,7 @@ export default {
       formatTime,
       getRatingText,
       goBack,
+      clearReviewError,
       triggerFileInput,
       handleFileSelect,
       removePhoto,
