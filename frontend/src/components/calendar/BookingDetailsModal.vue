@@ -178,7 +178,7 @@
           <div class="d-flex gap-2 flex-wrap">
             <button
               v-if="canReschedule"
-              class="btn btn-outline-warning"
+              class="btn btn-cyberpunk"
               @click="showRescheduleModal = true"
             >
               <i class="fas fa-calendar-alt me-2"></i>Reschedule
@@ -186,7 +186,7 @@
 
             <button
               v-if="canCancel"
-              class="btn btn-outline-danger"
+              class="btn btn-cyberpunk"
               @click="showCancelModal = true"
             >
               <i class="fas fa-times me-2"></i>Cancel
@@ -194,7 +194,7 @@
 
             <button
               v-if="canConfirm"
-              class="btn btn-success"
+              class="btn btn-cyberpunk"
               @click="confirmBooking"
               :disabled="loading"
             >
@@ -207,7 +207,7 @@
 
             <button
               v-if="canComplete"
-              class="btn btn-primary"
+              class="btn btn-cyberpunk"
               @click="completeBooking"
               :disabled="loading"
             >
@@ -220,7 +220,7 @@
 
             <button
               v-if="canJoinMeeting"
-              class="btn btn-success"
+              class="btn btn-cyberpunk"
               @click="joinMeeting"
             >
               <i class="fas fa-video me-2"></i>Join Meeting
@@ -230,7 +230,7 @@
         <div class="modal-footer">
           <button
             type="button"
-            class="btn btn-secondary"
+            class="btn btn-cyberpunk"
             @click="$emit('close')"
           >
             Close
@@ -578,33 +578,31 @@ export default {
 }
 
 .modal-content {
-  background: rgba(45, 45, 68, 0.98) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 107, 53, 0.2);
+  /* Match calendar theme: darker background with orange border */
+  background: rgba(26, 26, 26, 0.9) !important;
+  backdrop-filter: blur(12px);
+  border: 2px solid var(--cyber-orange, #ff8c42);
   border-radius: 20px;
   color: #ffffff;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 107, 53, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0,0,0,0.1);
   overflow: hidden;
 }
 
 .modal-header {
-  background: linear-gradient(
-    135deg,
-    rgba(58, 58, 82, 0.95) 0%,
-    rgba(45, 45, 68, 0.95) 100%
-  );
-  border-bottom: 1px solid rgba(255, 107, 53, 0.2);
+  /* Header uses subtle darker strip and orange separator to match calendar */
+  background: linear-gradient(135deg, rgba(28,28,28,0.95) 0%, rgba(24,24,24,0.95) 100%);
+  border-bottom: 1px solid rgba(255, 140, 66, 0.08);
   border-radius: 20px 20px 0 0;
-  padding: 1.75rem 2rem;
+  padding: 1.25rem 1.5rem;
 }
 
 .modal-title {
-  color: #ff6b35;
+  color: var(--cyber-orange, #ff8c42);
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: -0.02em;
   margin: 0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .btn-close {
@@ -620,22 +618,19 @@ export default {
 }
 
 .modal-body {
-  background: rgba(45, 45, 68, 0.98);
+  /* Body matches the darker calendar container */
+  background: rgba(26, 26, 26, 0.9);
   color: #ffffff;
-  padding: 2rem;
+  padding: 1.75rem 1.5rem;
   font-size: 0.95rem;
   line-height: 1.6;
 }
 
 .modal-footer {
-  background: linear-gradient(
-    135deg,
-    rgba(58, 58, 82, 0.95) 0%,
-    rgba(45, 45, 68, 0.95) 100%
-  );
-  border-top: 1px solid rgba(255, 107, 53, 0.2);
+  background: linear-gradient(135deg, rgba(28,28,28,0.95) 0%, rgba(24,24,24,0.95) 100%);
+  border-top: 1px solid rgba(255, 140, 66, 0.08);
   border-radius: 0 0 20px 20px;
-  padding: 1.5rem 2rem;
+  padding: 1rem 1.25rem;
 }
 
 .badge {

@@ -64,6 +64,13 @@ export default {
     const calendarOptions = computed(() => ({
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
       initialView: "dayGridMonth",
+      // Use human-friendly, capitalized labels for the view buttons
+      buttonText: {
+        month: 'Month',
+        week: 'Week',
+        day: 'Day',
+        today: 'Current Month'
+      },
       headerToolbar: {
         left: "prev,next today",
         center: "title",
