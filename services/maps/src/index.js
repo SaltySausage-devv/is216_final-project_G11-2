@@ -85,6 +85,9 @@ const nearbySearchSchema = Joi.object({
   keyword: Joi.string().optional()
 });
 
+// Handle all OPTIONS requests explicitly
+app.options('*', cors());
+
 // Routes
 app.post('/maps/geocode', async (req, res) => {
   try {
