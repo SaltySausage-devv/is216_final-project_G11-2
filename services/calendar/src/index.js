@@ -33,10 +33,11 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Rate limiting
+// Rate limiting - skip for OPTIONS requests
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100
+  max: 100,
+  skip: (req) => req.method === 'OPTIONS'
 });
 
 // Helper function to send messages via messaging service (with Socket.IO broadcast)

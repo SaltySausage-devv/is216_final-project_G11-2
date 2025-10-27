@@ -58,10 +58,11 @@ app.use(express.json());
 //   }
 // });
 
-// Rate limiting
+// Rate limiting - skip for OPTIONS requests
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000 // Increased for development
+  max: 1000, // Increased for development
+  skip: (req) => req.method === 'OPTIONS'
 });
 app.use(limiter);
 

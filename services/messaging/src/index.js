@@ -74,7 +74,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Rate limiting - More generous for development
+// Rate limiting - More generous for development, skip for OPTIONS requests
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1000, // Increased from 100 to 1000 requests per window
@@ -82,7 +82,8 @@ const limiter = rateLimit({
     error: 'Too many requests, please try again later'
   },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS'
 });
 app.use(limiter);
 
