@@ -50,9 +50,10 @@ class MessagingService {
       this.disconnect()
     }
 
-    console.log('🔌 MESSAGING SERVICE: Creating new socket connection to http://localhost:3005');
+    const messagingUrl = import.meta.env.VITE_MESSAGING_SERVICE_URL || 'http://localhost:3005'
+    console.log('🔌 MESSAGING SERVICE: Creating new socket connection to', messagingUrl);
     
-    this.socket = io('http://localhost:3005', {
+    this.socket = io(messagingUrl, {
       auth: {
         token: token
       },
