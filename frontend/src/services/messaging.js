@@ -1,37 +1,10 @@
 import { io } from 'socket.io-client'
-import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
 import { getApiUrl } from '../utils/api-helper'
+import api from './api'
 
-// Create a separate API client for messaging service
-const messagingApi = axios.create({
-  baseURL: '/api',
-  timeout: 30000 // Increased to 30 seconds for large message histories
-})
-
-// Add auth interceptor for messaging API
-messagingApi.interceptors.request.use(
-  (config) => {
-    // Construct full path (baseURL + url)
-    const fullPath = config.baseURL && config.url ? config.baseURL + config.url : config.url
-    
-    // Rewrite URL for production (full backend URLs)
-    if (fullPath && fullPath.startsWith('/api/')) {
-      config.url = getApiUrl(fullPath)
-      config.baseURL = '' // Clear baseURL since we now have full URL
-    }
-    
-    const authStore = useAuthStore()
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
-    }
-    
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
+// Use the main api instance which already has auth configured
+const messagingApi = api
 
 class MessagingService {
   constructor() {
