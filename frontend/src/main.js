@@ -12,7 +12,9 @@ const originalFetch = window.fetch
 window.fetch = function(url, options) {
   // Rewrite /api/ URLs to full backend URLs in production
   if (typeof url === 'string' && url.startsWith('/api/')) {
+    console.log('🌐 FETCH: Intercepting URL:', url)
     url = getApiUrl(url)
+    console.log('🌐 FETCH: Rewritten to:', url)
   }
   return originalFetch(url, options)
 }
