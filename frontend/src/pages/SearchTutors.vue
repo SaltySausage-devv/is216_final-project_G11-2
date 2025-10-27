@@ -234,28 +234,30 @@
                 </div>
 
                 <div class="col-12">
-                  <button
-                    ref="searchButton"
-                    type="submit"
-                    class="cyberpunk-search-btn"
-                    :disabled="isLoading"
-                  >
-                    <span
-                      v-if="isLoading"
-                      class="cyberpunk-spinner me-2"
-                    ></span>
-                    <i v-else class="fas fa-search me-2"></i>
-                    {{ isLoading ? "Searching..." : "SEARCH TUTORS" }}
-                  </button>
-                  <button
-                    ref="clearButton"
-                    type="button"
-                    @click="clearFilters"
-                    class="cyberpunk-clear-btn ms-2"
-                  >
-                    <i class="fas fa-times me-2"></i>
-                    Clear Filters
-                  </button>
+                  <div class="search-buttons-container">
+                    <button
+                      ref="searchButton"
+                      type="submit"
+                      class="cyberpunk-search-btn"
+                      :disabled="isLoading"
+                    >
+                      <span
+                        v-if="isLoading"
+                        class="cyberpunk-spinner me-2"
+                      ></span>
+                      <i v-else class="fas fa-search me-2"></i>
+                      {{ isLoading ? "Searching..." : "SEARCH TUTORS" }}
+                    </button>
+                    <button
+                      ref="clearButton"
+                      type="button"
+                      @click="clearFilters"
+                      class="cyberpunk-clear-btn"
+                    >
+                      <i class="fas fa-times me-2"></i>
+                      Clear Filters
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
@@ -275,88 +277,90 @@
               <h6 class="cyberpunk-filter-title mb-0">Refine Search</h6>
             </div>
             <div class="card-body">
-              <!-- Rating Filter -->
-              <div class="mb-4">
-                <h6 class="cyberpunk-filter-label mb-3">Rating</h6>
-                <div
-                  class="cyberpunk-checkbox-group"
-                  v-for="rating in [5, 4, 3, 2, 1]"
-                  :key="rating"
-                >
-                  <div class="cyberpunk-checkbox">
-                    <input
-                      class="cyberpunk-checkbox-input"
-                      type="checkbox"
-                      :id="`rating-${rating}`"
-                      :value="rating"
-                      v-model="filters.ratings"
-                    />
-                    <label
-                      class="cyberpunk-checkbox-label d-flex align-items-center"
-                      :for="`rating-${rating}`"
-                    >
-                      <div class="cyberpunk-rating me-2">
-                        <i
-                          v-for="i in 5"
-                          :key="i"
-                          :class="
-                            i <= rating
-                              ? 'fas fa-star cyberpunk-star'
-                              : 'far fa-star cyberpunk-star-empty'
-                          "
-                        ></i>
-                      </div>
-                      <span class="cyberpunk-text-muted"
-                        >({{ getRatingCount(rating) }})</span
+              <div class="filters-grid">
+                <!-- Rating Filter -->
+                <div class="filter-section">
+                  <h6 class="cyberpunk-filter-label mb-3">Rating</h6>
+                  <div
+                    class="cyberpunk-checkbox-group"
+                    v-for="rating in [5, 4, 3, 2, 1]"
+                    :key="rating"
+                  >
+                    <div class="cyberpunk-checkbox">
+                      <input
+                        class="cyberpunk-checkbox-input"
+                        type="checkbox"
+                        :id="`rating-${rating}`"
+                        :value="rating"
+                        v-model="filters.ratings"
+                      />
+                      <label
+                        class="cyberpunk-checkbox-label d-flex align-items-center"
+                        :for="`rating-${rating}`"
                       >
-                    </label>
+                        <div class="cyberpunk-rating me-2">
+                          <i
+                            v-for="i in 5"
+                            :key="i"
+                            :class="
+                              i <= rating
+                                ? 'fas fa-star cyberpunk-star'
+                                : 'far fa-star cyberpunk-star-empty'
+                            "
+                          ></i>
+                        </div>
+                        <span class="cyberpunk-text-muted"
+                          >({{ getRatingCount(rating) }})</span
+                        >
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Experience Filter -->
-              <div class="mb-4">
-                <h6 class="cyberpunk-filter-label mb-3">Experience</h6>
-                <div class="cyberpunk-checkbox-group">
-                  <div class="cyberpunk-checkbox">
-                    <input
-                      class="cyberpunk-checkbox-input"
-                      type="checkbox"
-                      id="exp-1"
-                      value="1-2"
-                      v-model="filters.experience"
-                    />
-                    <label class="cyberpunk-checkbox-label" for="exp-1"
-                      >1-2 years</label
-                    >
+                <!-- Experience Filter -->
+                <div class="filter-section">
+                  <h6 class="cyberpunk-filter-label mb-3">Experience</h6>
+                  <div class="cyberpunk-checkbox-group">
+                    <div class="cyberpunk-checkbox">
+                      <input
+                        class="cyberpunk-checkbox-input"
+                        type="checkbox"
+                        id="exp-1"
+                        value="1-2"
+                        v-model="filters.experience"
+                      />
+                      <label class="cyberpunk-checkbox-label" for="exp-1"
+                        >1-2 years</label
+                      >
+                    </div>
                   </div>
-                </div>
-                <div class="cyberpunk-checkbox-group">
-                  <div class="cyberpunk-checkbox">
-                    <input
-                      class="cyberpunk-checkbox-input"
-                      type="checkbox"
-                      id="exp-2"
-                      value="3-5"
-                      v-model="filters.experience"
-                    />
-                    <label class="cyberpunk-checkbox-label" for="exp-2"
-                      >3-5 years</label
-                    >
+                  <div class="cyberpunk-checkbox-group">
+                    <div class="cyberpunk-checkbox">
+                      <input
+                        class="cyberpunk-checkbox-input"
+                        type="checkbox"
+                        id="exp-2"
+                        value="3-5"
+                        v-model="filters.experience"
+                      />
+                      <label class="cyberpunk-checkbox-label" for="exp-2"
+                        >3-5 years</label
+                      >
+                    </div>
                   </div>
-                </div>
-                <div class="cyberpunk-checkbox-group">
-                  <div class="cyberpunk-checkbox">
-                    <input
-                      class="cyberpunk-checkbox-input"
-                      type="checkbox"
-                      id="exp-3"
-                      value="5+"
-                      v-model="filters.experience"
-                    />
-                    <label class="cyberpunk-checkbox-label" for="exp-3"
-                      >5+ years</label
-                    >
+                  <div class="cyberpunk-checkbox-group">
+                    <div class="cyberpunk-checkbox">
+                      <input
+                        class="cyberpunk-checkbox-input"
+                        type="checkbox"
+                        id="exp-3"
+                        value="5+"
+                        v-model="filters.experience"
+                      />
+                      <label class="cyberpunk-checkbox-label" for="exp-3"
+                        >5+ years</label
+                      >
+                    </div>
                   </div>
                 </div>
               </div>
@@ -665,6 +669,15 @@ export default {
 
       formFields.forEach(({ ref: fieldRef, delay }) => {
         if (fieldRef.value) {
+          // Skip animation for buttons completely
+          const isButton = fieldRef === searchButton || fieldRef === clearButton;
+          
+          if (isButton) {
+            // Just make it visible without animation
+            fieldRef.value.style.opacity = '1';
+            return;
+          }
+          
           searchTimeline.add(
             fieldRef.value,
             {
@@ -675,10 +688,7 @@ export default {
               rotateY: [-10, 0],
               rotateX: [5, 0],
               filter: ["blur(3px)", "blur(0px)"],
-              boxShadow: [
-                "0 0 0 rgba(255, 140, 66, 0)",
-                "0 0 15px rgba(255, 140, 66, 0.3)",
-              ],
+              boxShadow: ["0 0 0 rgba(255, 140, 66, 0)", "0 0 15px rgba(255, 140, 66, 0.3)"],
             },
             `+=${delay}`
           );
@@ -733,83 +743,7 @@ export default {
       });
 
       // Advanced button hover/click animations
-      if (searchButton.value) {
-        const buttonHoverTimeline = createTimeline({
-          defaults: { duration: 300, ease: "out(2)" },
-        });
-
-        const buttonClickTimeline = createTimeline({
-          defaults: { duration: 150, ease: "out(3)" },
-        });
-
-        searchButton.value.addEventListener("mouseenter", () => {
-          buttonHoverTimeline
-            .add(
-              searchButton.value,
-              {
-                scale: [1, 1.08],
-                boxShadow: [
-                  "0 0 0 rgba(255, 140, 66, 0)",
-                  "0 0 35px rgba(255, 140, 66, 0.6)",
-                ],
-                rotateX: [0, -5],
-              },
-              0
-            )
-            .add(
-              searchButton.value,
-              {
-                y: [0, -3],
-              },
-              0
-            );
-        });
-
-        searchButton.value.addEventListener("mouseleave", () => {
-          buttonHoverTimeline
-            .add(
-              searchButton.value,
-              {
-                scale: [1.08, 1],
-                boxShadow: [
-                  "0 0 35px rgba(255, 140, 66, 0.6)",
-                  "0 0 0 rgba(255, 140, 66, 0)",
-                ],
-                rotateX: [-5, 0],
-              },
-              0
-            )
-            .add(
-              searchButton.value,
-              {
-                y: [-3, 0],
-              },
-              0
-            );
-        });
-
-        searchButton.value.addEventListener("mousedown", () => {
-          buttonClickTimeline.add(
-            searchButton.value,
-            {
-              scale: [1.08, 0.95],
-              rotateX: [5, -5],
-            },
-            0
-          );
-        });
-
-        searchButton.value.addEventListener("mouseup", () => {
-          buttonClickTimeline.add(
-            searchButton.value,
-            {
-              scale: [0.95, 1.08],
-              rotateX: [-5, 5],
-            },
-            0
-          );
-        });
-      }
+      // Search button animations removed for cleaner UI
 
       // Add continuous subtle animations for cyberpunk feel
       const continuousTimeline = createTimeline({
@@ -925,35 +859,7 @@ export default {
       isLoading.value = true;
       currentPage.value = 1;
 
-      // Advanced loading animation for button
-      if (searchButton.value) {
-        const loadingTimeline = createTimeline({
-          loop: true,
-          playbackRate: 1.5,
-        });
-
-        loadingTimeline
-          .add(
-            searchButton.value,
-            {
-              scale: [1, 0.95, 1],
-              rotateX: [0, 5, 0],
-              boxShadow: [
-                "0 0 20px rgba(255, 140, 66, 0.3)",
-                "0 0 30px rgba(255, 140, 66, 0.5)",
-                "0 0 20px rgba(255, 140, 66, 0.3)",
-              ],
-            },
-            0
-          )
-          .add(
-            searchButton.value,
-            {
-              y: [0, -2, 0],
-            },
-            0
-          );
-      }
+      // Loading animation removed
 
       try {
         // Build query parameters
@@ -1614,45 +1520,106 @@ select.cyberpunk-input option {
   padding: 0.5rem;
 }
 
-/* Cyberpunk Buttons */
+/* Filters Grid Layout - Side by side on PHONE view */
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+/* Single column on very small screens only */
+@media (max-width: 400px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Single column in sidebar on large desktop screens */
+@media (min-width: 992px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filter-section {
+  min-width: 0;
+}
+
+.filter-section .cyberpunk-filter-label {
+  font-size: 0.85rem;
+}
+
+/* Search Buttons Container */
+.search-buttons-container {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
+}
+
+.search-buttons-container .cyberpunk-search-btn,
+.search-buttons-container .cyberpunk-clear-btn {
+  flex: 1;
+}
+
+/* Mobile view - side by side with smaller size */
+@media (max-width: 768px) {
+  .search-buttons-container {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+  
+  .search-buttons-container .cyberpunk-search-btn,
+  .search-buttons-container .cyberpunk-clear-btn {
+    flex: 1 1 50% !important;
+    max-width: 50% !important;
+    min-width: 0 !important;
+    width: auto !important;
+    display: inline-block !important;
+    padding: 0.65rem 0.75rem !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* Cyberpunk Buttons - Match Clear Filters style */
 .cyberpunk-search-btn {
-  background: linear-gradient(45deg, var(--cyber-orange), var(--cyber-yellow));
-  border: 2px solid var(--cyber-orange);
-  color: white;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  box-shadow: none;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  padding: 0.75rem 2rem;
-  border-radius: 10px;
-}
-
-.cyberpunk-search-btn::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
-  transition: left 0.5s ease;
-}
-
-.cyberpunk-search-btn:hover::before {
-  left: 100%;
+  background: transparent !important;
+  border: 2px solid var(--cyber-grey-light) !important;
+  color: var(--cyber-text) !important;
+  font-weight: 600 !important;
+  letter-spacing: 1px !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: all 0.3s ease !important;
+  padding: 0.75rem 2rem !important;
+  border-radius: 10px !important;
+  filter: none !important;
 }
 
 .cyberpunk-search-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 35px rgba(255, 140, 66, 0.6);
+  background: transparent !important;
+  border-color: var(--cyber-orange) !important;
+  color: var(--cyber-orange) !important;
+  transform: none !important;
+  box-shadow: 0 0 15px rgba(255, 140, 66, 0.3) !important;
+}
+
+.cyberpunk-search-btn:active {
+  transform: none !important;
+}
+
+.cyberpunk-search-btn:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.cyberpunk-search-btn:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
 }
 
 .cyberpunk-clear-btn {
@@ -1670,6 +1637,11 @@ select.cyberpunk-input option {
   border-color: var(--cyber-orange);
   color: var(--cyber-orange);
   box-shadow: 0 0 15px rgba(255, 140, 66, 0.3);
+}
+
+.cyberpunk-clear-btn:focus {
+  box-shadow: none;
+  outline: none;
 }
 
 .cyberpunk-load-more-btn {

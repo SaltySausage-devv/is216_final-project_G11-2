@@ -28,7 +28,6 @@
                   <div v-else class="avatar-placeholder">
                     <i class="fas fa-user"></i>
                   </div>
-                  <div class="avatar-status" :class="{ 'tutor': user?.userType === 'tutor' }"></div>
                 </div>
 
                 <!-- User Info -->
@@ -498,21 +497,6 @@ export default {
   font-size: 2.5rem;
 }
 
-.avatar-status {
-  position: absolute;
-  bottom: 3px;
-  right: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #10b981;
-  border: 2px solid #fff;
-}
-
-.avatar-status.tutor {
-  background: var(--cyber-orange);
-}
-
 /* Profile Badges */
 .profile-badges {
   display: flex;
@@ -655,9 +639,16 @@ export default {
 .cyberpunk-input-icon {
   position: absolute;
   left: 0.75rem;
-  top: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--cyber-text-muted);
   font-size: 0.875rem;
+}
+
+/* Icon alignment for textareas - align with text */
+.cyberpunk-input-group:has(textarea) .cyberpunk-input-icon {
+  top: 1rem;
+  transform: none;
 }
 
 /* Action Buttons */
@@ -987,16 +978,23 @@ export default {
   .profile-header-content {
     flex-direction: column;
     align-items: center;
-    gap: 2rem;
+    gap: 1.5rem;
     text-align: center;
   }
 
+  .profile-left-section {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
   .profile-header-container {
-    padding: 2rem;
+    padding: 1.5rem;
   }
 
   .profile-badges {
     justify-content: center;
+    flex-wrap: wrap;
   }
 
   .profile-quick-stats {
@@ -1005,11 +1003,12 @@ export default {
   }
 
   .profile-title {
-    font-size: 2rem;
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
   }
 
   .profile-subtitle {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .cyberpunk-avatar {
@@ -1026,23 +1025,35 @@ export default {
   .quick-stat-value {
     font-size: 1.5rem;
   }
+
+  .profile-edit-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 50px;
+    padding: 0.75rem 1.5rem;
+  }
 }
 
 @media (max-width: 480px) {
   .profile-header-container {
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .profile-header-content {
-    gap: 1.5rem;
+    gap: 1rem;
+  }
+
+  .profile-left-section {
+    gap: 1rem;
   }
 
   .profile-title {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
+    line-height: 1.3;
   }
 
   .profile-subtitle {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
   }
 
   .cyberpunk-avatar {
@@ -1052,16 +1063,21 @@ export default {
   }
 
   .profile-badges {
-    gap: 0.75rem;
+    gap: 0.5rem;
+    flex-direction: column;
+    width: 100%;
   }
 
   .profile-badge {
-    padding: 0.4rem 1rem;
-    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    width: 100%;
+    text-align: center;
   }
 
   .profile-quick-stats {
     gap: 1rem;
+    flex-wrap: wrap;
   }
 
   .quick-stat {
@@ -1075,6 +1091,12 @@ export default {
 
   .quick-stat-label {
     font-size: 0.7rem;
+  }
+
+  .profile-edit-btn {
+    font-size: 0.85rem;
+    padding: 0.65rem 1.25rem;
+    min-height: 45px;
   }
 }
 </style>

@@ -11,6 +11,65 @@
         <span class="fw-bold">TutorConnect</span>
       </router-link>
 
+      <!-- Credits Icon for Students - Always visible on navbar -->
+      <div class="navbar-credits-container" v-if="isAuthenticated && userType === 'student'">
+        <CreditsIcon />
+      </div>
+
+      <!-- Notifications Icon - Mobile only (always visible on navbar) -->
+      <div class="navbar-notification-container" v-if="isAuthenticated">
+        <div class="nav-item dropdown">
+          <a
+            class="nav-link position-relative d-flex align-items-center"
+            href="#"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            <i class="fas fa-bell fs-5"></i>
+            <span v-if="unreadCount > 0" class="notification-badge">
+              {{ unreadCount > 9 ? "9+" : unreadCount }}
+            </span>
+          </a>
+          <div class="dropdown-menu dropdown-menu-end notifications-dropdown">
+            <div class="notifications-header">
+              <h6 class="mb-0">Notifications</h6>
+              <span class="text-muted small">{{ notifications.length }} total</span>
+            </div>
+            <div class="notifications-body">
+              <div v-if="notifications.length === 0" class="text-center py-4">
+                <i class="fas fa-bell-slash text-muted fs-1 mb-2"></i>
+                <p class="text-muted mb-0 small">No notifications</p>
+              </div>
+              <div v-else>
+                <div
+                  v-for="notification in displayedNotifications"
+                  :key="notification.id"
+                  class="notification-item"
+                  :class="{ 'notification-unread': notification.unread }"
+                  @click.stop="handleNotificationClick(notification)"
+                >
+                  <div class="notification-icon-wrapper">
+                    <i :class="notification.icon"></i>
+                  </div>
+                  <div class="notification-content">
+                    <p class="notification-title">{{ notification.title }}</p>
+                    <small class="notification-time">{{ notification.time }}</small>
+                  </div>
+                  <div v-if="notification.unread" class="notification-dot"></div>
+                </div>
+                <div v-if="hasMoreNotifications" class="notification-view-all" @click.stop="toggleShowAllNotifications">
+                  <button class="btn btn-sm w-100" type="button">
+                    <i :class="showAllNotifications ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="me-2"></i>
+                    {{ showAllNotifications ? "Show Less" : `View All (${notifications.length})` }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <button
         class="navbar-toggler cyberpunk-hamburger"
         type="button"
@@ -28,13 +87,14 @@
         class="collapse navbar-collapse"
         :class="{ show: isNavbarExpanded }"
         id="navbarNav"
+        @click.self="toggleNavbar"
       >
         <ul class="navbar-nav me-auto">
           <li
             class="nav-item"
             v-if="userType === 'student' || !isAuthenticated"
           >
-            <router-link to="/search" class="nav-link">
+            <router-link to="/search" class="nav-link" @click="closeNavbar">
               <i class="fas fa-search me-1"></i>
               Find Tutors
             </router-link>
@@ -44,6 +104,7 @@
               to="/dashboard"
               class="nav-link"
               v-if="isAuthenticated"
+              @click="closeNavbar"
             >
               <i class="fas fa-tachometer-alt me-1"></i>
               Dashboard
@@ -52,8 +113,8 @@
         </ul>
 
         <ul class="navbar-nav">
-          <!-- Credits Icon for Students -->
-          <li class="nav-item" v-if="isAuthenticated && userType === 'student'">
+          <!-- Credits Icon for Students - Desktop view -->
+          <li class="nav-item desktop-credits-item" v-if="isAuthenticated && userType === 'student'">
             <CreditsIcon />
           </li>
 
@@ -87,8 +148,8 @@
             </a>
           </li>
 
-          <!-- Notifications Dropdown -->
-          <li class="nav-item dropdown" v-if="isAuthenticated">
+          <!-- Notifications Dropdown - Desktop only -->
+          <li class="nav-item dropdown desktop-notification-item" v-if="isAuthenticated">
             <a
               class="nav-link position-relative d-flex align-items-center"
               href="#"
@@ -561,6 +622,15 @@ export default {
       }
     };
 
+    // Close navbar
+    const closeNavbar = () => {
+      isNavbarExpanded.value = false;
+      const navbarCollapse = document.getElementById("navbarNav");
+      if (navbarCollapse) {
+        navbarCollapse.classList.remove("show");
+      }
+    };
+
     onMounted(async () => {
       // Load notifications from localStorage first
       loadNotificationsFromStorage();
@@ -652,6 +722,7 @@ export default {
       penaltyPoints,
       logout,
       toggleNavbar,
+      closeNavbar,
       isNavbarExpanded,
       notifications,
       displayedNotifications,
@@ -682,14 +753,18 @@ export default {
   font-weight: 500;
   color: var(--cyber-text-muted) !important;
   transition: color 0.3s ease;
+  text-shadow: none;
 }
 
 .nav-link:hover {
   color: var(--cyber-orange) !important;
+  text-shadow: none;
 }
 
 .nav-link.router-link-active {
   color: var(--cyber-orange) !important;
+  text-shadow: none;
+  font-weight: 600;
 }
 
 .dropdown-menu {
@@ -711,11 +786,76 @@ export default {
   color: var(--cyber-orange) !important;
 }
 
+/* Credits container - visible on mobile, hidden on desktop */
+.navbar-credits-container {
+  margin-left: auto;
+  margin-right: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Notification container - visible on mobile, hidden on desktop */
+.navbar-notification-container {
+  margin-right: 1rem;
+  margin-left: 0;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.navbar-notification-container .nav-item {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  height: 100%;
+}
+
+.navbar-notification-container .nav-link {
+  padding: 0.5rem;
+  color: var(--cyber-text) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navbar-notification-container .nav-link i {
+  font-size: 1.5rem !important;
+}
+
+.navbar-notification-container .dropdown-menu {
+  right: 0;
+}
+
+/* Hide mobile version on desktop */
+@media (min-width: 992px) {
+  .navbar-credits-container {
+    display: none !important;
+  }
+  
+  .navbar-notification-container {
+    display: none !important;
+  }
+}
+
+/* Hide desktop version on mobile */
+@media (max-width: 991px) {
+  .desktop-credits-item {
+    display: none !important;
+  }
+  
+  .desktop-notification-item {
+    display: none !important;
+  }
+}
+
 /* Clean hamburger menu for all screen sizes */
 .cyberpunk-hamburger {
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
   border-radius: 4px;
   padding: 0.5rem;
+  margin-right: 1rem;
+  margin-left: 0;
   background: rgba(255, 255, 255, 0.05) !important;
   transition: all 0.3s ease;
 }
@@ -742,10 +882,10 @@ export default {
     font-size: 1.2rem;
   }
 
-  /* Force navbar items to edges */
+  /* Force navbar items with proper spacing */
   .navbar .container {
-    padding-left: 0;
-    padding-right: 0;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
     max-width: 100%;
     margin: 0;
   }
@@ -755,8 +895,7 @@ export default {
   }
 
   .navbar-toggler {
-    margin-right: 0;
-    padding-right: 1rem;
+    margin-right: 1rem !important;
   }
 
   /* Ensure full width navbar */
@@ -768,6 +907,10 @@ export default {
 
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
+  .navbar {
+    z-index: 1050 !important;
+  }
+
   .navbar-brand {
     font-size: 1.3rem;
     margin-right: 1rem;
@@ -778,26 +921,54 @@ export default {
   }
 
   .navbar-collapse {
-    background: rgba(26, 26, 26, 0.7);
-    border: 1px solid var(--cyber-orange);
-    border-radius: 8px;
-    margin-top: 1rem;
-    padding: 1rem;
-    box-shadow: 0 0 20px rgba(255, 140, 66, 0.3);
-    backdrop-filter: blur(15px);
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: rgba(26, 26, 26, 0.98);
+    border: none;
+    border-top: 2px solid var(--cyber-orange);
+    border-radius: 0;
+    margin: 0;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(20px);
+    z-index: 1040;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  
+  .navbar-collapse.collapsing {
+    transition: none;
+  }
+  
+  /* Backdrop overlay */
+  .navbar-collapse.show::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+    backdrop-filter: blur(4px);
   }
 
   .navbar-nav {
     margin-top: 0;
-    gap: 0.5rem;
+    margin-right: 0 !important;
+    gap: 0;
   }
 
   .nav-item {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0;
   }
 
   .nav-link {
     padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
     border-radius: 6px;
     transition: all 0.3s ease;
     display: flex;
@@ -862,10 +1033,20 @@ export default {
   }
 }
 
-/* Add right margin to navbar items on larger screens */
+/* Add spacing between navbar items on larger screens */
 @media (min-width: 992px) {
   .navbar-nav {
-    margin-right: 1rem;
+    gap: 1rem;
+  }
+  
+  .navbar-nav .nav-item {
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Even spacing for all nav items */
+  .navbar-nav.me-auto {
+    margin-right: 2rem;
   }
 }
 
@@ -1051,20 +1232,59 @@ export default {
   }
 }
 
-/* Responsive adjustments for notifications */
+/* Responsive adjustments for notifications - Full screen overlay on mobile */
+@media (max-width: 991px) {
+  .navbar-notification-container .notifications-dropdown {
+    position: fixed !important;
+    top: 60px !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100vh - 60px) !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-top: 2px solid var(--cyber-orange) !important;
+    transform: none !important;
+    z-index: 1050 !important;
+  }
+  
+  /* Backdrop when notifications open on mobile */
+  .navbar-notification-container .dropdown.show::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1045;
+    backdrop-filter: blur(4px);
+  }
+  
+  .navbar-notification-container .notifications-dropdown.show {
+    z-index: 1050 !important;
+  }
+  
+  .navbar-notification-container .notifications-body {
+    max-height: calc(100vh - 180px) !important;
+  }
+}
+
 @media (max-width: 768px) {
-  .notifications-dropdown {
+  .desktop-notification-item .notifications-dropdown {
     width: 320px;
   }
 }
 
 @media (max-width: 576px) {
-  .notifications-dropdown {
+  .desktop-notification-item .notifications-dropdown {
     width: 280px;
     max-height: 400px;
   }
 
-  .notifications-body {
+  .desktop-notification-item .notifications-body {
     max-height: 300px;
   }
 }
