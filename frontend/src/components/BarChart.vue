@@ -1,5 +1,5 @@
 <template>
-    <Line
+    <Bar
         id="revenue-chart"
         :options="chartOptions"
         :data="{
@@ -10,34 +10,31 @@
 </template>
 
 <script>
-import { Line } from 'vue-chartjs'
+import { Bar } from 'vue-chartjs';
 import { 
     Chart as ChartJS, 
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend
-} from 'chart.js'
+    Title, 
+    Tooltip, 
+    Legend, 
+    BarElement, 
+    CategoryScale, 
+    LinearScale }
+    from 'chart.js'
 
 ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend
-)
+    Title, 
+    Tooltip, 
+    Legend, 
+    BarElement, 
+    CategoryScale, 
+    LinearScale)
 
 export default {
-    name: 'LineChart',
-    components: { Line },
+  name: 'BarChart',
+  components: { Bar },
     props: {
         labels: Array,
-        datasets: Array,
+        datasets: Array
     },
     setup() {
         return {
@@ -45,12 +42,14 @@ export default {
                 responsive: true,
                 scales: {
                     y: {
-                        suggestedMin: 0.0
+                        suggestedMin: 0,
+                        suggestedMax: 5
                     }
                 },
-                maintainAspectRatio: false,
-                showLine: true,
-                spanGaps: true
+                ticks: {
+                    stepSize: 1
+                },
+                maintainAspectRatio: false
             }
         }
     }

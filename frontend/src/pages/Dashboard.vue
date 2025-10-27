@@ -151,12 +151,15 @@
           >
             <div class="card-header bg-white border-bottom">
               <h5 class="fw-bold mb-0">
-                <i class="fas fa-dollar-sign me-2 text-primary"></i>
+                <i class="text-primary" v-bind:class="dataTypeIcon"></i>
                 {{ dataType }}
               </h5>
             </div>
             <div class="card-body">
-              <div class="chart-container" style="height: 300px;width:auto;">
+              <div v-if="dataType === 'Average Rating'" class="chart-container" style="height: 300px;width:auto;">
+                <BarChart :labels="labels" :datasets="datasets" />
+              </div>
+              <div v-else class="chart-container" style="height: 300px;width:auto;">
                 <LineChart :labels="labels" :datasets="datasets" />
               </div>
             </div>
@@ -170,11 +173,13 @@
 <script>
 import { ref, computed, onMounted, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
-import LineChart from '../components/LineChart.vue'
+import LineChart from '../components/LineChart.vue';
+import BarChart from '../components/BarChart.vue';
+import { subMonths } from 'date-fns'
 
 export default {
   name: "Dashboard",
-  components: { LineChart },
+  components: { LineChart, BarChart },
   setup() {
     const authStore = useAuthStore();
 
@@ -184,6 +189,18 @@ export default {
     const earnings = ref(null);
     const stats = ref([]);
     const recentActivity = ref([]);
+    const hoursThisMonth = ref(null);
+    const totalStudents = ref(null);
+
+    // mock data for values Tutos
+    const tutorData = ref([12,25,30,20,25])
+    const tutorDataHours = ref([25,48,32,43,48])
+    const tutorDataEarnings = ref([2000,1000,1500,2000,3000])
+
+    // mock data for values Student
+    const studentSpent = ref([1000,2000,1050,3000,1020])
+    const studentHours = ref([10,20,25,20,30])
+    
 
     const loadDashboardData = async () => {
       console.log("📊 Loading dashboard data for user type:", userType.value);
@@ -215,7 +232,34 @@ export default {
           console.error("Failed!", error)
         }
         // query for Earnings
-                try{
+          // fake vers
+        /*earnings.value = user.value.credits*/
+
+        // real vers
+        
+        try{
+          const response = await fetch(`http://localhost:3008/profiles/search?${user.value.id}`)
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch earnings')
+          }
+
+          const data = await response.json()
+          console.log('API Response:', data)
+
+          // Transform API data to frontend format
+          earnings.value = data.earnings
+        } catch (error) {
+          console.error("Failed!", error)
+        }
+        
+
+        // query for Total Students
+         // fake
+        totalStudents.value = getLast(tutorData.value)
+          //real vers
+        /*
+        try{
           const response = await fetch(`http://localhost:3008/analytics/tutor/${user.value.id}`)
 
           if (!response.ok) {
@@ -230,10 +274,14 @@ export default {
         } catch (error) {
           console.error("Failed!", error)
         }
+        */
+       // query for Total Hours
+        //fake
+      hoursThisMonth.value = getLast(tutorDataHours.value)
         stats.value = [
-          { icon: "fas fa-users", label: "Total Students", value: "25" },
+          { icon: "fas fa-users", label: "Total Students", value: totalStudents.value },
           { icon: "fas fa-star", label: "Average Rating", value: averageRating.value },
-          { icon: "fas fa-clock", label: "Hours This Month", value: "48" },
+          { icon: "fas fa-clock", label: "Hours This Month", value: hoursThisMonth.value },
           { icon: "fas fa-dollar-sign", label: "Earnings", value: earnings.value },
         ];
       } else if (userType.value === "centre") {
@@ -273,7 +321,8 @@ export default {
       console.log("✅ Dashboard data loaded, stats count:", stats.value.length);
     };
 
-    const dataType = ref(null)
+    const dataType = ref('Average Rating')
+    const dataTypeIcon = ref("fas fa-star")
     // Watch for userType changes and reload data
     watch(
       userType,
@@ -289,43 +338,267 @@ export default {
     const dates = ref([])
     const labels = ref([])
     const datasets = ref([])
+    const datasetBar = ref([])
+    const datasetBarVal = ref([])
+    const timescale = ref([])
+    
+
+
       // function to update chart whenever.
     async function setDataType(label){
       dataType.value = label
+      console.log(user.value)
       console.log(dataType.value)
-        try{
-          const response = await fetch(`http://localhost:3006/reviews/tutor/${user.value.id}`)
+      if (userType.value === "tutor"){
+        //clear values to prevent chart from shrinking
+        const timescale = ref([])
+        const datasetBar = ref([])
+        const datasetBarVal = ref([])
+        const charts = ref([])
+        const dates = ref([])
 
-          if (!response.ok) {
-            throw new Error('Failed to fetch reviews')
+        if (dataType.value === "Total Students") {
+          // change icon
+          dataTypeIcon.value = "fas fa-star"
+          // get current time scale (5 months)
+          var today = new Date()
+          //create an array for the timescale
+          for (let i=0;i<5;i++){
+            var monthList = subMonths(today, i)
+            timescale.value.push(monthList.getMonth())
           }
+          timescale.value.reverse()
+          timescale.value = monthConvert(timescale.value)
 
-          const data = await response.json()
-          console.log('API Response:', data)
+          labels.value = timescale.value
+            datasets.value = [{
+              label: label,
+              backgroundColor: "#f87979",
+              data: tutorData.value
+          }]
 
-          // Transform API data to frontend format
-          charts.value = data.reviews.map(reviews => ({
-            rating: reviews.rating
-          }))
-          dates.value = data.reviews.map(reviews => ({
-            date: reviews.created_at
-          }))
-          console.error("no")
-          labels.value = dates.value.map((item) =>{
-            return item.date
-          })
-          datasets.value = [{
-            label: label,
-            backgroundColor: "#f87979",
-            data: charts.value.map((item) => {
-              return item.rating
+          /*
+          try{
+            const response = await fetch(`http://localhost:3006/reviews/tutor/${user.value.id}`)
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch reviews')
+            }
+
+            const data = await response.json()
+            console.log('API Response:', data)
+
+            // Format Values
+            charts.value = data.reviews.map(reviews => ({
+              rating: reviews.rating
+            }))
+            dates.value = data.reviews.map(reviews => ({
+              date: reviews.created_at
+            }))
+
+            // create line chart
+            labels.value = dates.value.map((item) =>{
+              return item.date
+            })
+            datasets.value = [{
+              label: label,
+              backgroundColor: "#f87979",
+              data: charts.value.map((item) => {
+                return item.rating
+              })
+            }]
+          } catch (error) {
+            console.error("Failed!", error)
+          }
+            */
+        }
+        else if (dataType.value === "Average Rating"){
+          // change icon
+          dataTypeIcon.value = "fas fa-user"
+          try{
+            const response = await fetch(`http://localhost:3006/reviews/tutor/${user.value.id}`)
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch reviews')
+            }
+
+            const data = await response.json()
+            console.log('API Response:', data)
+
+            // Format Values
+            charts.value = data.reviews.map(reviews => ({
+              rating: reviews.rating
+            }))
+            dates.value = data.reviews.map(reviews => ({
+              date: reviews.created_at
+            }))
+
+            // create bar chart from 0 to 5
+            labels.value = [1,2,3,4,5]
+            // counter for the loop
+            for (let i =1;i<6; i++){
+              datasetBar.value = charts.value.map((item) => {
+                return item.rating
+              })
+              datasetBarVal.value.push(counter(datasetBar.value,i))
+            }
+            datasets.value = [{
+              label: label,
+              backgroundColor: "#f87979",
+              data: datasetBarVal.value
+            }]
+          } catch (error) {
+            console.error("Failed!", error)
+          }
+        }
+        else if (dataType.value === "Hours This Month"){
+          // change icon
+          dataTypeIcon.value = "fas fa-clock"
+          // fake data.
+          var today = new Date()
+          //create an array for the timescale
+          for (let i=0;i<5;i++){
+            var monthList = subMonths(today, i)
+            timescale.value.push(monthList.getMonth())
+          }
+          timescale.value.reverse()
+          timescale.value = monthConvert(timescale.value)
+
+          labels.value = timescale.value
+            datasets.value = [{
+              label: label,
+              backgroundColor: "#ffffff",
+              data: tutorDataHours.value,
+          }]
+          
+        }
+        else if (dataType.value === "Earnings"){
+          // change icon
+          dataTypeIcon.value = "fas fa-dollar-sign"
+          // fake data. 
+          // get current time scale (5 months)
+          var today = new Date()
+          //create an array for the timescale
+          for (let i=0;i<5;i++){
+            var monthList = subMonths(today, i)
+            timescale.value.push(monthList.getMonth())
+          }
+          timescale.value.reverse()
+          timescale.value = monthConvert(timescale.value)
+
+          labels.value = timescale.value
+            datasets.value = [{
+              label: label,
+              backgroundColor: "#ffffff",
+              data: tutorDataEarnings.value,
+              tension: 0
+          }]
+          /*
+          try{
+            const response = await fetch(`http://localhost:3006/analytics/tutor/${user.value.id}`)
+
+            if (!response.ok) {
+              throw new Error('Failed to fetch reviews')
+            }
+
+            const data = await response.json()
+            console.log('API Response:', data)
+
+            // Format Values
+            charts.value = data.reviews.map(reviews => ({
+              amount: reviews.amount
+            }))
+            dates.value = data.reviews.map(reviews => ({
+              date: reviews.created_at
+            }))
+
+            // create bar chart from 0 to 5
+            labels.value = [1,2,3,4,5]
+            datasets.value = [{
+              label: label,
+              backgroundColor: "#f87979",
+              data: charts.value.map((item) => {
+                return item.amount
             })
           }]
-        } catch (error) {
-          console.error("Failed!", error)
+          } catch (error) {
+            console.error("Failed!", error)
+          } */
         }
-      
+      else if(userType.value === "student"){
+        // do something.
+        if(dataType.value === "Active Sessions"){
+          dataTypeIcon.value = "fas fa-book"
+
+        }
+        else if(dataType.value === "Completed Sessions"){
+          // fake data. 
+          // get current time scale (5 months)
+          var today = new Date()
+          //create an array for the timescale
+          for (let i=0;i<5;i++){
+            var monthList = subMonths(today, i)
+            timescale.value.push(monthList.getMonth())
+          }
+          timescale.value.reverse()
+          timescale.value = monthConvert(timescale.value)
+
+          labels.value = timescale.value
+            datasets.value = [{
+              label: label,
+              backgroundColor: "#f87979",
+              data: tutorDataEarnings.value
+          }]
+        }
+        else if(dataType.value === "Hours This Month"){
+          // fake data. 
+          // change icon
+          dataTypeIcon.value = "fas fa-clock"
+          // get current time scale (5 months)
+          var today = new Date()
+          //create an array for the timescale
+          for (let i=0;i<5;i++){
+            var monthList = subMonths(today, i)
+            timescale.value.push(monthList.getMonth())
+          }
+          timescale.value.reverse()
+          timescale.value = monthConvert(timescale.value)
+
+          labels.value = timescale.value
+            datasets.value = [{
+              label: label,
+              backgroundColor: "#f87979",
+              data: studentHours.value
+          }]
+        }
+        else if(dataType.value === "Total Spent"){
+          // fake data. 
+          // change icon
+          dataTypeIcon.value = "fas fa-dollar-sign"
+          // get current time scale (5 months)
+          var today = new Date()
+          //create an array for the timescale
+          for (let i=0;i<5;i++){
+            var monthList = subMonths(today, i)
+            timescale.value.push(monthList.getMonth())
+          }
+          timescale.value.reverse()
+          timescale.value = monthConvert(timescale.value)
+
+          labels.value = timescale.value
+            datasets.value = [{
+              label: label,
+              backgroundColor: "#f87979",
+              data: studentSpent.value
+          }]          
+        }
+      }
+      else if(userType.value === "centre"){
+        // do something.
+      }
+      }
     }
+
 
     onMounted(() => {
       console.log("🚀 Dashboard mounted, user type:", userType.value);
@@ -334,6 +607,37 @@ export default {
         loadDashboardData();
       }
     });
+    // function for counting frequency
+    function counter(array, rating){
+      var count = 0
+      for (let i =0; i<array.length;i++){
+        if(array[i]==rating){
+          count++;
+        }
+      }
+      return count
+    }
+    // function for returning the array in months
+    function monthConvert(array){
+      var monthList = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+      var arrayReturn = []
+      for(let d = 0; d<array.length; d ++){
+        arrayReturn.push(monthList[array[d]])
+      }
+      return arrayReturn
+    }
+    //function for sum of array
+    function sumArray(array){
+      var sum = 0
+      array.forEach(element => {
+        sum += element;
+      });
+      return sum
+    }
+    // function for getting last element in array
+    function getLast(array){
+      return array[array.length - 1]
+    }
 
     return {
       user,
@@ -346,7 +650,22 @@ export default {
       labels,
       dates,
       averageRating,
-      earnings
+      earnings,
+      datasetBar,
+      datasetBarVal,
+      counter,
+      timescale,
+      tutorData,
+      monthConvert,
+      tutorDataHours,
+      tutorDataEarnings,
+      studentHours,
+      studentSpent,
+      sumArray,
+      totalStudents,
+      hoursThisMonth,
+      getLast,
+      dataTypeIcon
     };
   },
 };
