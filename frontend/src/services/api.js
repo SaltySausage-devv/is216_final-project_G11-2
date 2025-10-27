@@ -10,9 +10,13 @@ const api = axios.create({
 // Request interceptor to rewrite URLs for production and add auth token
 api.interceptors.request.use(
   (config) => {
+    // Construct full path (baseURL + url)
+    const fullPath = config.baseURL && config.url ? config.baseURL + config.url : config.url
+    
     // Rewrite URL for production (full backend URLs)
-    if (config.url && config.url.startsWith('/api/')) {
-      config.url = getApiUrl(config.url)
+    if (fullPath && fullPath.startsWith('/api/')) {
+      config.url = getApiUrl(fullPath)
+      config.baseURL = '' // Clear baseURL since we now have full URL
     }
     
     // Add auth token

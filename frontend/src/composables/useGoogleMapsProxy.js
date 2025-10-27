@@ -30,7 +30,7 @@ export function useGoogleMapsProxy() {
     error.value = null;
 
     try {
-      const response = await api.post(`/api/maps/autocomplete`, {
+      const response = await api.post(`/maps/autocomplete`, {
         input: input.trim(),
         sessionToken: sessionToken || generateSessionToken()
       });
@@ -69,7 +69,7 @@ export function useGoogleMapsProxy() {
     error.value = null;
 
     try {
-      const response = await api.get(`/api/maps/place-details/${placeId}`);
+      const response = await api.get(`/maps/place-details/${placeId}`);
 
       if (response.data) {
         return {
@@ -109,7 +109,7 @@ export function useGoogleMapsProxy() {
     error.value = null;
 
     try {
-      const response = await api.post(`/api/maps/geocode`, {
+      const response = await api.post(`/maps/geocode`, {
         address
       });
 
