@@ -656,12 +656,12 @@ app.get('/health', (req, res) => {
 
 // Initialize RabbitMQ and start server
 initRabbitMQ().then(() => {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Notifications service running on port ${PORT}`);
   });
 }).catch(error => {
   console.error('Failed to initialize:', error);
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Notifications service running on port ${PORT} (without RabbitMQ)`);
   });
 });

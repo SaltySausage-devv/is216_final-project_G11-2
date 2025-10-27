@@ -460,6 +460,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', service: 'maps' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Maps service running on port ${PORT}`);
 });

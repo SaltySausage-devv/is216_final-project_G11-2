@@ -1310,7 +1310,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', service: 'bookings' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Bookings service running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Supabase URL: ${process.env.SUPABASE_URL ? 'Set' : 'Not set'}`);

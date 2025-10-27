@@ -207,6 +207,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', service: 'users' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Users service running on port ${PORT}`);
 });

@@ -469,6 +469,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', service: 'reviews' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Reviews service running on port ${PORT}`);
 });
