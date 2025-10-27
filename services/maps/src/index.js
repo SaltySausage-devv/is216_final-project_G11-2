@@ -316,6 +316,8 @@ app.post('/maps/autocomplete', async (req, res) => {
   try {
     const { input, sessionToken } = req.body;
 
+    console.log('🔍 Autocomplete request:', { input, sessionToken });
+
     if (!input) {
       return res.status(400).json({ error: 'Input is required' });
     }
@@ -329,7 +331,11 @@ app.post('/maps/autocomplete', async (req, res) => {
       }
     });
 
+    console.log('🗺️ Google Maps API status:', response.data.status);
+    console.log('🗺️ Google Maps API predictions count:', response.data.predictions?.length || 0);
+
     if (response.data.status !== 'OK') {
+      console.error('❌ Autocomplete failed:', response.data.status, response.data.error_message);
       return res.status(400).json({ error: 'Autocomplete failed', details: response.data.status });
     }
 
