@@ -25,6 +25,7 @@ messagingApi.interceptors.request.use(
     if (authStore.token) {
       config.headers.Authorization = `Bearer ${authStore.token}`
     }
+    
     return config
   },
   (error) => {
