@@ -23,8 +23,13 @@ const isProduction = !!import.meta.env.VITE_AUTH_SERVICE_URL
  * @returns {string} - Full URL (e.g., 'https://messaging-production.up.railway.app/messaging/conversations')
  */
 export function getApiUrl(path) {
+  console.log('🔗 API Helper: Converting path:', path)
+  console.log('🔗 isProduction:', isProduction)
+  console.log('🔗 VITE_AUTH_SERVICE_URL:', import.meta.env.VITE_AUTH_SERVICE_URL)
+  
   // In development, use relative paths (Vite proxy handles routing)
   if (!isProduction) {
+    console.log('🔗 Development mode - returning original path')
     return path
   }
 
@@ -33,7 +38,7 @@ export function getApiUrl(path) {
   const match = path.match(/^\/api\/([^\/]+)/)
   
   if (!match) {
-    console.warn('API path does not match expected format:', path)
+    console.warn('❌ API path does not match expected format:', path)
     return path
   }
 
@@ -41,14 +46,16 @@ export function getApiUrl(path) {
   const serviceUrl = API_SERVICES[serviceName]
   
   if (!serviceUrl) {
-    console.warn('Unknown service:', serviceName)
+    console.warn('❌ Unknown service:', serviceName)
     return path
   }
 
   // Replace /api/{service} with the full service URL
   // /api/messaging/conversations -> https://messaging-xxx.railway.app/messaging/conversations
   const apiPath = path.replace('/api/', '/')
-  return serviceUrl + apiPath.replace(`/${serviceName}`, `/${serviceName}`)
+  const finalUrl = serviceUrl + apiPath.replace(`/${serviceName}`, `/${serviceName}`)
+  console.log('🔗 Converted to:', finalUrl)
+  return finalUrl
 }
 
 /**
