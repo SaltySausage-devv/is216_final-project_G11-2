@@ -476,7 +476,7 @@ export default {
         console.log("🔍 Loading tutor hourly rate for tutor ID:", tutorId);
 
         const response = await fetch(
-          `http://localhost:3003/profiles/tutor/${tutorId}`,
+          `/api/profiles/tutor/${tutorId}`,
           {
             headers: {
               Authorization: `Bearer ${authStore?.token}`,

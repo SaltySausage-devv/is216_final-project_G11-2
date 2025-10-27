@@ -874,7 +874,7 @@ export default {
 
         // Fetch tutors from API
         const response = await fetch(
-          `http://localhost:3003/profiles/search?${params}`
+          `/api/profiles/search?${params}`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch tutors");

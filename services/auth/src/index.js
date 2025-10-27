@@ -60,6 +60,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Handle all OPTIONS requests explicitly
+app.options('*', cors());
+
 // Validation schemas
 const registerSchema = Joi.object({
   email: Joi.string().email().required(),

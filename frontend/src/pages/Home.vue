@@ -18,10 +18,10 @@
                   <i class="fas fa-search me-2"></i>
                   Find Tutors
                 </router-link>
-                <a href="http://localhost:3000/register" class="btn btn-cyberpunk btn-lg">
+                <router-link to="/register" class="btn btn-cyberpunk btn-lg">
                   <i class="fas fa-user-plus me-2"></i>
                   Join as Tutor
-                </a>
+                </router-link>
               </div>
             </div>
           </div>
@@ -108,7 +108,7 @@
                 Join thousands of students and tutors who trust TutorConnect
               </p>
               <div class="d-flex gap-3 justify-content-center flex-wrap">
-                <a href="http://localhost:3000/register" class="btn btn-cyberpunk btn-lg">
+                <router-link to="/register" class="btn btn-cyberpunk btn-lg">
                   <i class="fas fa-user-plus me-2"></i>
                   Sign Up Now
                 </a>

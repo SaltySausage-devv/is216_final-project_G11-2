@@ -515,7 +515,7 @@ export default {
     const loadTutorProfile = async () => {
       try {
         const token = authStore.token
-        const response = await axios.get(`http://localhost:3003/profiles/tutor/${props.userId}`, {
+        const response = await axios.get(`/api/profiles/tutor/${props.userId}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
 
@@ -577,7 +577,7 @@ export default {
           preferredLocations: tutorProfile.preferredLocations
         }
 
-        await axios.post('http://localhost:3003/profiles/tutor', payload, {
+        await axios.post('/api/profiles/tutor', payload, {
           headers: { Authorization: `Bearer ${token}` }
         })
 

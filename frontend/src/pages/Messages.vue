@@ -3356,7 +3356,7 @@ export default {
       try {
         tutorProfile.value.loading = true;
         const response = await fetch(
-          `http://localhost:3003/profiles/tutor/${authStore.user.id}`,
+          `/api/profiles/tutor/${authStore.user.id}`,
           {
             headers: {
               Authorization: `Bearer ${authStore.token}`,

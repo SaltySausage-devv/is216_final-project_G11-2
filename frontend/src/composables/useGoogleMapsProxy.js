@@ -6,8 +6,6 @@
 import { ref } from 'vue';
 import axios from 'axios';
 
-const MAPS_SERVICE_URL = import.meta.env.VITE_MAPS_SERVICE_URL || 'http://localhost:3012';
-
 export function useGoogleMapsProxy() {
   const isLoading = ref(false);
   const error = ref(null);
@@ -32,7 +30,7 @@ export function useGoogleMapsProxy() {
     error.value = null;
 
     try {
-      const response = await axios.post(`${MAPS_SERVICE_URL}/maps/autocomplete`, {
+      const response = await axios.post(`/api/maps/autocomplete`, {
         input: input.trim(),
         sessionToken: sessionToken || generateSessionToken()
       });
@@ -71,7 +69,7 @@ export function useGoogleMapsProxy() {
     error.value = null;
 
     try {
-      const response = await axios.get(`${MAPS_SERVICE_URL}/maps/place-details/${placeId}`);
+      const response = await axios.get(`/api/maps/place-details/${placeId}`);
 
       if (response.data) {
         return {
@@ -111,7 +109,7 @@ export function useGoogleMapsProxy() {
     error.value = null;
 
     try {
-      const response = await axios.post(`${MAPS_SERVICE_URL}/maps/geocode`, {
+      const response = await axios.post(`/api/maps/geocode`, {
         address
       });
 

@@ -474,7 +474,7 @@ export default {
       try {
         console.log("Loading reviews for tutor:", tutorId);
         const response = await fetch(
-          `http://localhost:3006/reviews/tutor/${tutorId}`
+          `/api/reviews/tutor/${tutorId}`
         );
 
         if (!response.ok) {
@@ -507,7 +507,7 @@ export default {
 
         // Fetch tutor profile from API
         const response = await fetch(
-          `http://localhost:3003/profiles/tutor/${tutorId}`
+          `/api/profiles/tutor/${tutorId}`
         );
 
         if (!response.ok) {

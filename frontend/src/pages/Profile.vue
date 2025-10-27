@@ -333,7 +333,7 @@ export default {
 
     const loadTutorProfile = async () => {
       try {
-        const response = await fetch(`http://localhost:3003/profiles/tutor/${user.value.id}`, {
+        const response = await fetch(`/api/profiles/tutor/${user.value.id}`, {
           headers: {
             'Authorization': `Bearer ${user.value.token}`,
             'Content-Type': 'application/json'

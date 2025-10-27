@@ -48,6 +48,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Handle all OPTIONS requests explicitly
+app.options('*', cors());
+
 // JWT verification middleware
 const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];

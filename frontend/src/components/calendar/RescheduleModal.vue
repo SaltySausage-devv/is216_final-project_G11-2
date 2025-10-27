@@ -594,7 +594,7 @@ export default {
         console.log("🔍 User type:", authStore?.user?.user_type);
 
         const response = await fetch(
-          `http://localhost:3003/profiles/tutor/${tutorId}`,
+          `/api/profiles/tutor/${tutorId}`,
           {
             headers: {
               Authorization: `Bearer ${authStore?.token}`,
