@@ -193,6 +193,12 @@
                   Calendar
                 </router-link>
               </li>
+              <li>
+                <router-link to="/analytics" class="dropdown-item">
+                  <i class="fas fa-chart-line me-2"></i>
+                  Analytics
+                </router-link>
+              </li>
               <li><hr class="dropdown-divider" /></li>
               <li>
                 <a

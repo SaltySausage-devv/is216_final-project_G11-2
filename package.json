@@ -34,5 +34,11 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "kill-port": "2.0.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.76.1",
+    "axios": "^1.12.2",
+    "dotenv": "^17.2.3",
+    "jsonwebtoken": "^9.0.2"
   }
 }
