@@ -8,7 +8,7 @@ const Joi = require('joi');
 const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 const cron = require('node-cron');
-const amqp = require('amqplib');
+// amqplib removed - using direct HTTP calls instead
 // Load environment variables (optional for Railway deployment)
 try {
   require('dotenv').config({ path: '../../.env' });
@@ -43,37 +43,9 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
   console.warn('⚠️ Twilio credentials not found - SMS notifications will be disabled');
 }
 
-// RabbitMQ connection
-let connection;
-let channel;
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
-const NOTIFICATION_QUEUE = 'notifications';
-const EMAIL_QUEUE = 'email_notifications';
-const SMS_QUEUE = 'sms_notifications';
+// RabbitMQ removed - using direct HTTP calls instead
 
-// Initialize RabbitMQ
-async function initRabbitMQ() {
-  try {
-    connection = await amqp.connect(RABBITMQ_URL);
-    channel = await connection.createChannel();
-    
-    // Declare queues
-    await channel.assertQueue(NOTIFICATION_QUEUE, { durable: true });
-    await channel.assertQueue(EMAIL_QUEUE, { durable: true });
-    await channel.assertQueue(SMS_QUEUE, { durable: true });
-    
-    console.log('RabbitMQ connected successfully');
-    
-    // Start consuming messages
-    await consumeNotifications();
-    await consumeEmailNotifications();
-    await consumeSMSNotifications();
-    
-  } catch (error) {
-    console.error('RabbitMQ connection failed:', error);
-    // Fallback to direct processing if RabbitMQ is not available
-  }
-}
+// RabbitMQ initialization removed
 
 // Middleware
 app.use(helmet({
@@ -508,78 +480,7 @@ cron.schedule('0 18 * * *', async () => {
   }
 });
 
-// RabbitMQ Consumer Functions
-async function consumeNotifications() {
-  if (!channel) return;
-  
-  await channel.consume(NOTIFICATION_QUEUE, async (msg) => {
-    if (msg) {
-      try {
-        const notification = JSON.parse(msg.content.toString());
-        console.log('Processing notification:', notification);
-        
-        // Store notification in database
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: notification.userId,
-            type: notification.type,
-            title: notification.title,
-            message: notification.message,
-            data: notification.data,
-            created_at: new Date().toISOString()
-          });
-        
-        // Send to appropriate queue based on type
-        if (notification.channels.includes('email')) {
-          await channel.sendToQueue(EMAIL_QUEUE, Buffer.from(JSON.stringify(notification)));
-        }
-        if (notification.channels.includes('sms')) {
-          await channel.sendToQueue(SMS_QUEUE, Buffer.from(JSON.stringify(notification)));
-        }
-        
-        channel.ack(msg);
-      } catch (error) {
-        console.error('Error processing notification:', error);
-        channel.nack(msg, false, false);
-      }
-    }
-  });
-}
-
-async function consumeEmailNotifications() {
-  if (!channel) return;
-  
-  await channel.consume(EMAIL_QUEUE, async (msg) => {
-    if (msg) {
-      try {
-        const notification = JSON.parse(msg.content.toString());
-        await sendEmail(notification);
-        channel.ack(msg);
-      } catch (error) {
-        console.error('Error sending email:', error);
-        channel.nack(msg, false, false);
-      }
-    }
-  });
-}
-
-async function consumeSMSNotifications() {
-  if (!channel) return;
-  
-  await channel.consume(SMS_QUEUE, async (msg) => {
-    if (msg) {
-      try {
-        const notification = JSON.parse(msg.content.toString());
-        await sendSMS(notification);
-        channel.ack(msg);
-      } catch (error) {
-        console.error('Error sending SMS:', error);
-        channel.nack(msg, false, false);
-      }
-    }
-  });
-}
+// RabbitMQ Consumer Functions removed
 
 // Helper functions for sending notifications
 async function sendEmail(notification) {
@@ -623,16 +524,10 @@ async function sendSMS(notification) {
   }
 }
 
-// Publish notification to RabbitMQ
+// Publish notification directly (RabbitMQ removed)
 async function publishNotification(notification) {
-  if (channel) {
-    await channel.sendToQueue(NOTIFICATION_QUEUE, Buffer.from(JSON.stringify(notification)), {
-      persistent: true
-    });
-  } else {
-    // Fallback to direct processing
-    await processNotificationDirectly(notification);
-  }
+  // Direct processing since RabbitMQ is removed
+  await processNotificationDirectly(notification);
 }
 
 async function processNotificationDirectly(notification) {
@@ -666,18 +561,11 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     service: 'notifications',
-    rabbitmq: connection ? 'connected' : 'disconnected'
+    rabbitmq: 'removed'
   });
 });
 
-// Initialize RabbitMQ and start server
-initRabbitMQ().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Notifications service running on port ${PORT}`);
-  });
-}).catch(error => {
-  console.error('Failed to initialize:', error);
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Notifications service running on port ${PORT} (without RabbitMQ)`);
-  });
+// Start server (RabbitMQ removed)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Notifications service running on port ${PORT}`);
 });

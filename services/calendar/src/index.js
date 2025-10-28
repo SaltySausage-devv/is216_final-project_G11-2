@@ -72,7 +72,7 @@ async function sendMessageViaMessagingService(conversationId, content, messageTy
     console.error('❌ Error status:', error.response?.status);
     console.error('❌ Error headers:', error.response?.headers);
     console.error('❌ Full error:', error);
-    console.error('❌ Request URL:', `${process.env.MESSAGING_SERVICE_URL || 'http://localhost:3005'}/messaging/system-message`);
+    console.error('❌ Request URL:', `${messagingServiceUrl}/messaging/system-message`);
     console.error('❌ Request data:', { conversationId, content, messageType });
     console.error('❌ Auth token length:', authToken ? authToken.length : 'NO TOKEN');
     console.error('❌ ERROR RESPONSE BODY:', error.response?.data);
