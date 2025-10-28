@@ -63,29 +63,10 @@ const verifyToken = async (req, res, next) => {
   }
 
   try {
-    // Verify custom JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    console.log('🔐 JWT decoded:', {
-      userId: decoded.userId,
-      email: decoded.email,
-      userType: decoded.userType
-    });
-    
-    if (!decoded.userId) {
-      return res.status(401).json({ error: 'Invalid token - no user ID' });
-    }
-
-    req.user = {
-      userId: decoded.userId,
-      email: decoded.email,
-      userType: decoded.userType || 'student'
-    };
-    
-    console.log('🔐 User info added to request:', req.user);
+    req.user = decoded;
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
