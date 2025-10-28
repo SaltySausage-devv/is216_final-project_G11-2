@@ -389,7 +389,15 @@ export default {
 
     // Load analytics data
     const loadAnalytics = async () => {
+      console.log('🔍 ANALYTICS DEBUG:', {
+        userId: userId.value,
+        userType: userType.value,
+        hasToken: !!authStore.token,
+        tokenPreview: authStore.token ? authStore.token.substring(0, 20) + '...' : 'none'
+      });
+
       if (!userId.value) {
+        console.log('❌ No userId available, skipping analytics load');
         return;
       }
 
@@ -418,6 +426,13 @@ export default {
           default:
             throw new Error('Invalid user type for analytics')
         }
+
+        console.log('🔍 ANALYTICS API CALL:', {
+          endpoint,
+          userType: userType.value,
+          userId: userId.value,
+          period: selectedPeriod.value
+        });
 
         // Fetch real data from analytics service
         const response = await axios.get(endpoint, {
