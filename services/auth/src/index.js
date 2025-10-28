@@ -8,7 +8,12 @@ const bcrypt = require('bcryptjs');
 const Joi = require('joi');
 const https = require('https');
 const crypto = require('crypto');
-require('dotenv').config({ path: '../../.env' });
+// Load environment variables (optional for Railway deployment)
+try {
+  require('dotenv').config({ path: '../../.env' });
+} catch (error) {
+  console.log('⚠️ Could not load .env file, using system environment variables');
+}
 
 // Initialize Twilio client (optional - only if credentials provided)
 let twilioClient = null;

@@ -9,7 +9,12 @@ const nodemailer = require('nodemailer');
 const twilio = require('twilio');
 const cron = require('node-cron');
 const amqp = require('amqplib');
-require('dotenv').config({ path: '../../.env' });
+// Load environment variables (optional for Railway deployment)
+try {
+  require('dotenv').config({ path: '../../.env' });
+} catch (error) {
+  console.log('⚠️ Could not load .env file, using system environment variables');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3007;

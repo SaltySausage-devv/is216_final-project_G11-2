@@ -13,7 +13,12 @@ const multer = require('multer');
 const DOMPurify = require('isomorphic-dompurify');
 
 console.log('🔍 STARTUP: Dependencies loaded, loading environment variables...');
-require('dotenv').config({ path: '../../.env' });
+// Load environment variables (optional for Railway deployment)
+try {
+  require('dotenv').config({ path: '../../.env' });
+} catch (error) {
+  console.log('⚠️ Could not load .env file, using system environment variables');
+}
 console.log('🔍 STARTUP: Environment variables loaded');
 
 const app = express();

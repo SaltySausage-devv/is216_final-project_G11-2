@@ -9,7 +9,12 @@ const cron = require('node-cron');
 const axios = require('axios');
 // const multer = require('multer');
 try {
-  require('dotenv').config({ path: '../../.env' });
+  // Load environment variables (optional for Railway deployment)
+  try {
+    require('dotenv').config({ path: '../../.env' });
+  } catch (error) {
+    console.log('⚠️ Could not load .env file, using system environment variables');
+  }
   console.log('✅ Environment variables loaded');
 } catch (error) {
   console.log('⚠️ Could not load .env file, using system environment variables');

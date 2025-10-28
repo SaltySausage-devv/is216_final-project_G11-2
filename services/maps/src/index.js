@@ -6,7 +6,12 @@ const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const axios = require('axios');
-require('dotenv').config({ path: '../../.env' });
+// Load environment variables (optional for Railway deployment)
+try {
+  require('dotenv').config({ path: '../../.env' });
+} catch (error) {
+  console.log('⚠️ Could not load .env file, using system environment variables');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3012;
