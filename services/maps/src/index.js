@@ -34,8 +34,10 @@ app.use(helmet({
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  process.env.FRONTEND_URL || 'https://tutorconnect-production.up.railway.app'
-];
+  'https://tutorconnect-production.up.railway.app',
+  'https://beautiful-celebration-production.up.railway.app',
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 console.log('🔧 MAPS SERVICE: Allowed CORS origins:', allowedOrigins);
 
