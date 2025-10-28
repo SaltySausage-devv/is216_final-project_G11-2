@@ -415,13 +415,13 @@ export default {
         let endpoint = ''
         switch (userType.value) {
           case 'student':
-            endpoint = `/api/analytics/student/${userId.value}`
+            endpoint = `/analytics/student/${userId.value}`
             break
           case 'tutor':
-            endpoint = `/api/analytics/tutor/${userId.value}`
+            endpoint = `/analytics/tutor/${userId.value}`
             break
           case 'centre':
-            endpoint = `/api/analytics/centre/${userId.value}`
+            endpoint = `/analytics/centre/${userId.value}`
             break
           default:
             throw new Error('Invalid user type for analytics')
