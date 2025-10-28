@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { createClient } = require('@supabase/supabase-js');
 const Joi = require('joi');
+const jwt = require('jsonwebtoken');
 // Load environment variables (optional for Railway deployment)
 try {
   require('dotenv').config({ path: '../../.env' });
@@ -15,6 +16,11 @@ const app = express();
 const PORT = process.env.PORT || 3008;
 
 // Initialize Supabase client
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  console.error('❌ Missing Supabase environment variables');
+  process.exit(1);
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
@@ -46,17 +52,8 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// JWT verification middleware - following the same pattern as other services
-const jwt = require('jsonwebtoken');
-
-const verifyToken = async (req, res, next) => {
+const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  
-  console.log('🔐 Token verification:', {
-    hasAuthHeader: !!req.headers.authorization,
-    tokenLength: token?.length || 0,
-    tokenStart: token?.substring(0, 20) || 'none'
-  });
   
   if (!token) {
     return res.status(401).json({ error: 'No token provided' });
