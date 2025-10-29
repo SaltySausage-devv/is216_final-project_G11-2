@@ -342,7 +342,8 @@ export default {
         return "0.00";
 
       const total = tutorHourlyRate.value * sessionDurationInHours.value;
-      return total.toFixed(2);
+      // Always format to 2 decimal places (e.g., 3.18, 3.00, 0.50)
+      return parseFloat(total.toFixed(2)).toFixed(2);
     });
 
     // Calculate current session duration in hours
@@ -361,7 +362,9 @@ export default {
     const currentCredits = computed(() => {
       const hours = parseFloat(currentDurationInHours.value);
       if (tutorHourlyRate.value > 0 && hours > 0) {
-        return (tutorHourlyRate.value * hours).toFixed(2);
+        const total = tutorHourlyRate.value * hours.listen;
+        // Always format to 2 decimal places (e.g., 3.18, 3.00, 0.50)
+        return parseFloat(total.toFixed(2)).toFixed(2);
       }
       return "0.00";
     });
