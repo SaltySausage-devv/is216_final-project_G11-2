@@ -4,7 +4,7 @@
   "description": "TutorConnect Frontend - Vue.js application",
   "scripts": {
     "dev": "node node_modules/vite/bin/vite.js",
-    "postinstall": "npm install --no-save --include=optional @rollup/rollup-linux-x64-gnu || true",
+    "postinstall": "rm -rf node_modules/@rollup/rollup-win32-x64-gnu node_modules/@rollup/rollup-darwin-* node_modules/@esbuild/darwin-* node_modules/@esbuild/win32-* 2>/dev/null || true && npm install --no-save --include=optional @rollup/rollup-linux-x64-gnu @esbuild/linux-x64 || true",
     "prebuild": "echo '🔍 Checking env vars...' && env | grep VITE_ || echo '⚠️ No VITE_ env vars found'",
     "build": "vite build",
     "preview": "vite preview",
