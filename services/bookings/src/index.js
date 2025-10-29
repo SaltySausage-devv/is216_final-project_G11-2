@@ -1288,6 +1288,75 @@ app.post('/bookings/:bookingId/mark-attendance', verifyToken, async (req, res) =
   }
 });
 
+// Mark booking as completed
+app.post('/bookings/:bookingId/complete', verifyToken, async (req, res) => {
+  try {
+    console.log('✅ Complete booking endpoint called');
+    console.log('  - Request user:', req.user);
+    
+    const { bookingId } = req.params;
+    const currentUserId = req.user.userId; // Get user ID from verified token
+
+    // Get booking details
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', bookingId)
+      .single();
+
+    if (bookingError || !booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // Debug logging
+    console.log('🔍 Complete Booking Debug Info:');
+    console.log('  - Current User ID:', currentUserId, '(type:', typeof currentUserId, ')');
+    console.log('  - Booking Tutor ID:', booking.tutor_id, '(type:', typeof booking.tutor_id, ')');
+    console.log('  - Booking ID:', bookingId);
+    console.log('  - IDs Match:', String(booking.tutor_id) === String(currentUserId));
+
+    // Only tutors can mark bookings as complete
+    // Use String() conversion to handle potential UUID type mismatches
+    if (String(booking.tutor_id) !== String(currentUserId)) {
+      return res.status(403).json({ 
+        error: 'Only tutors can mark bookings as complete',
+        debug: {
+          currentUserId,
+          bookingTutorId: booking.tutor_id,
+          bookingId,
+          currentUserIdString: String(currentUserId),
+          bookingTutorIdString: String(booking.tutor_id)
+        }
+      });
+    }
+
+    // Update booking status to completed
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', bookingId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating booking status:', updateError);
+      throw updateError;
+    }
+
+    console.log('✅ Booking marked as completed:', updatedBooking.id);
+    res.json({ 
+      message: 'Booking marked as completed successfully',
+      data: updatedBooking 
+    });
+  } catch (error) {
+    console.error('Booking completion error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Check attendance status for multiple bookings
 app.post('/bookings/attendance-status', verifyToken, async (req, res) => {
   try {
