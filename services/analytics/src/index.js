@@ -52,7 +52,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   
   if (!token) {
@@ -60,8 +60,25 @@ const verifyToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Direct assignment to match other services
+    // Verify Supabase token
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    // Get user profile from database
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    req.user = {
+      userId: user.id,
+      userType: userProfile?.user_type || 'student'
+    };
+    
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token' });
