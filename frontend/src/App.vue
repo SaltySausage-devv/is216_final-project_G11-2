@@ -6,6 +6,13 @@
     </main>
     <Footer />
     <ToastNotifications />
+    <AlertModal
+      :visible="alertState.visible"
+      :title="alertState.title"
+      :message="alertState.message"
+      :type="alertState.type"
+      @close="handleClose"
+    />
   </div>
 </template>
 
@@ -14,18 +21,31 @@ import { onMounted, onUnmounted, watch, ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "./stores/auth";
 import { useNotifications } from "./composables/useNotifications";
+import { useAlertModal } from "./composables/useAlertModal";
 import messagingService from "./services/messaging.js";
 import ToastNotifications from "./components/ToastNotifications.vue";
+import AlertModal from "./components/AlertModal.vue";
 
 export default {
   name: "App",
   components: {
     ToastNotifications,
+    AlertModal,
   },
   setup() {
     const authStore = useAuthStore();
     const route = useRoute();
     const { showMessageNotification } = useNotifications();
+    const { alertState, handleClose, showAlert, showSuccess, showError, showWarning, showInfo } = useAlertModal();
+    
+    // Make alert functions globally available
+    if (typeof window !== 'undefined') {
+      window.showAlert = showAlert;
+      window.showSuccess = showSuccess;
+      window.showError = showError;
+      window.showWarning = showWarning;
+      window.showInfo = showInfo;
+    }
 
     // Store the global message handler reference to prevent duplicates
     let globalMessageHandler = null;
@@ -434,7 +454,10 @@ export default {
     window.testCreditUpdate = testCreditUpdate;
     window.testStudentCreditUpdate = testStudentCreditUpdate;
 
-    return {};
+    return {
+      alertState,
+      handleClose,
+    };
   },
 };
 </script>
