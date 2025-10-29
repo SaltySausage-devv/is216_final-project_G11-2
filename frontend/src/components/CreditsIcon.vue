@@ -20,7 +20,11 @@ export default {
     const authStore = useAuthStore();
 
     const userType = computed(() => authStore.userType);
-    const credits = computed(() => authStore.user?.credits || 0);
+    const credits = computed(() => {
+      const value = authStore.user?.credits || 0;
+      // Always format to 2 decimal places
+      return typeof value === 'number' ? value.toFixed(2) : parseFloat(value || 0).toFixed(2);
+    });
 
     return {
       userType,

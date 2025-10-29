@@ -325,7 +325,10 @@ export default {
         let successMessage = "Booking cancelled successfully";
         if (result.refundPolicy) {
           if (result.refundPolicy.studentRefunded) {
-            successMessage = `Booking cancelled successfully. You will receive ${result.refundPolicy.creditsToRefund} credits back.`;
+            const refundAmount = typeof result.refundPolicy.creditsToRefund === 'number' 
+              ? result.refundPolicy.creditsToRefund.toFixed(2)
+              : parseFloat(result.refundPolicy.creditsToRefund || 0).toFixed(2);
+            successMessage = `Booking cancelled successfully. You will receive ${refundAmount} credits back.`;
           } else {
             successMessage =
               "Booking cancelled successfully. No credit refund due to late cancellation.";
