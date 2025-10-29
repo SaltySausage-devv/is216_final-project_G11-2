@@ -98,6 +98,7 @@ export default {
       views: {
         dayGridMonth: {
           titleFormat: { year: "numeric", month: "long" },
+          moreLinkText: (num) => `+${num}`, // Show "+4" instead of "+4 more" on mobile
         },
         timeGridWeek: {
           titleFormat: { year: "numeric", month: "short", day: "numeric" },

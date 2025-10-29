@@ -364,21 +364,27 @@ export default {
 }
 
 .modal-content {
-  background: #2d2d44 !important;
-  border: 1px solid rgba(255, 107, 53, 0.3);
-  border-radius: 12px;
+  background: rgba(26, 26, 26, 0.98) !important;
+  backdrop-filter: blur(12px);
+  border: 2px solid var(--cyber-orange, #ff8c42) !important;
+  border-radius: 20px;
   color: #ffffff;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0,0,0,0.1);
 }
 
 .modal-header {
-  background: #3a3a52;
-  border-bottom: 1px solid rgba(255, 107, 53, 0.2);
-  border-radius: 12px 12px 0 0;
+  background: linear-gradient(135deg, rgba(28,28,28,0.95) 0%, rgba(24,24,24,0.95) 100%);
+  border-bottom: 2px solid var(--cyber-orange, #ff8c42);
+  border-radius: 20px 20px 0 0;
+  padding: 1.25rem 1.5rem;
 }
 
 .modal-title {
-  color: #ff6b35;
-  font-weight: 700;
+  color: var(--cyber-orange, #ff8c42);
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .btn-close {
@@ -391,14 +397,16 @@ export default {
 }
 
 .modal-body {
-  background: #2d2d44;
+  background: rgba(26, 26, 26, 0.9);
   color: #ffffff;
+  padding: 1.75rem 1.5rem;
 }
 
 .modal-footer {
-  background: #3a3a52;
-  border-top: 1px solid rgba(255, 107, 53, 0.2);
-  border-radius: 0 0 12px 12px;
+  background: linear-gradient(135deg, rgba(24,24,24,0.95) 0%, rgba(28,28,28,0.95) 100%);
+  border-top: 2px solid rgba(255, 140, 66, 0.3);
+  border-radius: 0 0 20px 20px;
+  padding: 1.25rem 1.5rem;
 }
 
 .form-label {
@@ -408,17 +416,18 @@ export default {
 
 .form-control,
 .form-select {
-  background: #3a3a52;
-  border: 1px solid rgba(255, 107, 53, 0.3);
-  color: #ffffff;
+  background: rgba(42, 42, 42, 0.8) !important;
+  border: 2px solid rgba(255, 140, 66, 0.3) !important;
+  color: #ffffff !important;
+  border-radius: 8px;
 }
 
 .form-control:focus,
 .form-select:focus {
-  background: #3a3a52;
-  border-color: #ff6b35;
-  color: #ffffff;
-  box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+  background: rgba(42, 42, 42, 0.95) !important;
+  border-color: var(--cyber-orange, #ff8c42) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 15px rgba(255, 140, 66, 0.3) !important;
 }
 
 .form-control::placeholder {

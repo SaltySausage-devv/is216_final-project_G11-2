@@ -769,33 +769,29 @@ export default {
 }
 
 .modal-content {
-  background: rgba(45, 45, 68, 0.98) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 107, 53, 0.2);
+  background: rgba(26, 26, 26, 0.98) !important;
+  backdrop-filter: blur(12px);
+  border: 2px solid var(--cyber-orange, #ff8c42) !important;
   border-radius: 20px;
   color: #ffffff;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 107, 53, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0,0,0,0.1);
   overflow: hidden;
 }
 
 .modal-header {
-  background: linear-gradient(
-    135deg,
-    rgba(58, 58, 82, 0.95) 0%,
-    rgba(45, 45, 68, 0.95) 100%
-  );
-  border-bottom: 1px solid rgba(255, 107, 53, 0.2);
+  background: linear-gradient(135deg, rgba(28,28,28,0.95) 0%, rgba(24,24,24,0.95) 100%);
+  border-bottom: 2px solid var(--cyber-orange, #ff8c42);
   border-radius: 20px 20px 0 0;
-  padding: 1.75rem 2rem;
+  padding: 1.25rem 1.5rem;
 }
 
 .modal-title {
-  color: #ff6b35;
+  color: var(--cyber-orange, #ff8c42);
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: -0.02em;
   margin: 0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .btn-close {
@@ -811,22 +807,18 @@ export default {
 }
 
 .modal-body {
-  background: rgba(45, 45, 68, 0.98);
+  background: rgba(26, 26, 26, 0.9);
   color: #ffffff;
-  padding: 2rem;
+  padding: 1.75rem 1.5rem;
   font-size: 0.95rem;
   line-height: 1.6;
 }
 
 .modal-footer {
-  background: linear-gradient(
-    135deg,
-    rgba(58, 58, 82, 0.95) 0%,
-    rgba(45, 45, 68, 0.95) 100%
-  );
-  border-top: 1px solid rgba(255, 107, 53, 0.2);
+  background: linear-gradient(135deg, rgba(24,24,24,0.95) 0%, rgba(28,28,28,0.95) 100%);
+  border-top: 2px solid rgba(255, 140, 66, 0.3);
   border-radius: 0 0 20px 20px;
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 1.5rem;
 }
 
 .form-label {
