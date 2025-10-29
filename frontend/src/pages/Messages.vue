@@ -428,55 +428,10 @@
                                 <i class="fas fa-check-circle me-1"></i>
                                 Session has been booked and added to calendar
                               </p>
-                            </div>
-                            <!-- Mark Attendance Button for Tutors -->
-                            <div
-                              v-if="
-                                (authStore.user &&
-                                  authStore.user.user_type === 'tutor') ||
-                                canMarkAttendance(message) ||
-                                isAttendanceMarked(message)
-                              "
-                              class="booking-actions mt-3"
-                              :key="`attendance-${message.id}`"
-                            >
-                              <!-- Button when attendance can be marked -->
-                              <button
-                                v-if="
-                                  canMarkAttendance(message) &&
-                                  !isAttendanceMarked(message)
-                                "
-                                class="btn btn-warning btn-sm"
-                                @click="showMarkAttendanceModal(message)"
-                              >
-                                <i class="fas fa-clipboard-check me-1"></i>
-                                Mark Attendance
-                              </button>
-
-                              <!-- Button when attendance has been marked -->
-                              <button
-                                v-if="isAttendanceMarked(message)"
-                                class="btn btn-success btn-sm"
-                                disabled
-                              >
-                                <i class="fas fa-check-circle me-1"></i>
-                                Attendance Marked
-                              </button>
-
-                              <!-- Button when session hasn't started yet -->
-                              <button
-                                v-if="
-                                  authStore.user &&
-                                  authStore.user.user_type === 'tutor' &&
-                                  !canMarkAttendance(message) &&
-                                  !isAttendanceMarked(message)
-                                "
-                                class="btn btn-secondary btn-sm"
-                                disabled
-                              >
-                                <i class="fas fa-clock me-1"></i>
-                                Session Not Started
-                              </button>
+                              <p class="mb-0 mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <small class="text-muted">Mark attendance from the calendar page</small>
+                              </p>
                             </div>
 
                             <!-- Session End Button for Students -->
