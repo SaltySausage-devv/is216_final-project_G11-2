@@ -84,19 +84,20 @@ export default {
 
 .subtitle {
   margin: 0;
-  color: #6b7280;
+  color: #ffffff;
 }
 
 .posts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
+  color: var(--cyber-orange)
 }
 
 .post-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--cyber-orange);
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--cyber-grey-light);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -119,7 +120,7 @@ export default {
 
 .excerpt {
   margin: 0 0 12px 0;
-  color: #4b5563;
+  color: #ffffff;
 }
 
 .meta {

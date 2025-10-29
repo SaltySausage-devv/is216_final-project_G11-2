@@ -3,21 +3,20 @@
     <div class="container">
       <header class="page-header">
         <h1>Success Stories</h1>
-        <p class="subtitle">A few highlights from our community. This is placeholder content.</p>
+        <p class="subtitle">Over the years, Tutor Connect has allowed students to find appropriate tutors. Let's hear some of them!</p>
       </header>
 
       <div class="stories-grid">
-        <article class="story-card" v-for="n in 6" :key="n">
+        <article class="story-card" v-for="(story, index) in scriptData" :key="index">
           <div class="image-skeleton" aria-hidden="true" />
           <div class="story-content">
-            <h2>Story Title {{ n }}</h2>
+            <h2>{{ story.title }}</h2>
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent commodo
-              cursus magna, vel scelerisque nisl consectetur et.
+             {{story.content}}
             </p>
             <div class="meta">
               <span class="tag">Category</span>
-              <span class="date">2025-01-0{{ (n % 9) + 1 }}</span>
+              <span class="date">2025-01-0{{ story.date }}</span>
             </div>
           </div>
         </article>
@@ -27,9 +26,24 @@
 </template>
 
 <script>
+import { ref, computed, onMounted, watch } from "vue";
+
 export default {
   name: 'SuccessStories',
+  setup () {
+    const scriptData = ref([]);
+    scriptData.value = [
+      {title: "She's such a great person.", content: "yaperoni yaperoni", date: "2025-01-24"},
+      {title: "She's such a great person.", content: "yaperoni yaperoni", date: "2025-01-24"},
+      {title: "She's such a great person.", content: "yaperoni yaperoni", date: "2025-01-24"},
+    ];
+  return{
+    scriptData
+  }
+  }
+  
 };
+
 </script>
 
 <style scoped>
@@ -51,6 +65,10 @@ export default {
   margin: 0 0 8px 0;
   font-size: 32px;
   line-height: 1.2;
+}
+
+h2{
+  color:grey
 }
 
 .subtitle {
