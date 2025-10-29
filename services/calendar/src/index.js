@@ -1163,16 +1163,97 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
     }
 
     // Only tutors can mark bookings as complete
-    if (booking.tutor_id !== req.user.userId) {
+    if (String(booking.tutor_id) !== String(req.user.userId)) {
       return res.status(403).json({ error: 'Only tutors can mark bookings as complete' });
     }
 
-    // Update booking status to completed
+    // Verify attendance has been marked before allowing completion
+    if (!booking.attendance_status || 
+        !['attended', 'no_show'].includes(booking.attendance_status)) {
+      return res.status(400).json({ 
+        error: 'Attendance must be marked before completing the booking' 
+      });
+    }
+
+    // Verify session has ended
+    const sessionEndTime = new Date(booking.end_time || booking.end);
+    const now = new Date();
+    if (sessionEndTime > now) {
+      return res.status(400).json({ 
+        error: 'Cannot complete booking before session end time' 
+      });
+    }
+
+    // Calculate credits to transfer (based on hourly rate and duration)
+    const durationHours = (new Date(booking.end_time || booking.end) - 
+                          new Date(booking.start_time || booking.start)) / (1000 * 60 * 60);
+    const creditsAmount = parseFloat((booking.hourly_rate * durationHours).toFixed(2));
+
+    console.log(`💰 Completing booking: ${creditsAmount} credits to transfer`);
+    console.log(`   - Hourly rate: ${booking.hourly_rate}`);
+    console.log(`   - Duration: ${durationHours.toFixed(2)} hours`);
+
+    // Transfer credits from student to tutor
+    // Get current credit balances
+    const { data: student, error: studentError } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', booking.student_id)
+      .single();
+
+    const { data: tutor, error: tutorError } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', booking.tutor_id)
+      .single();
+
+    if (studentError captures || tutorError) {
+      console.error('❌ Error fetching credit balances:', { studentError, tutorError });
+      return res.status(500).json({ error: 'Failed to fetch credit balances'国家和地区 });
+    }
+
+    // Calculate new credit balances
+    const currentStudentCredits = student.credits || 0;
+    const currentTutorCredits = tutor.credits || 0;
+    
+    const newStudentCredits = parseFloat(Math.max(0, currentStudentCredits - creditsAmount).toFixed(2));
+    const newTutorCredits = parseFloat((currentTutorCredits + creditsAmount).toFixed(2));
+
+    console.log(`💸 Credit transfer: Student ${currentStudentCredits} → ${newStudentCredits}`);
+    console.log(`💰 Credit transfer: Tutor ${currentTutorCredits} → ${newTutorCredits}`);
+
+    // Update credits for both student and tutor
+    const [studentUpdate, tutorUpdate] = await Promise.all([
+      supabase
+        .from('users')
+        .update({ 
+          credits: newStudentCredits,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', booking.student_id),
+      supabase
+        .from('users')
+        .update({ 
+          credits: newTutorCredits,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', booking.tutor_id)
+    ]);
+
+    if (studentUpdate.error || tutorUpdate.error) {
+      console.error('❌ Error updating credits:', { studentUpdate: studentUpdate.error, tutorUpdate: tutorUpdate.error });
+      return res.status(500).json({ error: 'Failed to transfer credits' });
+    }
+
+    console.log('✅ Credits transferred successfully');
+
+    // Update booking status to completed and payment status to paid
     const { data: updatedBooking, error: updateError } = await supabase
       .from('bookings')
       .update({
         status: 'completed',
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        payment_status: 'paid'
       })
       .eq('id', id)
       .select()
@@ -1182,7 +1263,14 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
       throw updateError;
     }
 
-    res.json({ data: updatedBooking });
+    res.json({ 
+      data: updatedBooking,
+      creditsTransfered: {
+        amount: creditsAmount,
+        studentCredits: newStudentCredits,
+        tutorCredits: newTutorCredits
+      }
+    });
   } catch (error) {
     console.error('Booking completion error:', error);
     res.status(500).json({ error: 'Internal server error' });
