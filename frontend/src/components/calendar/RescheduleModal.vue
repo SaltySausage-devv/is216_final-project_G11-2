@@ -139,19 +139,19 @@
                     "
                   >
                     <div class="card-body">
-                      <h6 class="card-title text-muted">
+                      <h6 class="card-title" style="color: rgba(255, 255, 255, 0.9); font-weight: 600;">
                         <i class="fas fa-coins me-2"></i>Current Session
                       </h6>
                       <div class="d-flex align-items-center">
-                        <strong v-if="authStore?.user?.user_type === 'student'"
+                        <strong v-if="authStore?.user?.user_type === 'student'" style="color: #ffffff;"
                           >Credits Used:</strong
                         >
-                        <strong v-else>Credits Earned:</strong>
+                        <strong v-else style="color: #ffffff;">Credits Earned:</strong>
                         <span class="text-warning fw-bold ms-2"
                           >${{ currentCredits }}</span
                         >
                       </div>
-                      <small class="text-muted d-block mt-1">
+                      <small class="d-block mt-1" style="color: rgba(255, 255, 255, 0.8);">
                         {{ currentDurationInHours }} hours
                       </small>
                     </div>
@@ -162,17 +162,18 @@
                 <div class="col-md-6 mb-3">
                   <div class="card h-100" :style="creditChangeStyle">
                     <div class="card-body">
-                      <h6 class="card-title" :class="creditChangeTextClass">
+                      <h6 class="card-title" :class="creditChangeTextClass" style="font-weight: 700;">
                         <i class="fas fa-coins me-2"></i>Proposed Session
                       </h6>
                       <div class="d-flex align-items-center">
-                        <strong v-if="authStore?.user?.user_type === 'student'"
+                        <strong v-if="authStore?.user?.user_type === 'student'" style="color: #ffffff;"
                           >Credits Used:</strong
                         >
-                        <strong v-else>Credits Earned:</strong>
+                        <strong v-else style="color: #ffffff;">Credits Earned:</strong>
                         <span
                           class="fw-bold ms-2"
                           :class="creditChangeTextClass"
+                          style="font-size: 1.1em;"
                           >${{ calculatedCredits }}</span
                         >
                         <i
@@ -181,11 +182,11 @@
                           :class="creditChangeIcon"
                         ></i>
                       </div>
-                      <small class="text-muted d-block mt-1">
+                      <small class="d-block mt-1" style="color: rgba(255, 255, 255, 0.8);">
                         {{ sessionDurationInHours }} hours
                       </small>
                       <div v-if="creditDifference !== 0" class="mt-2">
-                        <small :class="creditChangeTextClass">
+                        <small :class="creditChangeTextClass" style="font-weight: 700; font-size: 0.95em;">
                           <strong>{{ creditChangeText }}</strong>
                         </small>
                       </div>
@@ -902,8 +903,18 @@ export default {
 }
 
 .text-danger {
-  color: #dc2626 !important;
+  color: #ff6b6b !important;
   font-weight: 700;
+}
+
+.text-warning {
+  color: #ffd23f !important;
+  font-weight: 700;
+}
+
+/* Ensure strong tags have proper color on dark backgrounds */
+.card-body strong {
+  color: #ffffff !important;
 }
 
 .btn-warning {
