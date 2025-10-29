@@ -1842,8 +1842,7 @@
       @absent-reported="handleAbsentReported"
     />
 
-    <!-- Toast Notifications -->
-    <ToastNotifications />
+    <!-- Toast Notifications REMOVED - User requested no popups -->
 
     <!-- Booking Request Success Popup -->
     <div
