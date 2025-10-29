@@ -548,7 +548,7 @@ export default {
 }
 
 .text-success {
-  color: #4ecdc4 !important;
+  color: #ff8c42 !important;
 }
 
 strong {
@@ -723,7 +723,7 @@ strong {
 
 /* Icon Styling */
 .fa-check-circle {
-  color: #4ecdc4 !important;
+  color: #ff8c42 !important;
 }
 
 .fa-times-circle {
@@ -735,7 +735,7 @@ strong {
 }
 
 .fa-info-circle {
-  color: #4ecdc4 !important;
+  color: #ff8c42 !important;
 }
 
 .fa-exclamation-triangle {
@@ -786,12 +786,12 @@ strong {
 
 .success-icon {
   font-size: 3rem;
-  color: #4ecdc4;
+  color: #ff8c42;
   margin-bottom: 1rem;
 }
 
 .success-title {
-  color: #4ecdc4;
+  color: #ff8c42;
   font-weight: 700;
   margin-bottom: 1rem;
   font-size: 1.5rem;
@@ -804,7 +804,7 @@ strong {
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+  background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
   border: none;
   color: #ffffff;
   border-radius: 8px;
@@ -814,7 +814,7 @@ strong {
 }
 
 .btn-success:hover {
-  background: linear-gradient(135deg, #44a08d 0%, #3a8b7a 100%);
+  background: linear-gradient(135deg, #ff6b35 0%, #e55a2b 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
 }

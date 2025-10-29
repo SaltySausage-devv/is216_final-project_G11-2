@@ -53,7 +53,7 @@
             <div class="action-buttons">
               <button
                 type="button"
-                class="btn btn-success btn-lg action-btn"
+                class="btn btn-warning btn-lg action-btn"
                 @click="showReviewForm = true"
               >
                 <i class="fas fa-star me-2"></i>
@@ -64,7 +64,7 @@
               </button>
               <button
                 type="button"
-                class="btn btn-danger btn-lg action-btn"
+                class="btn btn-outline-warning btn-lg action-btn"
                 @click="showAbsentForm = true"
               >
                 <i class="fas fa-user-times me-2"></i>
@@ -266,7 +266,7 @@
           <button
             v-if="showReviewForm && !reviewSubmitted"
             type="button"
-            class="btn btn-success"
+            class="btn btn-warning"
             @click="submitReview"
             :disabled="loading || reviewForm.rating === 0"
           >
@@ -280,7 +280,7 @@
           <button
             v-if="showAbsentForm && !absentReported"
             type="button"
-            class="btn btn-danger"
+            class="btn btn-outline-warning"
             @click="submitAbsentReport"
             :disabled="loading || !proofPhoto"
           >
@@ -824,7 +824,7 @@ export default {
 }
 
 .text-success {
-  color: #4ecdc4 !important;
+  color: #ff8c42 !important;
 }
 
 .text-warning {
@@ -1036,8 +1036,8 @@ strong {
   border-color: #5a6268;
 }
 
-.btn-success {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+.btn-warning {
+  background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
   border: none;
   color: #ffffff;
   border-radius: 8px;
@@ -1046,26 +1046,28 @@ strong {
   transition: all 0.3s ease;
 }
 
-.btn-success:hover {
-  background: linear-gradient(135deg, #44a08d 0%, #3a8b7a 100%);
+.btn-warning:hover {
+  background: linear-gradient(135deg, #ff6b35 0%, #e55a2b 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
 }
 
-.btn-danger {
-  background: linear-gradient(135deg, #ff6b6b 0%, #e55a5a 100%);
-  border: none;
-  color: #ffffff;
+.btn-outline-warning {
+  background: transparent;
+  border: 2px solid #ff8c42;
+  color: #ff8c42;
   border-radius: 8px;
   font-weight: 600;
   padding: 0.75rem 1.5rem;
   transition: all 0.3s ease;
 }
 
-.btn-danger:hover {
-  background: linear-gradient(135deg, #e55a5a 0%, #d14a4a 100%);
+.btn-outline-warning:hover {
+  background: #ff8c42;
+  border-color: #ff8c42;
+  color: #ffffff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
 }
 
 .btn-primary {
@@ -1097,20 +1099,20 @@ strong {
 }
 
 .success-content {
-  background: rgba(78, 205, 196, 0.1);
-  border: 2px solid rgba(78, 205, 196, 0.3);
+  background: rgba(255, 140, 66, 0.1);
+  border: 2px solid rgba(255, 140, 66, 0.3);
   border-radius: 12px;
   padding: 2rem;
 }
 
 .success-icon {
   font-size: 3rem;
-  color: #4ecdc4;
+  color: #ff8c42;
   margin-bottom: 1rem;
 }
 
 .success-title {
-  color: #4ecdc4;
+  color: #ff8c42;
   font-weight: 700;
   margin-bottom: 1rem;
   font-size: 1.5rem;

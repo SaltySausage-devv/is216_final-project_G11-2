@@ -442,9 +442,9 @@ export default {
 }
 
 .alert-info {
-  background-color: rgba(78, 205, 196, 0.15);
-  border-color: rgba(78, 205, 196, 0.3);
-  color: #4ecdc4;
+  background-color: rgba(255, 140, 66, 0.15);
+  border-color: rgba(255, 140, 66, 0.3);
+  color: #ff8c42;
 }
 
 .text-danger {

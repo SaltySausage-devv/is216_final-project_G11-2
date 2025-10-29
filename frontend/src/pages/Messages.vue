@@ -2491,7 +2491,7 @@ export default {
         messages.value = messages.value.filter(
           (msg) => msg.id !== `temp_${Date.now()}`
         );
-        alert("Failed to send message. Please try again.");
+        showNotification('Error', 'Failed to send message. Please try again.', 'error');
       } finally {
         isLoading.value = false;
       }
@@ -2612,7 +2612,7 @@ export default {
         }
       } catch (error) {
         console.error("Error creating conversation:", error);
-        alert("Failed to create conversation: " + error.message);
+        showNotification('Error', 'Failed to create conversation: ' + error.message, 'error');
       }
     };
 
@@ -2647,7 +2647,7 @@ export default {
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert("Image is too large. Maximum size is 5MB.");
+        showNotification('Warning', 'Image is too large. Maximum size is 5MB.', 'warning');
         event.target.value = "";
         return;
       }
@@ -3016,7 +3016,7 @@ export default {
         messageToDelete.value = null;
       } catch (error) {
         console.error("Error deleting message:", error);
-        alert("Failed to delete message");
+        showNotification('Error', 'Failed to delete message', 'error');
       } finally {
         isDeleting.value = false;
       }
@@ -3086,10 +3086,10 @@ export default {
         showBookingOfferModal.value = false;
 
         // Show success message
-        alert("Booking request sent successfully!");
+        showNotification('Success', 'Booking request sent successfully!', 'success');
       } catch (error) {
         console.error("Error creating booking offer:", error);
-        alert("Failed to send booking request. Please try again.");
+        showNotification('Error', 'Failed to send booking request. Please try again.', 'error');
       } finally {
         isCreatingBooking.value = false;
       }
@@ -3100,11 +3100,11 @@ export default {
 
       // Validate required fields
       if (!bookingProposal.value.proposedDate) {
-        alert("Please select a date for the booking");
+        showNotification('Warning', 'Please select a date for the booking', 'warning');
         return;
       }
       if (!bookingProposal.value.proposedTime) {
-        alert("Please select a time for the booking");
+        showNotification('Warning', 'Please select a time for the booking', 'warning');
         return;
       }
 
@@ -3199,10 +3199,10 @@ export default {
         selectedBookingOffer.value = null;
 
         // Show success message
-        alert("Booking proposal sent successfully!");
+        showNotification('Success', 'Booking proposal sent successfully!', 'success');
       } catch (error) {
         console.error("Error creating booking proposal:", error);
-        alert("Failed to send booking proposal. Please try again.");
+        showNotification('Error', 'Failed to send booking proposal. Please try again.', 'error');
       } finally {
         isCreatingProposal.value = false;
       }
@@ -3274,10 +3274,10 @@ export default {
         selectedDate.value = null;
         selectedTimeSlot.value = null;
 
-        alert("Booking proposal sent successfully!");
+        showNotification('Success', 'Booking proposal sent successfully!', 'success');
       } catch (error) {
         console.error("Error sending booking proposal:", error);
-        alert("Failed to send booking proposal. Please try again.");
+        showNotification('Error', 'Failed to send booking proposal. Please try again.', 'error');
       } finally {
         isSendingProposal.value = false;
       }
@@ -3543,12 +3543,10 @@ export default {
         await creditService.refreshCredits();
 
         // Show success message
-        alert(
-          "Booking confirmed successfully! The session has been added to your calendar."
-        );
+        showNotification('Success', 'Booking confirmed successfully! The session has been added to your calendar.', 'success');
       } catch (error) {
         console.error("Error confirming booking:", error);
-        alert("Failed to confirm booking. Please try again.");
+        showNotification('Error', 'Failed to confirm booking. Please try again.', 'error');
       }
     };
 
@@ -6466,7 +6464,7 @@ i.text-primary {
 }
 
 .btn-success.btn-sm {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+  background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%) !important;
   border: none !important;
   color: #ffffff !important;
   font-weight: 600;
@@ -6474,7 +6472,7 @@ i.text-primary {
 }
 
 .btn-success.btn-sm:disabled {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+  background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%) !important;
   border: none !important;
   color: #ffffff !important;
   opacity: 0.9;
@@ -6482,7 +6480,7 @@ i.text-primary {
 }
 
 .btn-success.btn-sm:hover:disabled {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%) !important;
+  background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%) !important;
   transform: none;
   box-shadow: none;
 }
