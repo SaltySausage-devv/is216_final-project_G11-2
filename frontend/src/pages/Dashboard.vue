@@ -152,8 +152,6 @@
 <script>
 import { ref, computed, onMounted, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
-import api from '../services/api';
-
 
 export default {
   name: "Dashboard",
@@ -162,110 +160,29 @@ export default {
 
     const user = computed(() => authStore.user);
     const userType = computed(() => authStore.userType);
-    const userId = computed(() => authStore.user?.id);
 
     const stats = ref([]);
     const recentActivity = ref([]);
-    
-    const data = ref({});
 
     const loadDashboardData = async () => {
       console.log("📊 Loading dashboard data for user type:", userType.value);
-      console.log('🔍 ANALYTICS DEBUG:', {
-        userId: userId.value,
-        userType: userType.value,
-        hasToken: !!authStore.token,
-        tokenPreview: authStore.token ? authStore.token.substring(0, 20) + '...' : 'none'
-      });
-
-      if (!userId.value) {
-        console.log('❌ No userId available, skipping analytics load');
-        return;
-      }
-
-      isLoading.value = true
-      error.value = ''
-
-      try {
-        // Get auth token
-        const token = authStore.token
-        if (!token) {
-          throw new Error('No authentication token available')
-        }
-
-        // Determine the correct endpoint based on user type
-        let endpoint = ''
-        switch (userType.value) {
-          case 'student':
-            endpoint = `/analytics/student/${userId.value}`
-            break
-          case 'tutor':
-            endpoint = `/analytics/tutor/${userId.value}`
-            break
-          case 'centre':
-            endpoint = `/analytics/centre/${userId.value}`
-            break
-          default:
-            throw new Error('Invalid user type for analytics')
-        }
-
-        console.log('🔍 ANALYTICS API CALL:', {
-          endpoint,
-          userType: userType.value,
-          userId: userId.value,
-        });
-
-        // Fetch real data from analytics service
-        const response = await api.get(endpoint)
-
-        if (response.data.success) {
-          analyticsData.value = response.data.data
-          await nextTick()
-          // Add a small delay to ensure DOM is fully rendered
-          setTimeout(100)
-        } else {
-          throw new Error(response.data.error || 'Failed to load analytics data')
-        }
-      } catch (err) {
-        console.error('Analytics load error:', err)
-        console.error('Error details:', {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status,
-          url: err.config?.url
-        })
-        
-        // Show specific error messages instead of falling back to mock data
-        if (err.code === 'ECONNREFUSED' || err.message.includes('Network Error')) {
-          error.value = `Analytics service is not running. Please start the analytics service on port 3008.`
-        } else if (err.response?.status === 401) {
-          error.value = `Authentication failed. Please log in again.`
-        } else if (err.response?.status === 403) {
-          error.value = `Access denied. You don't have permission to view this data.`
-        } else {
-          error.value = `Failed to load analytics data: ${err.response?.data?.error || err.message}`
-        }
-      } finally {
-        isLoading.value = false
-      }
 
       // Load stats based on user type
-      if (userType.value == "student") {
-
+      if (userType.value === "student") {
         stats.value = [
           { icon: "fas fa-book", label: "Active Bookings", value: "3" },
           { icon: "fas fa-star", label: "Completed Sessions", value: "12" },
           { icon: "fas fa-clock", label: "Hours This Month", value: "24" },
           { icon: "fas fa-dollar-sign", label: "Total Spent", value: "$1,440" },
         ];
-      } else if (userType.value == "tutor") {
+      } else if (userType.value === "tutor") {
         stats.value = [
           { icon: "fas fa-users", label: "Total Students", value: "25" },
           { icon: "fas fa-star", label: "Average Rating", value: "4.8" },
           { icon: "fas fa-clock", label: "Hours This Month", value: "48" },
           { icon: "fas fa-dollar-sign", label: "Earnings", value: "$2,880" },
         ];
-      } else if (userType.value == "centre") {
+      } else if (userType.value === "centre") {
         stats.value = [
           { icon: "fas fa-users", label: "Total Students", value: "150" },
           { icon: "fas fa-star", label: "Average Rating", value: "4.6" },

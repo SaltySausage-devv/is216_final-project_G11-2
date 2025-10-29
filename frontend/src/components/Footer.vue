@@ -46,7 +46,7 @@
               </router-link>
             </li>
             <li class="mb-2">
-              <router-link to="/AboutUs" class="text-muted text-decoration-none">Success Stories</router-link>
+              <a href="#" class="text-muted text-decoration-none">Success Stories</a>
             </li>
           </ul>
         </div>
