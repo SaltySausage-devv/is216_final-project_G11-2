@@ -1876,17 +1876,25 @@ export default {
     const handleChatRoute = async (tutorId) => {
       try {
         console.log('🔄 Handling chat route for tutor:', tutorId);
+        console.log('🔄 Current user ID:', currentUserId.value);
         
         // Load conversations first
         await loadConversations();
+        console.log('🔄 Loaded conversations:', conversations.value.map(c => ({
+          id: c.id,
+          participantId: c.participant.id,
+          participantName: c.participant.name,
+          targetTutorId: tutorId
+        })));
         
         // Check if conversation already exists with this tutor
         const existingConversation = conversations.value.find(conv => {
+          console.log('🔍 Checking conversation:', conv.participant.id, '===', tutorId);
           return conv.participant.id === tutorId;
         });
 
         if (existingConversation) {
-          console.log('✅ Found existing conversation, selecting it');
+          console.log('✅ Found existing conversation, selecting it:', existingConversation);
           await selectConversationWithRoom(existingConversation);
           return;
         }
@@ -1905,6 +1913,7 @@ export default {
     const createConversationWithTutor = async (tutorId) => {
       try {
         console.log('🔄 Creating conversation with tutor:', tutorId);
+        console.log('🔄 Current user ID:', currentUserId.value);
         
         // Use the messaging service to create conversation
         const response = await messagingService.createConversation(tutorId);
@@ -1912,14 +1921,21 @@ export default {
         
         // Reload conversations to include the new one
         await loadConversations();
+        console.log('🔄 After reload, conversations:', conversations.value.map(c => ({
+          id: c.id,
+          participantId: c.participant.id,
+          participantName: c.participant.name
+        })));
         
         // Find and select the new conversation
         const newConversation = conversations.value.find(conv => conv.id === response.conversation.id);
         if (newConversation) {
-          console.log('✅ Found new conversation, selecting it');
+          console.log('✅ Found new conversation, selecting it:', newConversation);
           await selectConversationWithRoom(newConversation);
         } else {
           console.warn('⚠️ New conversation not found in conversations list');
+          console.log('Available conversations:', conversations.value);
+          console.log('Looking for conversation ID:', response.conversation.id);
         }
         
       } catch (error) {
