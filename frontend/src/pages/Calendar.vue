@@ -30,7 +30,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -55,10 +55,17 @@ export default {
     const bookings = ref([]);
     const selectedBooking = ref(null);
     const calendarRef = ref(null);
+    const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+    // Track window width for responsive moreLinkText
+    const updateWindowWidth = () => {
+      windowWidth.value = window.innerWidth;
+    };
 
     // Computed properties
     const userType = computed(() => authStore.userType);
     const currentUserId = computed(() => authStore.user?.id);
+    const isMobile = computed(() => windowWidth.value <= 768);
 
     // Calendar configuration
     const calendarOptions = computed(() => ({
@@ -98,7 +105,10 @@ export default {
       views: {
         dayGridMonth: {
           titleFormat: { year: "numeric", month: "long" },
-          moreLinkText: (num) => `+${num}`, // Show "+4" instead of "+4 more" on mobile
+          moreLinkText: (num) => {
+            // Desktop/wide view: "+X more", Mobile/compact view: "+X"
+            return isMobile.value ? `+${num}` : `+${num} more`;
+          },
         },
         timeGridWeek: {
           titleFormat: { year: "numeric", month: "short", day: "numeric" },
@@ -303,6 +313,18 @@ export default {
     // Lifecycle
     onMounted(() => {
       fetchCalendarData();
+      // Add window resize listener for responsive moreLinkText
+      if (typeof window !== 'undefined') {
+        window.addEventListener('resize', updateWindowWidth);
+        updateWindowWidth(); // Set initial width
+      }
+    });
+
+    onUnmounted(() => {
+      // Clean up resize listener
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', updateWindowWidth);
+      }
     });
 
     return {
