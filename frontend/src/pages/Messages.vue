@@ -1872,7 +1872,7 @@ import { useNotifications } from "../composables/useNotifications";
 import { useCreditService } from "../services/creditService";
 import { useGoogleMapsProxy } from "../composables/useGoogleMapsProxy";
 import { messagingApi } from "../services/messaging";
-import { useAlertModal } from "../composables/useAlertModal";
+import { useAlertModal } from "../composables/useAlertModal.js";
 import MarkAttendanceModal from "../components/calendar/MarkAttendanceModal.vue";
 import SessionEndModal from "../components/calendar/SessionEndModal.vue";
 import ToastNotifications from "../components/ToastNotifications.vue";

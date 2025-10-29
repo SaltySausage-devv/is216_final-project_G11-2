@@ -233,7 +233,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import TutorProfileForm from '../components/TutorProfileForm.vue'
-import { useAlertModal } from '../composables/useAlertModal'
+import { useAlertModal } from '../composables/useAlertModal.js'
 
 export default {
   name: 'Profile',

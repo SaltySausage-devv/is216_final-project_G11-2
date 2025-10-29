@@ -374,7 +374,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import api from '../services/api'
 import { useAuthStore } from '../stores/auth'
-import { useAlertModal } from '../composables/useAlertModal'
+import { useAlertModal } from '../composables/useAlertModal.js'
 
 export default {
   name: 'TutorProfileForm',
