@@ -4113,26 +4113,8 @@ export default {
             selectedConversation.value &&
             message.conversation_id === selectedConversation.value.id
           ) {
-            // Special handling for attendance notifications - show toast even when viewing conversation
-            if (message.message_type === "attendance_notification") {
-              console.log(
-                "🔔 ATTENDANCE NOTIFICATION: Showing toast for attendance notification"
-              );
-
-              // Mark notification as processed to prevent duplicates
-              const notificationKey = `${message.id}-${message.conversation_id}`;
-              if (!processedNotifications.value.has(notificationKey)) {
-                processedNotifications.value.add(notificationKey);
-
-                showMessageNotification({
-                  senderName: "System",
-                  message: message.content,
-                  conversationId: message.conversation_id,
-                });
-
-                console.log("✅ Attendance notification toast shown");
-              }
-            }
+            // MESSAGE NOTIFICATIONS DISABLED - User requested removal of notification popups
+            // Attendance notifications disabled
             console.log("Adding message to current conversation");
 
             // Validate message data
