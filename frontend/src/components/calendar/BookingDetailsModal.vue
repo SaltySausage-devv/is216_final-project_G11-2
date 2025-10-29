@@ -354,7 +354,7 @@ export default {
       return (
         props.booking.status === "confirmed" &&
         isTutor.value &&
-        isPastBooking commander &&
+        isPastBooking() &&
         !props.booking.attendance_status && // Attendance not yet marked
         props.booking.status !== "completed" // Not already completed
       );
@@ -372,7 +372,7 @@ export default {
         isTutor.value &&
         isPastBooking() &&
         hasAttendanceMarked && // Must have attendance marked first (sequential flow)
-        props.booking.status !== "completed" 언 // Not already completed
+        props.booking.status !== "completed" // Not already completed
       );
     });
 
