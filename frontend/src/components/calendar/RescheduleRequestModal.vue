@@ -31,11 +31,11 @@
             "
           >
             <div class="card-body">
-              <h6 class="card-title text-muted">
+              <h6 class="card-title" style="color: rgba(255, 255, 255, 0.9); font-weight: 600;">
                 <i class="fas fa-calendar me-2"></i>Current Time
               </h6>
-              <p class="mb-0">
-                <strong>{{ formatDate(booking.start_time) }}</strong
+              <p class="mb-0" style="color: #ffffff;">
+                <strong style="color: #ffffff;">{{ formatDate(booking.start_time) }}</strong
                 ><br />
                 {{ formatTime(booking.start_time) }} -
                 {{ formatTime(booking.end_time) }}
@@ -57,11 +57,11 @@
             "
           >
             <div class="card-body">
-              <h6 class="card-title text-warning">
+              <h6 class="card-title text-warning" style="font-weight: 700;">
                 <i class="fas fa-calendar-check me-2"></i>Proposed New Time
               </h6>
-              <p class="mb-0">
-                <strong>{{
+              <p class="mb-0" style="color: #ffffff;">
+                <strong style="color: #ffffff;">{{
                   formatDate(booking.pending_reschedule_start_time)
                 }}</strong
                 ><br />
@@ -84,10 +84,10 @@
                   "
                 >
                   <div class="card-body">
-                    <h6 class="card-title text-muted">
+                    <h6 class="card-title" style="color: rgba(255, 255, 255, 0.9); font-weight: 600;">
                       <i class="fas fa-map-marker-alt me-2"></i>Current Location
                     </h6>
-                    <p class="mb-0 text-light">
+                    <p class="mb-0" style="color: #ffffff;">
                       {{ booking.location || "No location set" }}
                     </p>
                   </div>
@@ -104,11 +104,11 @@
                   "
                 >
                   <div class="card-body">
-                    <h6 class="card-title text-info">
+                    <h6 class="card-title text-info" style="font-weight: 700;">
                       <i class="fas fa-map-marker-alt me-2"></i>Proposed
                       Location
                     </h6>
-                    <p class="mb-0 text-light">
+                    <p class="mb-0" style="color: #ffffff;">
                       {{
                         booking.pending_reschedule_location ||
                         "No location change"
@@ -122,10 +122,10 @@
 
           <!-- Reason -->
           <div v-if="booking.reschedule_reason" class="mb-4">
-            <h6 class="text-muted">
+            <h6 style="color: rgba(255, 255, 255, 0.9); font-weight: 600;">
               <i class="fas fa-comment me-2"></i>Reason
             </h6>
-            <p class="text-light">{{ booking.reschedule_reason }}</p>
+            <p style="color: #ffffff;">{{ booking.reschedule_reason }}</p>
           </div>
 
           <!-- Credits Comparison -->
@@ -147,19 +147,19 @@
                   "
                 >
                   <div class="card-body">
-                    <h6 class="card-title text-muted">
+                    <h6 class="card-title" style="color: rgba(255, 255, 255, 0.9); font-weight: 600;">
                       <i class="fas fa-coins me-2"></i>Current Session
                     </h6>
                     <div class="d-flex align-items-center">
-                      <strong v-if="authStore?.user?.user_type === 'student'"
+                      <strong v-if="authStore?.user?.user_type === 'student'" style="color: #ffffff;"
                         >Credits Used:</strong
                       >
-                      <strong v-else>Credits Earned:</strong>
+                      <strong v-else style="color: #ffffff;">Credits Earned:</strong>
                       <span class="text-warning fw-bold ms-2"
                         >${{ currentCredits }}</span
                       >
                     </div>
-                    <small class="text-muted d-block mt-1">
+                    <small class="d-block mt-1" style="color: rgba(255, 255, 255, 0.8);">
                       {{ currentDurationInHours }} hours
                     </small>
                   </div>
@@ -170,15 +170,15 @@
               <div class="col-md-6 mb-3">
                 <div class="card h-100" :style="creditChangeStyle">
                   <div class="card-body">
-                    <h6 class="card-title" :class="creditChangeTextClass">
+                    <h6 class="card-title" :class="creditChangeTextClass" style="font-weight: 700;">
                       <i class="fas fa-coins me-2"></i>Proposed Session
                     </h6>
                     <div class="d-flex align-items-center">
-                      <strong v-if="authStore?.user?.user_type === 'student'"
+                      <strong v-if="authStore?.user?.user_type === 'student'" style="color: #ffffff;"
                         >Credits Used:</strong
                       >
-                      <strong v-else>Credits Earned:</strong>
-                      <span class="fw-bold ms-2" :class="creditChangeTextClass"
+                      <strong v-else style="color: #ffffff;">Credits Earned:</strong>
+                      <span class="fw-bold ms-2" :class="creditChangeTextClass" style="font-size: 1.1em;"
                         >${{ calculatedCredits }}</span
                       >
                       <i
@@ -187,11 +187,11 @@
                         :class="creditChangeIcon"
                       ></i>
                     </div>
-                    <small class="text-muted d-block mt-1">
+                    <small class="d-block mt-1" style="color: rgba(255, 255, 255, 0.8);">
                       {{ sessionDurationInHours }} hours
                     </small>
                     <div v-if="creditDifference !== 0" class="mt-2">
-                      <small :class="creditChangeTextClass">
+                      <small :class="creditChangeTextClass" style="font-weight: 700; font-size: 0.95em;">
                         <strong>{{ creditChangeText }}</strong>
                       </small>
                     </div>
@@ -202,14 +202,14 @@
             <div v-else class="alert alert-warning">
               <div class="d-flex align-items-center">
                 <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
-                <span class="text-muted">Tutor hourly rate not available</span>
+                <span style="color: #ffffff;">Tutor hourly rate not available</span>
               </div>
             </div>
           </div>
 
           <!-- Response Message Input (when responding) -->
           <div v-if="!responded" class="mb-3">
-            <label class="form-label">Your Response (Optional)</label>
+            <label class="form-label" style="color: var(--cyber-orange, #ff8c42); font-weight: 700;">Your Response (Optional)</label>
             <textarea
               v-model="responseMessage"
               class="form-control"
@@ -912,11 +912,20 @@ export default {
 }
 
 .text-muted {
-  color: #aaaaaa !important;
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
 .text-light {
-  color: #e0e0e0 !important;
+  color: #ffffff !important;
+}
+
+/* Ensure strong tags have proper color on dark backgrounds */
+.card-body strong {
+  color: #ffffff !important;
+}
+
+.modal-body p {
+  color: #ffffff !important;
 }
 
 .form-control {
