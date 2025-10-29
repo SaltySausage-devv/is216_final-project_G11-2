@@ -139,6 +139,35 @@
 
               <!-- Search Form -->
               <form @submit.prevent="searchTutors" class="row g-3">
+                <!-- Name Search - Full width for prominence -->
+                <div class="col-12">
+                  <label class="cyberpunk-label">
+                    <i class="fas fa-user me-2"></i>Search by Name
+                  </label>
+                  <div class="cyberpunk-input-group">
+                    <div class="cyberpunk-input-icon">
+                      <i class="fas fa-user-circle"></i>
+                    </div>
+                    <input
+                      ref="nameField"
+                      type="text"
+                      v-model="filters.name"
+                      class="cyberpunk-input"
+                      placeholder="Enter tutor's name to search..."
+                      @input="applyClientSideFilters"
+                    />
+                    <button
+                      v-if="filters.name"
+                      type="button"
+                      class="cyberpunk-clear-name-btn"
+                      @click="filters.name = ''; applyClientSideFilters()"
+                      title="Clear name search"
+                    >
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+
                 <div class="col-md-6">
                   <label class="cyberpunk-label">Subject</label>
                   <div class="cyberpunk-input-group">
@@ -191,13 +220,20 @@
                     <div class="cyberpunk-input-icon">
                       <i class="fas fa-map-marker-alt"></i>
                     </div>
-                    <input
+                    <select
                       ref="locationField"
-                      type="text"
                       v-model="filters.location"
                       class="cyberpunk-input"
-                      placeholder="Enter location or postal code"
-                    />
+                    >
+                      <option value="">All Locations</option>
+                      <option
+                        v-for="area in singaporeAreas"
+                        :key="area"
+                        :value="area"
+                      >
+                        {{ area }}
+                      </option>
+                    </select>
                   </div>
                 </div>
 
@@ -520,6 +556,7 @@ export default {
     const searchIcon = ref(null);
     const searchTitle = ref(null);
     const searchSubtitle = ref(null);
+    const nameField = ref(null);
     const subjectField = ref(null);
     const levelField = ref(null);
     const locationField = ref(null);
@@ -543,7 +580,91 @@ export default {
     const motionPath2 = ref(null);
     const motionPath3 = ref(null);
 
+    const singaporeAreas = [
+      // Central
+      'Orchard',
+      'Marina Bay',
+      'Chinatown',
+      'Clarke Quay',
+      'Bugis',
+      'Dhoby Ghaut',
+      'City Hall',
+      'Raffles Place',
+      'Tanjong Pagar',
+      'Little India',
+      'Farrer Park',
+      'Rochor',
+      'Novena',
+      'Newton',
+      'Somerset',
+      'Bras Basah',
+      // North
+      'Woodlands',
+      'Yishun',
+      'Sembawang',
+      'Admiralty',
+      'Kranji',
+      'Marsiling',
+      'Choa Chu Kang',
+      'Lim Chu Kang',
+      'Punggol',
+      'Sengkang',
+      'Ang Mo Kio',
+      'Bishan',
+      'Toa Payoh',
+      'Yio Chu Kang',
+      // East
+      'Geylang',
+      'Bedok',
+      'Tampines',
+      'Pasir Ris',
+      'Eunos',
+      'Kembangan',
+      'Simei',
+      'Changi',
+      'Katong',
+      'Marine Parade',
+      'Tanah Merah',
+      'Kallang',
+      'Paya Lebar',
+      'Ubi',
+      // West
+      'Jurong',
+      'Clementi',
+      'Bukit Batok',
+      'Bukit Panjang',
+      'Boon Lay',
+      'Pioneer',
+      'Tuas',
+      'Jurong East',
+      'Jurong West',
+      'Lakeside',
+      'Chinese Garden',
+      'Dover',
+      'Nanyang',
+      // Other
+      'Queenstown',
+      'Redhill',
+      'Tiong Bahru',
+      'Commonwealth',
+      'Harbourfront',
+      'Sentosa',
+      'Alexandra',
+      'Telok Blangah',
+      'Mount Faber',
+      'Henderson',
+      'Ayer Rajah',
+      'Buona Vista',
+      'Holland Village',
+      'Balmoral',
+      'Tanglin',
+      'Stevens',
+      'Caldecott',
+      'Botanic Gardens'
+    ];
+
     const filters = reactive({
+      name: "",
       subject: "",
       level: "",
       location: "",
@@ -655,6 +776,7 @@ export default {
 
       // Form fields with staggered animations
       const formFields = [
+        { ref: nameField, delay: 350 },
         { ref: subjectField, delay: 400 },
         { ref: levelField, delay: 450 },
         { ref: locationField, delay: 500 },
@@ -695,6 +817,7 @@ export default {
 
       // Advanced input focus animations
       const inputFields = [
+        nameField,
         subjectField,
         levelField,
         locationField,
@@ -906,6 +1029,7 @@ export default {
             profile.location?.address ||
             profile.preferred_locations?.[0] ||
             "Singapore",
+          preferredLocations: profile.preferred_locations || [],
           teachingMode: profile.teaching_mode?.[0] || "both",
           availability: ["now"], // TODO: Get from availability system
         }));
@@ -913,11 +1037,38 @@ export default {
         // Apply client-side filters for ratings, experience, availability
         let filtered = allTutors.value;
 
+        // Name filter (case-insensitive partial match)
+        if (filters.name && filters.name.trim()) {
+          const nameQuery = filters.name.trim().toLowerCase();
+          filtered = filtered.filter((tutor) => {
+            const tutorName = tutor.name.toLowerCase();
+            return tutorName.includes(nameQuery);
+          });
+        }
+
+        // Location filter (exact match with primary location or preferred locations)
+        if (filters.location && filters.location.trim()) {
+          const locationQuery = filters.location.trim();
+          filtered = filtered.filter((tutor) => {
+            // Check if tutor's primary location matches
+            if (tutor.location === locationQuery) {
+              return true;
+            }
+            // Check if any preferred location matches
+            if (tutor.preferredLocations && tutor.preferredLocations.length > 0) {
+              return tutor.preferredLocations.includes(locationQuery);
+            }
+            return false;
+          });
+        }
+
         // Rating filter
         if (filters.ratings.length > 0) {
-          filtered = filtered.filter((tutor) =>
-            filters.ratings.includes(tutor.rating)
-          );
+          filtered = filtered.filter((tutor) => {
+            // Round the average rating to nearest integer for filtering
+            const roundedRating = Math.round(tutor.rating || 0);
+            return filters.ratings.includes(roundedRating);
+          });
         }
 
         // Experience filter
@@ -969,9 +1120,73 @@ export default {
       }
     };
 
+    // Apply client-side filters to already loaded tutors (for name search real-time filtering)
+    const applyClientSideFilters = () => {
+      let filtered = allTutors.value;
+
+      // Name filter (case-insensitive partial match)
+      if (filters.name && filters.name.trim()) {
+        const nameQuery = filters.name.trim().toLowerCase();
+        filtered = filtered.filter((tutor) => {
+          const tutorName = tutor.name.toLowerCase();
+          return tutorName.includes(nameQuery);
+        });
+      }
+
+      // Rating filter
+      if (filters.ratings.length > 0) {
+        filtered = filtered.filter((tutor) => {
+          const roundedRating = Math.round(tutor.rating || 0);
+          return filters.ratings.includes(roundedRating);
+        });
+      }
+
+      // Experience filter
+      if (filters.experience.length > 0) {
+        filtered = filtered.filter((tutor) =>
+          filters.experience.includes(tutor.experience)
+        );
+      }
+
+      // Availability filter
+      if (filters.availability.length > 0) {
+        filtered = filtered.filter((tutor) =>
+          filters.availability.some((avail) =>
+            tutor.availability.includes(avail)
+          )
+        );
+      }
+
+      // Apply sorting
+      if (sortBy.value === "rating") {
+        filtered.sort((a, b) => b.rating - a.rating);
+      } else if (sortBy.value === "price-low") {
+        filtered.sort((a, b) => a.hourlyRate - b.hourlyRate);
+      } else if (sortBy.value === "price-high") {
+        filtered.sort((a, b) => b.hourlyRate - a.hourlyRate);
+      } else if (sortBy.value === "experience") {
+        const expOrder = { "5+": 3, "3-5": 2, "1-2": 1 };
+        filtered.sort(
+          (a, b) => expOrder[b.experience] - expOrder[a.experience]
+        );
+      }
+
+      // Update results
+      totalFilteredTutors.value = filtered.length;
+      tutors.value = filtered.slice(0, tutorsPerPage);
+      
+      // Reset to first page when filtering
+      currentPage.value = 1;
+    };
+
     // Get dynamic count of tutors by rating
+    // Count tutors whose average rating rounds to the specified star rating
     const getRatingCount = (rating) => {
-      return allTutors.value.filter((tutor) => tutor.rating === rating).length;
+      return allTutors.value.filter((tutor) => {
+        // Round the average rating to nearest integer for comparison
+        const roundedRating = Math.round(tutor.rating || 0);
+        return roundedRating === rating;
+      }).length;
     };
 
     // Animate tutor cards entrance
@@ -1017,11 +1232,38 @@ export default {
       // Apply client-side filters for ratings, experience, availability
       let filtered = allTutors.value;
 
+      // Name filter (case-insensitive partial match)
+      if (filters.name && filters.name.trim()) {
+        const nameQuery = filters.name.trim().toLowerCase();
+        filtered = filtered.filter((tutor) => {
+          const tutorName = tutor.name.toLowerCase();
+          return tutorName.includes(nameQuery);
+        });
+      }
+
+      // Location filter (exact match with primary location or preferred locations)
+      if (filters.location && filters.location.trim()) {
+        const locationQuery = filters.location.trim();
+        filtered = filtered.filter((tutor) => {
+          // Check if tutor's primary location matches
+          if (tutor.location === locationQuery) {
+            return true;
+          }
+          // Check if any preferred location matches
+          if (tutor.preferredLocations && tutor.preferredLocations.length > 0) {
+            return tutor.preferredLocations.includes(locationQuery);
+          }
+          return false;
+        });
+      }
+
       // Rating filter
       if (filters.ratings.length > 0) {
-        filtered = filtered.filter((tutor) =>
-          filters.ratings.includes(tutor.rating)
-        );
+        filtered = filtered.filter((tutor) => {
+          // Round the average rating to nearest integer for filtering
+          const roundedRating = Math.round(tutor.rating || 0);
+          return filters.ratings.includes(roundedRating);
+        });
       }
 
       // Experience filter
@@ -1210,6 +1452,7 @@ export default {
       searchIcon,
       searchTitle,
       searchSubtitle,
+      nameField,
       subjectField,
       levelField,
       locationField,
@@ -1232,6 +1475,7 @@ export default {
       motionPath2,
       motionPath3,
       // Form data
+      singaporeAreas,
       filters,
       sortBy,
       tutors,
@@ -1239,6 +1483,7 @@ export default {
       isLoading,
       hasMoreTutors,
       searchTutors,
+      applyClientSideFilters,
       clearFilters,
       loadMore,
       getRatingCount,
@@ -1495,6 +1740,26 @@ export default {
 
 .cyberpunk-input::placeholder {
   color: var(--cyber-text-dim);
+}
+
+/* Clear name button */
+.cyberpunk-clear-name-btn {
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--cyber-text-muted);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-left: 1px solid var(--cyber-grey-light);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cyberpunk-clear-name-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 /* Style select dropdowns */

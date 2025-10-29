@@ -302,25 +302,41 @@
       <div class="card-body p-4">
         <div class="mb-3">
           <label class="form-label">Primary Location/Area</label>
-          <input
-            type="text"
+          <select
             v-model="tutorProfile.locationAddress"
             class="form-control"
             :disabled="!editMode"
-            placeholder="e.g., Orchard, Singapore"
-          />
+          >
+            <option value="">Select an area</option>
+            <option
+              v-for="area in singaporeAreas"
+              :key="area"
+              :value="area"
+            >
+              {{ area }}
+            </option>
+          </select>
         </div>
 
         <div class="mb-3">
           <label class="form-label">Preferred Teaching Locations</label>
-          <input
-            type="text"
-            v-model="preferredLocationsInput"
-            class="form-control"
-            :disabled="!editMode"
-            placeholder="e.g., Orchard, Novena, Toa Payoh (comma-separated)"
-            @blur="updatePreferredLocations"
-          />
+          <div class="d-flex gap-2 mb-2">
+            <select
+              v-model="preferredLocationsInput"
+              class="form-control"
+              :disabled="!editMode"
+              @change="addPreferredLocation"
+            >
+              <option value="">Select an area to add</option>
+              <option
+                v-for="area in availablePreferredLocations"
+                :key="area"
+                :value="area"
+              >
+                {{ area }}
+              </option>
+            </select>
+          </div>
           <div class="mt-2">
             <span
               v-for="(location, index) in tutorProfile.preferredLocations"
@@ -412,6 +428,91 @@ export default {
       'Hokkien'
     ]
 
+    const singaporeAreas = [
+      // Central
+      'Orchard',
+      'Marina Bay',
+      'Chinatown',
+      'Clarke Quay',
+      'Bugis',
+      'Dhoby Ghaut',
+      'City Hall',
+      'Raffles Place',
+      'Tanjong Pagar',
+      'Little India',
+      'Farrer Park',
+      'Rochor',
+      'Novena',
+      'Newton',
+      'Somerset',
+      'Bras Basah',
+      // North
+      'Woodlands',
+      'Yishun',
+      'Sembawang',
+      'Admiralty',
+      'Kranji',
+      'Marsiling',
+      'Choa Chu Kang',
+      'Lim Chu Kang',
+      'Punggol',
+      'Sengkang',
+      'Ang Mo Kio',
+      'Bishan',
+      'Toa Payoh',
+      'Yio Chu Kang',
+      // East
+      'Geylang',
+      'Bedok',
+      'Tampines',
+      'Pasir Ris',
+      'Eunos',
+      'Kembangan',
+      'Simei',
+      'Changi',
+      'Katong',
+      'Marine Parade',
+      'Tanah Merah',
+      'Tampines',
+      'Kallang',
+      'Paya Lebar',
+      'Ubi',
+      // West
+      'Jurong',
+      'Clementi',
+      'Bukit Batok',
+      'Bukit Panjang',
+      'Boon Lay',
+      'Pioneer',
+      'Tuas',
+      'Jurong East',
+      'Jurong West',
+      'Lakeside',
+      'Chinese Garden',
+      'Dover',
+      'Boon Lay',
+      'Nanyang',
+      // Other
+      'Queenstown',
+      'Redhill',
+      'Tiong Bahru',
+      'Commonwealth',
+      'Harbourfront',
+      'Sentosa',
+      'Alexandra',
+      'Telok Blangah',
+      'Mount Faber',
+      'Henderson',
+      'Ayer Rajah',
+      'Buona Vista',
+      'Holland Village',
+      'Balmoral',
+      'Tanglin',
+      'Stevens',
+      'Caldecott',
+      'Botanic Gardens'
+    ]
+
     const tutorProfile = reactive({
       headline: '',
       bio: '',
@@ -495,16 +596,21 @@ export default {
       tutorProfile.specialties.splice(index, 1)
     }
 
-    const updatePreferredLocations = () => {
-      if (preferredLocationsInput.value) {
-        const newLocations = preferredLocationsInput.value
-          .split(',')
-          .map(l => l.trim())
-          .filter(l => l && !tutorProfile.preferredLocations.includes(l))
+    // Computed property to show only areas not already selected as preferred locations
+    const availablePreferredLocations = computed(() => {
+      return singaporeAreas.filter(area => !tutorProfile.preferredLocations.includes(area))
+    })
 
-        tutorProfile.preferredLocations.push(...newLocations)
+    const addPreferredLocation = () => {
+      if (preferredLocationsInput.value && !tutorProfile.preferredLocations.includes(preferredLocationsInput.value)) {
+        tutorProfile.preferredLocations.push(preferredLocationsInput.value)
         preferredLocationsInput.value = ''
       }
+    }
+
+    const updatePreferredLocations = () => {
+      // Keep for backward compatibility, but addPreferredLocation is now used
+      addPreferredLocation()
     }
 
     const removePreferredLocation = (index) => {
@@ -601,6 +707,8 @@ export default {
       availableSubjects,
       availableLevels,
       availableLanguages,
+      singaporeAreas,
+      availablePreferredLocations,
       specialtiesInput,
       preferredLocationsInput,
       profileCompleteness,
@@ -608,6 +716,7 @@ export default {
       removeQualification,
       updateSpecialties,
       removeSpecialty,
+      addPreferredLocation,
       updatePreferredLocations,
       removePreferredLocation,
       saveTutorProfile
