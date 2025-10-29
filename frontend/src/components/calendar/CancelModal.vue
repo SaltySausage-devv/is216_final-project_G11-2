@@ -234,11 +234,17 @@ export default {
         const endTime = props.booking.end_time || props.booking.end;
         const duration =
           (new Date(endTime) - new Date(startTime)) / (1000 * 60 * 60);
-        const calculated = (props.booking.hourly_rate * duration).toFixed(2);
+        const total = props.booking.hourly_rate * duration;
+        // Always format to 2 decimal places
+        const calculated = parseFloat(total.toFixed(2)).toFixed(2);
         return calculated;
       }
       // Fallback to total_amount if available, otherwise use a default
-      return props.booking.total_amount || "50";
+      // If total_amount is a number, format it to 2 decimal places
+      if (props.booking.total_amount && typeof props.booking.total_amount === 'number') {
+        return parseFloat(props.booking.total_amount.toFixed(2)).toFixed(2);
+      }
+      return props.booking.total_amount || "50.00";
     });
 
     // Methods
