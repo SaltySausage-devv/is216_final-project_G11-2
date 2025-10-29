@@ -13,29 +13,10 @@ export function useNotifications() {
   const router = useRouter()
 
   const showNotification = ({ title, message, conversationId, onClick }) => {
-    console.log('🔔 TOAST: showNotification called with:', { title, message, conversationId })
-    
-    const id = notificationId++
-    const notification = {
-      id,
-      title,
-      message,
-      conversationId,
-      onClick,
-      show: true
-    }
-
-    notifications.value.push(notification)
-    console.log('🔔 TOAST: Notification added. Total notifications:', notifications.value.length)
-    console.log('🔔 TOAST: Current notifications:', notifications.value)
-
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-      console.log('🔔 TOAST: Auto-removing notification:', id)
-      removeNotification(id)
-    }, 5000)
-
-    return id
+    console.log('🔔 TOAST: showNotification called but DISABLED - User requested removal of all popup toasts')
+    // DISABLED - User requested complete removal of toast popups
+    // Return early, do nothing
+    return
   }
 
   const removeNotification = (id) => {
