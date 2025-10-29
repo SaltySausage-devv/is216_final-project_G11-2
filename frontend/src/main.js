@@ -21,6 +21,7 @@ window.fetch = function(url, options) {
 
 // Import pages
 import Home from './pages/Home.vue'
+import SuccessStories from './pages/SuccessStories.vue'
 import Login from './pages/Login.vue'
 import Register from './pages/Register.vue'
 import ForgotPassword from './pages/ForgotPassword.vue'
@@ -50,6 +51,7 @@ const routes = [
   { path: '/calendar', name: 'Calendar', component: Calendar, meta: { requiresAuth: true } },
   { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/analytics', name: 'Analytics', component: Analytics, meta: { requiresAuth: true } },
+  { path: '/SuccessStories', name: 'SuccessStories', component: SuccessStories}
 ]
 
 const router = createRouter({
