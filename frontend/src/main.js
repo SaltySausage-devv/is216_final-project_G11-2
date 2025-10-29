@@ -47,6 +47,7 @@ const routes = [
   { path: '/search', name: 'SearchTutors', component: SearchTutors },
   { path: '/tutor/:id', name: 'TutorProfile', component: TutorProfile },
   { path: '/messages', name: 'Messages', component: Messages, meta: { requiresAuth: true } },
+  { path: '/chat/:id', name: 'Chat', component: Messages, meta: { requiresAuth: true } },
   { path: '/calendar', name: 'Calendar', component: Calendar, meta: { requiresAuth: true } },
   { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/analytics', name: 'Analytics', component: Analytics, meta: { requiresAuth: true } },

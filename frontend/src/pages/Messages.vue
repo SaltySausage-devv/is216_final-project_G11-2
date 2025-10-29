@@ -1859,6 +1859,91 @@ export default {
 
     // Location choice watcher removed - no longer needed with backend proxy
 
+    // Watch for route changes to handle chat/:id
+    watch(
+      () => route.params.id,
+      async (tutorId) => {
+        if (tutorId && authStore.user) {
+          console.log('🔗 Chat route detected with tutor ID:', tutorId);
+          await handleChatRoute(tutorId);
+        }
+      },
+      { immediate: true }
+    );
+
+    // Handle chat route with specific tutor ID
+    const handleChatRoute = async (tutorId) => {
+      try {
+        console.log('🔄 Handling chat route for tutor:', tutorId);
+        
+        // First, load conversations to see if one already exists
+        await loadConversations();
+        
+        // Check if conversation already exists with this tutor
+        const existingConversation = conversations.value.find(conv => {
+          return conv.participant.id === tutorId;
+        });
+
+        if (existingConversation) {
+          console.log('✅ Found existing conversation, selecting it');
+          await selectConversationWithRoom(existingConversation);
+          return;
+        }
+
+        // If no existing conversation, create a new one
+        console.log('🆕 Creating new conversation with tutor:', tutorId);
+        await createConversationWithTutor(tutorId);
+        
+      } catch (error) {
+        console.error('❌ Error handling chat route:', error);
+        showNotification('Error', 'Failed to start conversation with tutor', 'error');
+      }
+    };
+
+    // Create conversation with specific tutor
+    const createConversationWithTutor = async (tutorId) => {
+      try {
+        // Check if user is authenticated
+        if (!authStore.session?.access_token) {
+          throw new Error('User not authenticated');
+        }
+
+        const response = await fetch('/api/messaging/conversations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authStore.session.access_token}`
+          },
+          body: JSON.stringify({
+            participantId: tutorId
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to create conversation');
+        }
+
+        const data = await response.json();
+        console.log('✅ Conversation created:', data.conversation);
+        
+        // Reload conversations to include the new one
+        await loadConversations();
+        
+        // Find and select the new conversation
+        const newConversation = conversations.value.find(conv => conv.id === data.conversation.id);
+        if (newConversation) {
+          await selectConversationWithRoom(newConversation);
+        } else {
+          console.warn('⚠️ New conversation not found in conversations list');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error creating conversation:', error);
+        throw error;
+      }
+    };
+
     // Handle input changes and fetch predictions using backend proxy
     const handleLocationInput = async (type, event) => {
       const query = event.target.value;
@@ -4720,6 +4805,9 @@ export default {
       handleAbsentReported,
       // Notification deduplication
       processedNotifications,
+      // Chat route handling
+      handleChatRoute,
+      createConversationWithTutor,
     };
   },
   components: {
