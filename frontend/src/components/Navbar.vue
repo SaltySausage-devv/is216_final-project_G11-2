@@ -600,23 +600,83 @@ export default {
         console.log("🔔 NAVBAR: ✨ Received new message:", message);
         console.log("🔔 NAVBAR: Message sender_id:", message.sender_id);
         console.log("🔔 NAVBAR: Current user_id:", currentUserId.value);
+        console.log("🔔 NAVBAR: Message type:", message.message_type);
 
-        // Only add notification if message is from another user
-        if (message.sender_id !== currentUserId.value && message.sender) {
-          console.log(
-            "🔔 NAVBAR: Message is from another user, creating notification"
-          );
-          const senderName = `${message.sender.first_name} ${message.sender.last_name}`;
-          const messagePreview =
-            message.message_type === "image"
-              ? "Sent an image"
-              : message.content.substring(0, 50);
+        // Check if this is a system message (reschedule_request, booking_cancelled, etc.)
+        const isSystemMessage = 
+          message.message_type === 'reschedule_request' ||
+          message.message_type === 'reschedule_accepted' ||
+          message.message_type === 'reschedule_rejected' ||
+          message.message_type === 'booking_cancelled';
+
+        // Check if current user is the sender (using String() to handle UUID type mismatches)
+        const isSender = String(message.sender_id) === String(currentUserId.value);
+
+        // For reschedule requests, reductions, only notify the RECEIVER (not the requester/sender)
+        const isRescheduleMessage = 
+          message.message_type === 'reschedule_request' ||
+          message.message_type === 'reschedule_accepted' ||
+          message.message_type === 'reschedule_rejected';
+
+        // Determine if we should show notification
+        let shouldShow = false;
+        if (isRescheduleMessage) {
+          // Reschedule messages: only notify receiver (not sender)
+          shouldShow = !isSender;
+        } else if (isSystemMessage) {
+          // Other system messages: notify receiver
+          shouldShow = !isSender;
+        } else {
+          // Regular messages: notify if not from yourself and has sender
+          shouldShow = !isSender && message.sender;
+        }
+
+        if (shouldShow) {
+          console.log("🔔 NAVBAR: Message is from another user or system message, creating notification");
+
+          // Format sender name
+          let senderName = "System";
+          if (message.sender) {
+            senderName = `${message.sender.first_name} ${message.sender.last_name}`;
+          } else if (isSystemMessage) {
+            senderName = "System";
+          }
+
+          // Format message preview based on message type
+          let messagePreview;
+          if (message.message_type === "image") {
+            messagePreview = "📷 Sent an image";
+          } else if (message.message_type === "reschedule_request") {
+            messagePreview = "📅 Reschedule booking request";
+          } else if (message.message_type === "reschedule_accepted") {
+            messagePreview = "✅ Reschedule request accepted";
+          } else if (message.message_type === "reschedule_rejected") {
+            messagePreview = "❌ Reschedule request declined";
+          } else if (message.message_type === "booking_proposal") {
+            messagePreview = "📝 Booking proposal";
+          } else if (message.message_type === "booking_confirmation") {
+            messagePreview = "✅ Booking confirmed";
+          } else if (message.message_type === "booking_cancelled") {
+            messagePreview = "❌ Booking cancelled";
+          } else if (message.content) {
+            messagePreview = message.content.substring(0, 50);
+          } else {
+            messagePreview = "New message";
+          }
+
+          // Format title
+          let title;
+          if (isSystemMessage) {
+            title = messagePreview;
+          } else {
+            title = `New message from ${senderName}`;
+          }
 
           // Add to notifications list
           const notification = {
             id: message.id,
-            icon: "fas fa-envelope",
-            title: `New message from ${senderName}`,
+            icon: isSystemMessage ? "fas fa-bell" : "fas fa-envelope",
+            title: title,
             message: messagePreview,
             time: formatTime(message.created_at),
             timestamp: message.created_at,
@@ -642,7 +702,7 @@ export default {
           console.log("🔔 NAVBAR: Notification:", notification);
         } else {
           console.log(
-            "🔔 NAVBAR: ⏭️ Skipping notification (message from self or no sender)"
+            "🔔 NAVBAR: ⏭️ Skipping notification (message from self or conditions not met)"
           );
         }
       };
