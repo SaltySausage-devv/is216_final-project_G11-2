@@ -166,8 +166,7 @@ export default {
 
     const stats = ref([]);
     const recentActivity = ref([]);
-    const isLoading = ref(false)
-    const error = ref('')
+    
     const data = ref({});
 
     const loadDashboardData = async () => {
@@ -254,24 +253,24 @@ export default {
       if (userType.value == "student") {
 
         stats.value = [
-          { icon: "fas fa-book", label: "Active Bookings", value: analyticsData.value.totalSessions || 0 },
-          { icon: "fas fa-clock", label: "Hours Learnt", value: `${analyticsData.value.totalHours || 0}h` },
-          { icon: "fas fa-user-graduate", label: "Tutors Worked With", value: analyticsData.value.tutorsWorkedWith || 0 },
-          { icon: "fas fa-dollar-sign", label: "Total Spent", value: `$${analyticsData.value.totalSpent || 0}` },
+          { icon: "fas fa-book", label: "Active Bookings", value: "3" },
+          { icon: "fas fa-star", label: "Completed Sessions", value: "12" },
+          { icon: "fas fa-clock", label: "Hours This Month", value: "24" },
+          { icon: "fas fa-dollar-sign", label: "Total Spent", value: "$1,440" },
         ];
       } else if (userType.value == "tutor") {
         stats.value = [
-          { icon: "fas fa-users", label: "Total Bookings", value: analyticsData.value.totalBookings || 0 },
-          { icon: "fas fa-star", label: "Average Rating", value: analyticsData.value.averageRating || 0 },
-          { icon: "fas fa-users", label: "Students Taught", value: analyticsData.value.totalStudents || 0 },
-          { icon: "fas fa-dollar-sign", label: "Earnings", value: `$${analyticsData.value.totalEarnings || 0}` },
+          { icon: "fas fa-users", label: "Total Students", value: "25" },
+          { icon: "fas fa-star", label: "Average Rating", value: "4.8" },
+          { icon: "fas fa-clock", label: "Hours This Month", value: "48" },
+          { icon: "fas fa-dollar-sign", label: "Earnings", value: "$2,880" },
         ];
       } else if (userType.value == "centre") {
         stats.value = [
-          { icon: "fas fa-users", label: "Total Students", value: analyticsData.value.totalStudents || 0 },
-          { icon: "fas fa-star", label: "Average Rating", value: analyticsData.value.averageRating || 0 },
-          { icon: "fas fa-chalkboard-teacher", label: "Total Tutors", value: analyticsData.value.totalTutors || 0 },
-          { icon: "fas fa-dollar-sign", label: "Revenue", value: `$${analyticsData.value.totalRevenue || 0}` },
+          { icon: "fas fa-users", label: "Total Students", value: "150" },
+          { icon: "fas fa-star", label: "Average Rating", value: "4.6" },
+          { icon: "fas fa-calendar", label: "Classes This Month", value: "45" },
+          { icon: "fas fa-dollar-sign", label: "Revenue", value: "$8,100" },
         ];
       }
 
@@ -328,12 +327,6 @@ export default {
       userType,
       stats,
       recentActivity,
-      response,
-      analyticsData,
-      token,
-      data,
-      isLoading,
-      error
     };
   },
 };
