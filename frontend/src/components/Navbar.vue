@@ -609,18 +609,28 @@ export default {
           message.message_type === 'reschedule_rejected' ||
           message.message_type === 'booking_cancelled';
 
-        // Check if current user is the sender (using String() to handle UUID type mismatches)
-        const isSender = String(message.sender_id) === String(currentUserId.value);
+        // For booking-related messages (proposal, confirmation, offer), only notify the receiver (not the sender)
+        const isBookingMessage =
+          message.message_type === 'booking_cancelled' ||
+          message.message_type === 'booking_proposal' ||
+          message.message_type === 'booking_confirmation' ||
+          message.message_type === 'booking_offer';
 
-        // For reschedule requests, reductions, only notify the RECEIVER (not the requester/sender)
+        // For reschedule requests, only notify the RECEIVER (not the requester/sender)
         const isRescheduleMessage = 
           message.message_type === 'reschedule_request' ||
           message.message_type === 'reschedule_accepted' ||
           message.message_type === 'reschedule_rejected';
 
+        // Check if current user is the sender (using String() to handle UUID type mismatches)
+        const isSender = String(message.sender_id) === String(currentUserId.value);
+
         // Determine if we should show notification
         let shouldShow = false;
-        if (isRescheduleMessage) {
+        if (isBookingMessage) {
+          // Booking messages: only show to receiver (not sender)
+          shouldShow = !isSender;
+        } else if (isRescheduleMessage) {
           // Reschedule messages: only notify receiver (not sender)
           shouldShow = !isSender;
         } else if (isSystemMessage) {
