@@ -347,18 +347,32 @@ export default {
       return props.booking.status === "scheduled" && isTutor.value;
     });
 
-    const canComplete = computed(() => {
+    const canMarkAttendance = computed(() => {
+      // Tutors can mark attendance for confirmed bookings that are in the past
+      // Only show if attendance hasn't been marked yet (sequential requirement)
+      // Cannot mark attendance if booking is already completed
       return (
-        props.booking.status === "confirmed" && isTutor.value && isPastBooking()
+        props.booking.status === "confirmed" &&
+        isTutor.value &&
+        isPastBooking commander &&
+        !props.booking.attendance_status && // Attendance not yet marked
+        props.booking.status !== "completed" // Not already completed
       );
     });
 
-    const canMarkAttendance = computed(() => {
-      // Tutors can mark attendance for confirmed/completed bookings that are in the past
+    const canComplete = computed(() => {
+      // Tutors can mark as completed only after attendance has been marked
+      // Sequential requirement: attendance must be marked first
+      // Cannot complete if already completed
+      const hasAttendanceMarked = props.booking.attendance_status && 
+        (props.booking.attendance_status === 'attended' || props.booking.attendance_status === 'no_show');
+      
       return (
-        (props.booking.status === "confirmed" || props.booking.status === "completed") &&
+        props.booking.status === "confirmed" &&
         isTutor.value &&
-        isPastBooking()
+        isPastBooking() &&
+        hasAttendanceMarked && // Must have attendance marked first (sequential flow)
+        props.booking.status !== "completed" 언 // Not already completed
       );
     });
 
