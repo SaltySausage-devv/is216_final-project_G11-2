@@ -33,6 +33,9 @@ import Messages from './pages/Messages.vue'
 import Calendar from './pages/Calendar.vue'
 import Profile from './pages/Profile.vue'
 import Analytics from './pages/Analytics.vue'
+import FAQ from './pages/FAQ.vue'
+import TermsOfService from './pages/TermsOfService.vue'
+import BlogPost from './pages/BlogPost.vue'
 
 // Import components
 import Navbar from './components/Navbar.vue'
@@ -51,7 +54,10 @@ const routes = [
   { path: '/calendar', name: 'Calendar', component: Calendar, meta: { requiresAuth: true } },
   { path: '/profile', name: 'Profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/analytics', name: 'Analytics', component: Analytics, meta: { requiresAuth: true } },
-  { path: '/SuccessStories', name: 'SuccessStories', component: SuccessStories}
+  { path: '/SuccessStories', name: 'SuccessStories', component: SuccessStories},
+  { path: '/faq', name: 'FAQ', component: FAQ },
+  { path: '/terms', name: 'TermsOfService', component: TermsOfService },
+  { path: '/blog/:slug', name: 'BlogPost', component: BlogPost }
 ]
 
 const router = createRouter({

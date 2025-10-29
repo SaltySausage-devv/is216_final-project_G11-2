@@ -55,10 +55,10 @@
           <h5 class="fw-bold mb-3">Company</h5>
           <ul class="list-unstyled">
             <li class="mb-2">
-              <router-link to="/Home" class="text-muted text-decoration-none">About Us</router-link>
+              <router-link to="/" class="text-muted text-decoration-none">About Us</router-link>
             </li>
             <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Blog</a>
+              <router-link to="/blog" class="text-muted text-decoration-none">Blog</router-link>
             </li>
           </ul>
         </div>
@@ -67,7 +67,7 @@
           <h5 class="fw-bold mb-3">Support</h5>
           <ul class="list-unstyled">
             <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Help Center</a>
+              <router-link to="/faq" class="text-muted text-decoration-none">Help Center</router-link>
             </li>
             <li class="mb-2">
               <a href="#" class="text-muted text-decoration-none">Contact Us</a>
@@ -76,7 +76,7 @@
               <a href="#" class="text-muted text-decoration-none">Privacy Policy</a>
             </li>
             <li class="mb-2">
-              <a href="#" class="text-muted text-decoration-none">Terms of Service</a>
+              <router-link to="/terms" class="text-muted text-decoration-none">Terms of Service</router-link>
             </li>
           </ul>
         </div>
