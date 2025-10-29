@@ -60,6 +60,9 @@ export function useNotifications() {
 
   const showMessageNotification = ({ senderName, message, conversationId }) => {
     console.log('🔔 TOAST: showMessageNotification called with:', { senderName, message, conversationId })
+    // DISABLED - User requested removal of popup toasts
+    // Toast notifications are now disabled, only navbar badge will update
+    return;
     
     return showNotification({
       title: `New message from ${senderName}`,

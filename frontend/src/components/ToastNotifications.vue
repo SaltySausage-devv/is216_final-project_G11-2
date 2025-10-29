@@ -24,9 +24,6 @@
       </div>
       <div class="toast-body">
         {{ notification.message }}
-        <div class="mt-2 pt-2 border-top">
-          <small class="text-muted">Click to view message</small>
-        </div>
       </div>
     </div>
   </div>
