@@ -4591,9 +4591,8 @@ export default {
       }
     };
 
-    // Attendance marking functionality
-    const markAttendanceModal = ref(false);
-    const selectedBookingForAttendance = ref(null);
+    // Attendance marking functionality - removed from messages (only available in calendar)
+    // Keeping status check functions for potential future use but not the modal functionality
     const attendanceMarkedBookings = ref(new Set());
     const bookingAttendanceStatus = ref(new Map());
     const checkingAttendanceStatus = ref(new Set());
@@ -4836,21 +4835,11 @@ export default {
       markAttendanceModal.value = true;
     };
 
-    // Handle attendance marked event
+    // Handle attendance marked event - REMOVED: No longer used in messages
     const handleAttendanceMarked = async (attendanceData) => {
-      try {
-        // Only send attendance message if it wasn't already marked
-        if (!attendanceData.already_marked) {
-          // Send attendance message to the conversation
-          await messagingService.sendAttendanceMessage(
-            selectedConversation.value.id,
-            selectedBookingForAttendance.value.id,
-            attendanceData
-          );
-        }
-
-        // Update the booking confirmation message with attendance status
-        const bookingId = selectedBookingForAttendance.value.id;
+      // Function kept for compatibility but no longer used
+      // Attendance marking now only available in calendar
+      console.log('handleAttendanceMarked called but attendance marking removed from messages');
         console.log(
           "🔄 Looking for booking confirmation message with ID:",
           bookingId
@@ -5245,7 +5234,8 @@ export default {
       // Booking cancellation helpers
       getBookingCancellationData,
       isBookingCancelledByMe,
-      // Attendance marking
+      // Attendance marking - REMOVED from messages (only available in calendar)
+      // Keeping status check functions for potential future use but not modal functionality
       showMarkAttendanceModal,
       canMarkAttendance,
       isAttendanceMarked,
@@ -5258,10 +5248,6 @@ export default {
       getAttendanceStatusIcon,
       getAttendanceStatusText,
       viewProofPhoto,
-      handleAttendanceMarked,
-      markAttendanceModal,
-      selectedBookingForAttendance,
-      bookingAttendanceStatus,
       // Session end functionality
       sessionEndModal,
       selectedBookingForSessionEnd,
