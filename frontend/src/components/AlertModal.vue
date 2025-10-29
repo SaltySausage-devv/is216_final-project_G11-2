@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="isVisible"
-    class="modal fade show"
+    class="modal fade show alert-modal-overlay"
     style="display: block; background-color: rgba(0, 0, 0, 0.75)"
     @click.self="handleClose"
     tabindex="-1"
@@ -104,8 +104,18 @@ export default {
 </script>
 
 <style scoped>
-.modal {
-  z-index: 10000 !important;
+.modal.alert-modal-overlay {
+  z-index: 999999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
+.modal-dialog {
+  z-index: 999999 !important;
+  position: relative !important;
 }
 
 .modal-dialog-centered {
