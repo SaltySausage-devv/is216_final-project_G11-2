@@ -956,6 +956,51 @@
                             <span>{{ message.fileName }}</span>
                           </div>
                         </div>
+                        
+                        <!-- Fallback for unknown message types - try to detect booking confirmation -->
+                        <div
+                          v-else
+                          class="message-content"
+                        >
+                          <!-- Check if content looks like booking confirmation JSON -->
+                          <div
+                            v-if="isBookingConfirmationContent(message.content)"
+                            class="message-content booking-message booking-confirmation"
+                          >
+                            <div class="booking-header">
+                              <i class="fas fa-check-circle me-2"></i>
+                              <span class="booking-title">Booking Confirmed!</span>
+                            </div>
+                            <div class="booking-details">
+                              <div v-if="getBookingData(message)">
+                                <p class="mb-2">
+                                  <strong>Time:</strong>
+                                  {{
+                                    formatDateTime(
+                                      getBookingData(message).confirmedTime
+                                    )
+                                  }}
+                                </p>
+                                <p
+                                  v-if="getBookingData(message).location"
+                                  class="mb-2"
+                                >
+                                  <strong>Location:</strong>
+                                  {{ getBookingData(message).location }}
+                                </p>
+                                <p class="mb-2">
+                                  <strong>Status:</strong>
+                                  <span class="text-success">Confirmed</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <!-- Fallback for other unknown types -->
+                          <div v-else class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Unknown message type:</strong> {{ message.messageType || 'undefined' }}
+                          </div>
+                        </div>
                         <div class="message-footer">
                           <div class="message-time">
                             {{ formatTime(message.createdAt) }}
@@ -3085,8 +3130,7 @@ export default {
         };
         showBookingOfferModal.value = false;
 
-        // Show success message
-        showNotification('Success', 'Booking request sent successfully!', 'success');
+        // Booking request sent - no notification needed
       } catch (error) {
         console.error("Error creating booking offer:", error);
         showNotification('Error', 'Failed to send booking request. Please try again.', 'error');
@@ -3290,6 +3334,16 @@ export default {
       } catch (error) {
         console.error("Error parsing booking data:", error);
         return null;
+      }
+    };
+
+    // Check if content looks like booking confirmation JSON
+    const isBookingConfirmationContent = (content) => {
+      try {
+        const parsed = JSON.parse(content);
+        return parsed && parsed.bookingOfferId && parsed.confirmedTime;
+      } catch (error) {
+        return false;
       }
     };
 
@@ -3595,11 +3649,12 @@ export default {
             "🔔 RECEIVER: Received new message via Socket.io:",
             message
           );
-          console.log("🔔 RECEIVER: Current user ID:", currentUserId.value);
-          console.log("🔔 RECEIVER: Message sender ID:", message.sender_id);
-          console.log("🔔 RECEIVER: Message content:", message.content);
-          console.log("🔔 RECEIVER: Message type:", message.message_type);
-          console.log("🔔 RECEIVER: Message created_at:", message.created_at);
+            console.log("🔔 RECEIVER: Current user ID:", currentUserId.value);
+            console.log("🔔 RECEIVER: Message sender ID:", message.sender_id);
+            console.log("🔔 RECEIVER: Message content:", message.content);
+            console.log("🔔 RECEIVER: Message type:", message.message_type);
+            console.log("🔔 RECEIVER: Message created_at:", message.created_at);
+            console.log("🔔 RECEIVER: Message type check - is booking_confirmation?", message.message_type === 'booking_confirmation');
           console.log(
             "🔔 RECEIVER: Current selected conversation:",
             selectedConversation.value?.id
@@ -3682,11 +3737,20 @@ export default {
                 msg.content === message.content
             );
 
+            console.log("🔔 RECEIVER: Creating new message with type:", message.message_type);
+            
+            // Fix message type if it's undefined but content looks like booking confirmation
+            let messageType = message.message_type;
+            if (!messageType && isBookingConfirmationContent(message.content)) {
+              messageType = 'booking_confirmation';
+              console.log("🔔 RECEIVER: Fixed message type to booking_confirmation based on content");
+            }
+            
             const newMessage = {
               id: message.id,
               senderId: message.sender_id,
               content: message.content,
-              messageType: message.message_type,
+              messageType: messageType,
               createdAt: message.created_at,
               readAt: message.read_at,
               deliveredAt: message.delivered_at,
@@ -4766,6 +4830,7 @@ export default {
       sendBookingProposal,
       // Booking message helpers
       getBookingData,
+      isBookingConfirmationContent,
       getBookingStatusValue,
       isBookingConfirmed,
       getBookingStatusText,
