@@ -46,6 +46,7 @@ export function useNotifications() {
   }
 
   const clearAllNotifications = () => {
+    // DISABLED - Toast notifications removed
     notifications.value = []
   }
 

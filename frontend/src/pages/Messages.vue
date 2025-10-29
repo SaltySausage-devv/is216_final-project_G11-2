@@ -1905,7 +1905,7 @@ import { messagingApi } from "../services/messaging";
 import { useAlertModal } from "../composables/useAlertModal.js";
 import MarkAttendanceModal from "../components/calendar/MarkAttendanceModal.vue";
 import SessionEndModal from "../components/calendar/SessionEndModal.vue";
-import ToastNotifications from "../components/ToastNotifications.vue";
+// ToastNotifications REMOVED - User requested no popups
 
 export default {
   name: "Messages",
@@ -5322,7 +5322,6 @@ export default {
   components: {
     MarkAttendanceModal,
     SessionEndModal,
-    ToastNotifications,
   },
 };
 </script>

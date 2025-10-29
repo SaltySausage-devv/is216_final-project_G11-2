@@ -5,7 +5,6 @@
       <router-view />
     </main>
     <Footer />
-    <ToastNotifications />
     <AlertModal
       :visible="alertState.visible"
       :title="alertState.title"
@@ -23,13 +22,11 @@ import { useAuthStore } from "./stores/auth";
 import { useNotifications } from "./composables/useNotifications";
 import { useAlertModal } from "./composables/useAlertModal";
 import messagingService from "./services/messaging.js";
-import ToastNotifications from "./components/ToastNotifications.vue";
 import AlertModal from "./components/AlertModal.vue";
 
 export default {
   name: "App",
   components: {
-    ToastNotifications,
     AlertModal,
   },
   setup() {
