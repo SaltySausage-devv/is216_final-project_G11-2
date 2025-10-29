@@ -748,6 +748,10 @@
                                 Your reschedule request has been accepted!
                               </p>
                               <p class="mb-2">
+                                <strong>Subject:</strong>
+                                {{ getBookingData(message).subject || 'Tutoring Session' }}
+                              </p>
+                              <p class="mb-2">
                                 <strong>New Time:</strong>
                                 {{
                                   formatDateTime(
@@ -760,6 +764,13 @@
                                     getBookingData(message).newEndTime
                                   )
                                 }}
+                              </p>
+                              <p
+                                v-if="getBookingData(message).location"
+                                class="mb-2"
+                              >
+                                <strong>Location:</strong>
+                                {{ getBookingData(message).location }}
                               </p>
                               <p
                                 v-if="getBookingData(message).responseMessage"
