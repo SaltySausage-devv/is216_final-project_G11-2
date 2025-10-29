@@ -237,16 +237,9 @@ export default {
                 messagePreview = message.content;
               }
 
-              console.log("🌐 APP: Calling showMessageNotification with:", {
-                senderName,
-                message: messagePreview,
-                conversationId: message.conversation_id,
-              });
-              showMessageNotification({
-                senderName,
-                message: messagePreview,
-                conversationId: message.conversation_id,
-              });
+              // Toast popup disabled - user requested removal of popup toasts
+              // Notification badge in navbar will still update via Navbar notification system
+              console.log("🌐 APP: Message notification (toast disabled, navbar badge will update)");
             } else {
               console.log(
                 "🌐 APP: On Messages page, not showing notification from App.vue"

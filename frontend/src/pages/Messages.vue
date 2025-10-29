@@ -4113,8 +4113,8 @@ export default {
             selectedConversation.value &&
             message.conversation_id === selectedConversation.value.id
           ) {
-            // MESSAGE NOTIFICATIONS DISABLED - User requested removal of notification popups
-            // Attendance notifications disabled
+            // Toast popup disabled for attendance notifications - user requested removal of popup toasts
+            // Notification badge in navbar will still update via Navbar notification system
             console.log("Adding message to current conversation");
 
             // Validate message data
@@ -4320,11 +4320,9 @@ export default {
               // Mark notification as processed to prevent duplicates
               processedNotifications.value.add(notificationKey);
 
-              showMessageNotification({
-                senderName,
-                message: messagePreview,
-                conversationId: message.conversation_id,
-              });
+              // Toast popup disabled - user requested removal of popup toasts
+              // Notification badge in navbar will still update via Navbar notification system
+              console.log("🔔 Messages: Message notification (toast disabled, navbar badge will update)");
             }
           }
 
