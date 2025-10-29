@@ -14,62 +14,115 @@
       <!-- Mobile Navigation Items Container -->
       <div class="mobile-nav-items d-lg-none">
         <!-- Credits Icon for Students - Mobile: Visible, Desktop: In navbar collapse -->
-        <div class="navbar-credits-container" v-if="isAuthenticated && userType === 'student'">
+        <div
+          class="navbar-credits-container"
+          v-if="isAuthenticated && userType === 'student'"
+        >
+          <CreditsIcon />
+        </div>
+
+        <!-- Penalty Points for Tutors - Mobile: Visible in top bar -->
+        <div
+          class="navbar-penalty-container"
+          v-if="isAuthenticated && userType === 'tutor'"
+        >
+          <a
+            class="nav-link d-flex align-items-center"
+            href="#"
+            role="button"
+            data-bs-toggle="tooltip"
+            data-bs-placement="bottom"
+            :title="`Penalty Points: ${penaltyPoints}`"
+          >
+            <i class="fas fa-exclamation-triangle fs-5 text-warning"></i>
+            <span class="penalty-points-text text-warning ms-1">
+              {{ penaltyPoints }}
+            </span>
+          </a>
+        </div>
+
+        <!-- Credits Icon for Tutors - Mobile: Visible, Desktop: In navbar collapse -->
+        <div
+          class="navbar-credits-container"
+          v-if="isAuthenticated && userType === 'tutor'"
+        >
           <CreditsIcon />
         </div>
 
         <!-- Notifications Icon - Mobile: Visible, Desktop: In navbar collapse -->
         <div class="navbar-notification-container" v-if="isAuthenticated">
           <div class="nav-item dropdown">
-          <a
-            class="nav-link position-relative d-flex align-items-center"
-            href="#"
-            role="button"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-          >
-            <i class="fas fa-bell fs-5"></i>
-            <span v-if="unreadCount > 0" class="notification-badge">
-              {{ unreadCount > 9 ? "9+" : unreadCount }}
-            </span>
-          </a>
-          <div class="dropdown-menu dropdown-menu-end notifications-dropdown">
-            <div class="notifications-header">
-              <h6 class="mb-0">Notifications</h6>
-              <span class="text-muted small">{{ notifications.length }} total</span>
-            </div>
-            <div class="notifications-body">
-              <div v-if="notifications.length === 0" class="text-center py-4">
-                <i class="fas fa-bell-slash text-muted fs-1 mb-2"></i>
-                <p class="text-muted mb-0 small">No notifications</p>
-              </div>
-              <div v-else>
-                <div
-                  v-for="notification in displayedNotifications"
-                  :key="notification.id"
-                  class="notification-item"
-                  :class="{ 'notification-unread': notification.unread }"
-                  @click.stop="handleNotificationClick(notification)"
+            <a
+              class="nav-link position-relative d-flex align-items-center"
+              href="#"
+              role="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              <i class="fas fa-bell fs-5"></i>
+              <span v-if="unreadCount > 0" class="notification-badge">
+                {{ unreadCount > 9 ? "9+" : unreadCount }}
+              </span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end notifications-dropdown">
+              <div class="notifications-header">
+                <h6 class="mb-0">Notifications</h6>
+                <span class="text-muted small"
+                  >{{ notifications.length }} total</span
                 >
-                  <div class="notification-icon-wrapper">
-                    <i :class="notification.icon"></i>
-                  </div>
-                  <div class="notification-content">
-                    <p class="notification-title">{{ notification.title }}</p>
-                    <small class="notification-time">{{ notification.time }}</small>
-                  </div>
-                  <div v-if="notification.unread" class="notification-dot"></div>
+              </div>
+              <div class="notifications-body">
+                <div v-if="notifications.length === 0" class="text-center py-4">
+                  <i class="fas fa-bell-slash text-muted fs-1 mb-2"></i>
+                  <p class="text-muted mb-0 small">No notifications</p>
                 </div>
-                <div v-if="hasMoreNotifications" class="notification-view-all" @click.stop="toggleShowAllNotifications">
-                  <button class="btn btn-sm w-100" type="button">
-                    <i :class="showAllNotifications ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="me-2"></i>
-                    {{ showAllNotifications ? "Show Less" : `View All (${notifications.length})` }}
-                  </button>
+                <div v-else>
+                  <div
+                    v-for="notification in displayedNotifications"
+                    :key="notification.id"
+                    class="notification-item"
+                    :class="{ 'notification-unread': notification.unread }"
+                    @click.stop="handleNotificationClick(notification)"
+                  >
+                    <div class="notification-icon-wrapper">
+                      <i :class="notification.icon"></i>
+                    </div>
+                    <div class="notification-content">
+                      <p class="notification-title">{{ notification.title }}</p>
+                      <small class="notification-time">{{
+                        notification.time
+                      }}</small>
+                    </div>
+                    <div
+                      v-if="notification.unread"
+                      class="notification-dot"
+                    ></div>
+                  </div>
+                  <div
+                    v-if="hasMoreNotifications"
+                    class="notification-view-all"
+                    @click.stop="toggleShowAllNotifications"
+                  >
+                    <button class="btn btn-sm w-100" type="button">
+                      <i
+                        :class="
+                          showAllNotifications
+                            ? 'fas fa-chevron-up'
+                            : 'fas fa-chevron-down'
+                        "
+                        class="me-2"
+                      ></i>
+                      {{
+                        showAllNotifications
+                          ? "Show Less"
+                          : `View All (${notifications.length})`
+                      }}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
 
         <button
@@ -117,7 +170,10 @@
 
         <ul class="navbar-nav">
           <!-- Credits Icon for Students - Desktop view -->
-          <li class="nav-item d-none d-lg-block" v-if="isAuthenticated && userType === 'student'">
+          <li
+            class="nav-item d-none d-lg-block"
+            v-if="isAuthenticated && userType === 'student'"
+          >
             <CreditsIcon />
           </li>
 
@@ -134,8 +190,11 @@
             </router-link>
           </li>
 
-          <!-- Penalty Points (Tutors Only) -->
-          <li class="nav-item" v-if="isAuthenticated && userType === 'tutor'">
+          <!-- Penalty Points (Tutors Only) - Desktop only (mobile shows in top bar) -->
+          <li
+            class="nav-item d-none d-lg-block"
+            v-if="isAuthenticated && userType === 'tutor'"
+          >
             <a
               class="nav-link d-flex align-items-center"
               href="#"
@@ -151,8 +210,19 @@
             </a>
           </li>
 
+          <!-- Credits Icon for Tutors - Desktop view -->
+          <li
+            class="nav-item d-none d-lg-block"
+            v-if="isAuthenticated && userType === 'tutor'"
+          >
+            <CreditsIcon />
+          </li>
+
           <!-- Notifications Dropdown - Desktop only -->
-          <li class="nav-item dropdown d-none d-lg-block" v-if="isAuthenticated">
+          <li
+            class="nav-item dropdown d-none d-lg-block"
+            v-if="isAuthenticated"
+          >
             <a
               class="nav-link position-relative d-flex align-items-center"
               href="#"
@@ -434,62 +504,72 @@ export default {
       try {
         console.log("🔔 NAVBAR: Loading unread messages from conversations...");
         const response = await messagingService.getConversations();
-        
+
         if (!response.conversations || response.conversations.length === 0) {
           console.log("🔔 NAVBAR: No conversations found");
           return;
         }
-        
-        console.log(`🔔 NAVBAR: Found ${response.conversations.length} conversations`);
-        
+
+        console.log(
+          `🔔 NAVBAR: Found ${response.conversations.length} conversations`
+        );
+
         // Find conversations with unread messages
         const conversationsWithUnread = response.conversations.filter(
           (conv) => conv.unreadCount > 0
         );
-        
-        console.log(`🔔 NAVBAR: ${conversationsWithUnread.length} conversations have unread messages`);
-        
+
+        console.log(
+          `🔔 NAVBAR: ${conversationsWithUnread.length} conversations have unread messages`
+        );
+
         // Add notification for each conversation with unread messages
         for (const conv of conversationsWithUnread) {
           const otherParticipant =
             conv.participant1_id === currentUserId.value
               ? conv.participant2
               : conv.participant1;
-          
+
           const participantName = `${otherParticipant.first_name} ${otherParticipant.last_name}`;
-          
+
           // Check if we already have a notification for this conversation
           const existingNotification = notifications.value.find(
             (n) => n.conversationId === conv.id
           );
-          
+
           if (!existingNotification) {
-            console.log(`🔔 NAVBAR: Adding notification for ${participantName} (${conv.unreadCount} unread)`);
-            
+            console.log(
+              `🔔 NAVBAR: Adding notification for ${participantName} (${conv.unreadCount} unread)`
+            );
+
             const notification = {
               id: `conv_${conv.id}_${Date.now()}`, // Unique ID
               icon: "fas fa-envelope",
-              title: `${conv.unreadCount} unread message${conv.unreadCount > 1 ? 's' : ''} from ${participantName}`,
+              title: `${conv.unreadCount} unread message${
+                conv.unreadCount > 1 ? "s" : ""
+              } from ${participantName}`,
               message: conv.last_message_content || "New message",
               time: formatTime(conv.last_message_at || conv.created_at),
               timestamp: conv.last_message_at || conv.created_at,
               conversationId: conv.id,
               unread: true,
             };
-            
+
             notifications.value.unshift(notification);
           }
         }
-        
+
         // Limit to last 20 notifications
         if (notifications.value.length > 20) {
           notifications.value = notifications.value.slice(0, 20);
         }
-        
+
         // Save to localStorage
         if (conversationsWithUnread.length > 0) {
           saveNotificationsToStorage();
-          console.log(`🔔 NAVBAR: ✅ Added ${conversationsWithUnread.length} notification(s) for unread messages`);
+          console.log(
+            `🔔 NAVBAR: ✅ Added ${conversationsWithUnread.length} notification(s) for unread messages`
+          );
         }
       } catch (error) {
         console.error("🔔 NAVBAR: Error loading unread messages:", error);
@@ -609,7 +689,7 @@ export default {
       console.log("🚪 Navbar: Logout completed, redirecting to home...");
 
       // Navigate to home page with full page reload
-      window.location.assign('/');
+      window.location.assign("/");
     };
 
     // Custom toggle function as fallback
@@ -654,9 +734,9 @@ export default {
         // Try to set up notifications even if not connected yet
         // The messaging service will be connected by App.vue
         setupMessageNotifications();
-        
+
         // Load unread messages as notifications
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
         await loadUnreadMessagesAsNotifications();
 
         // Retry setup after a delay if service isn't connected
@@ -688,7 +768,7 @@ export default {
           setTimeout(async () => {
             setupMessageNotifications();
             // Load unread messages as notifications after a short delay
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise((resolve) => setTimeout(resolve, 500));
             await loadUnreadMessagesAsNotifications();
           }, 1000);
         } else {
@@ -807,6 +887,31 @@ export default {
   height: 40px;
 }
 
+/* Penalty points container - visible on mobile, hidden on desktop */
+.navbar-penalty-container {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  height: 40px;
+}
+
+.navbar-penalty-container .nav-link {
+  padding: 0;
+  color: var(--cyber-text) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.navbar-penalty-container .nav-link i {
+  font-size: 1.2rem !important;
+  line-height: 1 !important;
+  margin: 0;
+  padding: 0;
+}
+
 /* Notification container - visible on mobile, hidden on desktop */
 .navbar-notification-container {
   margin: 0;
@@ -850,8 +955,6 @@ export default {
 .navbar-notification-container .dropdown-menu {
   right: 0;
 }
-
-
 
 /* Clean hamburger menu for all screen sizes */
 .cyberpunk-hamburger {
@@ -1008,14 +1111,14 @@ export default {
     max-height: calc(100vh - 60px);
     overflow-y: auto;
   }
-  
+
   .navbar-collapse.collapsing {
     transition: none;
   }
-  
+
   /* Backdrop overlay */
   .navbar-collapse.show::before {
-    content: '';
+    content: "";
     position: fixed;
     top: 0;
     left: 0;
@@ -1108,12 +1211,12 @@ export default {
   .navbar-nav {
     gap: 1rem;
   }
-  
+
   .navbar-nav .nav-item {
     display: flex;
     align-items: center;
   }
-  
+
   /* Even spacing for all nav items */
   .navbar-nav.me-auto {
     margin-right: 2rem;
@@ -1359,10 +1462,10 @@ export default {
     transform: none !important;
     z-index: 1050 !important;
   }
-  
+
   /* Backdrop when notifications open on mobile */
   .navbar-notification-container .dropdown.show::before {
-    content: '';
+    content: "";
     position: fixed;
     top: 0;
     left: 0;
@@ -1372,16 +1475,15 @@ export default {
     z-index: 1045;
     backdrop-filter: blur(4px);
   }
-  
+
   .navbar-notification-container .notifications-dropdown.show {
     z-index: 1050 !important;
   }
-  
+
   .navbar-notification-container .notifications-body {
     max-height: calc(100vh - 180px) !important;
   }
 }
-
 
 /* Penalty Points Styling */
 .penalty-points-text {
@@ -1441,6 +1543,18 @@ export default {
 
   .navbar-credits-container {
     transform: scale(0.9);
+  }
+
+  .navbar-penalty-container {
+    transform: scale(0.9);
+  }
+
+  .navbar-penalty-container .nav-link i {
+    font-size: 1rem !important;
+  }
+
+  .navbar-penalty-container .penalty-points-text {
+    font-size: 0.75rem;
   }
 
   .navbar-notification-container .nav-link {
