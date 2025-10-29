@@ -2035,7 +2035,7 @@ export default {
             name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
             type: otherParticipant.user_type,
           },
-          lastMessage: backendConversation.last_message_content || "No messages yet",
+          lastMessage: formatMessagePreview(backendConversation.last_message_content, backendConversation.last_message_type) || "No messages yet",
           lastMessageAt: backendConversation.last_message_at || backendConversation.created_at,
         };
 
@@ -2404,7 +2404,7 @@ export default {
               name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
               type: otherParticipant.user_type,
             },
-            lastMessage: conv.last_message_content || "No messages yet",
+            lastMessage: formatMessagePreview(conv.last_message_content, conv.last_message_type) || "No messages yet",
             lastMessageAt: conv.last_message_at || conv.created_at,
             unreadCount: conv.unreadCount || 0,
           };
@@ -3454,6 +3454,8 @@ export default {
 
     // Format message content for previews (conversation list, notifications, etc.)
     const formatMessagePreview = (content, messageType) => {
+      console.log('🔍 formatMessagePreview called with:', { content, messageType });
+      
       if (messageType === "image") {
         return "📷 Sent an image";
       } else if (messageType === "reschedule_request") {
@@ -3474,6 +3476,7 @@ export default {
         return "📋 Attendance marked";
       } else if (content && content.includes('bookingOfferId')) {
         // Handle raw booking JSON that wasn't properly typed
+        console.log('🔍 Detected booking JSON, returning "Booking offer sent"');
         return "Booking offer sent";
       } else {
         return content || "No messages yet";
