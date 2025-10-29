@@ -34,8 +34,10 @@ export function getApiUrl(path) {
   }
 
   // In production, construct full URL
-  // Extract service name from path: /api/{service}/...
-  const match = path.match(/^\/api\/([^\/]+)/)
+  // Extract service name from path: /api/{service}/... or /api/{service}?query
+  // Split path to separate pathname from query string
+  const [pathname, queryString] = path.split('?')
+  const match = pathname.match(/^\/api\/([^\/]+)/)
   
   if (!match) {
     console.warn('❌ API path does not match expected format:', path)
@@ -54,8 +56,9 @@ export function getApiUrl(path) {
 
   // Replace /api/{service} with the full service URL
   // /api/messaging/conversations -> https://messaging-xxx.railway.app/messaging/conversations
-  const apiPath = path.replace('/api/', '/')
-  const finalUrl = serviceUrl + apiPath
+  // Preserve query string if it exists
+  const apiPath = pathname.replace('/api/', '/')
+  const finalUrl = serviceUrl + apiPath + (queryString ? '?' + queryString : '')
   console.log('🔗 Converted to:', finalUrl)
   return finalUrl
 }
