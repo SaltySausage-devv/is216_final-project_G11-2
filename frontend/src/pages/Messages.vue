@@ -3661,10 +3661,42 @@ export default {
 
     // Helper methods for booking messages
     const getBookingData = (message) => {
+      // Only attempt to parse JSON for booking-related message types
+      const bookingMessageTypes = [
+        'booking_offer',
+        'booking_proposal',
+        'booking_confirmation',
+        'booking_rejection',
+        'booking_cancelled',
+        'reschedule_request',
+        'reschedule_accepted',
+        'reschedule_rejected',
+        'attendance_notification'
+      ];
+      
+      // If message type is not a booking type, don't try to parse
+      if (!message.messageType || !bookingMessageTypes.includes(message.messageType)) {
+        return null;
+      }
+      
       try {
+        // Check if content looks like JSON (starts with { or [)
+        if (!message.content || typeof message.content !== 'string') {
+          return null;
+        }
+        
+        const trimmed = message.content.trim();
+        if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+          return null;
+        }
+        
         return JSON.parse(message.content);
       } catch (error) {
-        console.error("Error parsing booking data:", error);
+        // Silently fail - this is expected for non-booking messages
+        // Only log in development or if it's actually a booking message
+        if (bookingMessageTypes.includes(message.messageType)) {
+          console.warn("Error parsing booking data for booking message:", error, message);
+        }
         return null;
       }
     };

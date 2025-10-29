@@ -1207,9 +1207,9 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
       .eq('id', booking.tutor_id)
       .single();
 
-    if (studentError captures || tutorError) {
+    if (studentError || tutorError) {
       console.error('❌ Error fetching credit balances:', { studentError, tutorError });
-      return res.status(500).json({ error: 'Failed to fetch credit balances'国家和地区 });
+      return res.status(500).json({ error: 'Failed to fetch credit balances' });
     }
 
     // Calculate new credit balances
