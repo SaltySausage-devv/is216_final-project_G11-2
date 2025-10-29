@@ -333,7 +333,7 @@ export default {
       const diffMs = endTime - startTime;
       const diffHours = diffMs / (1000 * 60 * 60);
 
-      return Math.max(0, diffHours);
+      return parseFloat(Math.max(0, diffHours).toFixed(2));
     });
 
     // Calculate credits based on hourly rate and duration
@@ -353,15 +353,15 @@ export default {
       const start = new Date(props.booking.start_time);
       const end = new Date(props.booking.end_time);
       const durationMs = end.getTime() - start.getTime();
-      return durationMs / (1000 * 60 * 60); // Convert to hours
+      const hours = durationMs / (1000 * 60 * 60); // Convert to hours
+      return parseFloat(hours.toFixed(2)); // Round to 2 decimal places
     });
 
     // Calculate current session credits
     const currentCredits = computed(() => {
-      if (tutorHourlyRate.value > 0 && currentDurationInHours.value > 0) {
-        return (tutorHourlyRate.value * currentDurationInHours.value).toFixed(
-          2
-        );
+      const hours = parseFloat(currentDurationInHours.value);
+      if (tutorHourlyRate.value > 0 && hours > 0) {
+        return (tutorHourlyRate.value * hours).toFixed(2);
       }
       return "0.00";
     });
