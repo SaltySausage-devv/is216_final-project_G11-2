@@ -4,6 +4,7 @@ nixPkgs = ["nodejs"]
 [phases.build]
 cmds = [
   "npm install",
+  "npm install --no-save @rollup/rollup-linux-x64-gnu || npm install --no-save rollup",
   "npm run build"
 ]
 
