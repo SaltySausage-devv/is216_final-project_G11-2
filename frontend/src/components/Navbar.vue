@@ -356,7 +356,6 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
-import { useNotifications } from "../composables/useNotifications";
 import { animate, stagger, spring } from "animejs";
 import messagingService from "../services/messaging.js";
 import CreditsIcon from "./CreditsIcon.vue";
@@ -370,7 +369,6 @@ export default {
     const authStore = useAuthStore();
     const router = useRouter();
     const isNavbarExpanded = ref(false);
-    const { showNotification, showMessageNotification, showRescheduleNotification } = useNotifications();
 
     const isAuthenticated = computed(() => authStore.isAuthenticated);
     const user = computed(() => authStore.user);
@@ -414,20 +412,41 @@ export default {
     // Save notifications to localStorage
     const saveNotificationsToStorage = () => {
       try {
-        localStorage.setItem(
-          NOTIFICATIONS_STORAGE_KEY,
-          JSON.stringify(notifications.value)
-        );
+        const notificationsData = JSON.stringify(notifications.value);
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, notificationsData);
         console.log(
-          "🔔 NAVBAR: Saved",
+          "🔔 NAVBAR: ✅ Saved",
           notifications.value.length,
-          "notifications to storage"
+          "notifications to storage (size:",
+          notificationsData.length,
+          "bytes)"
         );
+        
+        // Verify the save worked
+        const verifyRead = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+        if (!verifyRead) {
+          console.error("🔔 NAVBAR: ⚠️ Storage verification failed - data not persisted!");
+        }
       } catch (error) {
         console.error(
-          "🔔 NAVBAR: Error saving notifications to storage:",
+          "🔔 NAVBAR: ❌ Error saving notifications to storage:",
           error
         );
+        // Check if it's a quota exceeded error
+        if (error.name === 'QuotaExceededError') {
+          console.error("🔔 NAVBAR: ⚠️ LocalStorage quota exceeded! Clearing old notifications...");
+          // Keep only the 5 most recent notifications if quota exceeded
+          notifications.value = notifications.value.slice(0, 5);
+          try {
+            localStorage.setItem(
+              NOTIFICATIONS_STORAGE_KEY,
+              JSON.stringify(notifications.value)
+            );
+            console.log("🔔 NAVBAR: ✅ Saved reduced notification set (5 notifications)");
+          } catch (retryError) {
+            console.error("🔔 NAVBAR: ❌ Still failed after reducing notifications:", retryError);
+          }
+        }
       }
     };
 
@@ -755,6 +774,19 @@ export default {
             iconClass = "fas fa-bell";
           }
 
+          // Check if we already have this notification (prevent duplicates)
+          const existingNotificationIndex = notifications.value.findIndex(
+            (n) => n.id === message.id
+          );
+
+          if (existingNotificationIndex !== -1) {
+            console.log(
+              "🔔 NAVBAR: Notification already exists, skipping duplicate:",
+              message.id
+            );
+            return; // Skip adding duplicate
+          }
+
           // Add to notifications list
           const notification = {
             id: message.id,
@@ -768,11 +800,21 @@ export default {
             unread: true,
           };
 
+          console.log("🔔 NAVBAR: Before adding - current count:", notifications.value.length);
+          console.log("🔔 NAVBAR: New notification to add:", {
+            id: notification.id,
+            title: notification.title,
+            type: message.message_type
+          });
+
           // Add to beginning of notifications array (most recent first)
           notifications.value.unshift(notification);
 
+          console.log("🔔 NAVBAR: After unshift - new count:", notifications.value.length);
+
           // Limit to last 20 notifications
           if (notifications.value.length > 20) {
+            console.log("🔔 NAVBAR: Trimming to 20 notifications");
             notifications.value = notifications.value.slice(0, 20);
           }
 
@@ -780,40 +822,15 @@ export default {
           saveNotificationsToStorage();
 
           console.log(
-            "🔔 NAVBAR: ✅ Added notification, total:",
+            "🔔 NAVBAR: ✅ Added notification, final total:",
             notifications.value.length
           );
-          console.log("🔔 NAVBAR: Notification:", notification);
+          console.log("🔔 NAVBAR: All notification IDs:", 
+            notifications.value.map(n => n.id).join(', ')
+          );
           
-          // Show toast notification based on message type
-          // IMPORTANT: NO toasts for reschedule_accepted or reschedule_rejected - they show blank
-          // Only show toasts for reschedule REQUESTS and regular messages
-          if (message.message_type === 'reschedule_request') {
-            try {
-              const messageData = JSON.parse(message.content);
-              const bookingTitle = messageData.subject || 'Tutoring Session';
-              showRescheduleNotification({
-                senderName: senderName,
-                bookingTitle: bookingTitle,
-                conversationId: message.conversation_id
-              });
-              console.log("🔔 NAVBAR: ✅ Shown reschedule request toast notification");
-            } catch (error) {
-              console.error("🔔 NAVBAR: Failed to parse reschedule message for toast:", error);
-            }
-          } else if (message.message_type !== 'reschedule_accepted' && 
-                     message.message_type !== 'reschedule_rejected' && 
-                     !isSystemMessage) {
-            // Show regular message toast for non-system messages (excluding reschedule responses)
-            showMessageNotification({
-              senderName: senderName,
-              message: messagePreview,
-              conversationId: message.conversation_id
-            });
-            console.log("🔔 NAVBAR: ✅ Shown message toast notification");
-          } else {
-            console.log("🔔 NAVBAR: ⏭️ Skipping toast notification for system message:", message.message_type);
-          }
+          // Toast notifications completely disabled - only navbar notifications inbox is used
+          console.log("🔔 NAVBAR: Notification added to inbox only (no toast)");
         } else {
           console.log(
             "🔔 NAVBAR: ⏭️ Skipping notification (message from self or conditions not met)"

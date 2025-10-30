@@ -1897,7 +1897,7 @@ export default {
     const route = useRoute();
     const authStore = useAuthStore();
     const creditService = useCreditService();
-    const { showMessageNotification, showNotification, clearAllNotifications } = useNotifications();
+    const { clearAllNotifications } = useNotifications();
     const { showError, showWarning, showInfo } = useAlertModal();
 
     const currentUserId = computed(() => authStore.user?.id);

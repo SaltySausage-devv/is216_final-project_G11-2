@@ -5,7 +5,6 @@
       <router-view />
     </main>
     <Footer />
-    <ToastNotifications />
     <AlertModal
       :visible="alertState.visible"
       :title="alertState.title"
@@ -20,23 +19,18 @@
 import { onMounted, onUnmounted, watch, ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "./stores/auth";
-import { useNotifications } from "./composables/useNotifications";
 import { useAlertModal } from "./composables/useAlertModal";
 import messagingService from "./services/messaging.js";
 import AlertModal from "./components/AlertModal.vue";
 
-import ToastNotifications from "./components/ToastNotifications.vue";
-
 export default {
   name: "App",
   components: {
-    ToastNotifications,
     AlertModal,
   },
   setup() {
     const authStore = useAuthStore();
     const route = useRoute();
-    const { showMessageNotification, showRescheduleNotification } = useNotifications();
     const { alertState, handleClose, showAlert, showSuccess, showError, showWarning, showInfo } = useAlertModal();
     
     // Make alert functions globally available

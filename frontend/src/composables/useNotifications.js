@@ -13,25 +13,10 @@ export function useNotifications() {
   const router = useRouter()
 
   const showNotification = ({ title, message, conversationId, onClick }) => {
-    console.log('🔔 TOAST: showNotification called with:', { title, message, conversationId })
-    
-    const id = ++notificationId
-    const notification = {
-      id,
-      title,
-      message,
-      conversationId,
-      onClick
-    }
-    
-    notifications.value.push(notification)
-    
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-      removeNotification(id)
-    }, 5000)
-    
-    return id
+    // TOAST NOTIFICATIONS COMPLETELY DISABLED
+    // All notifications now only appear in the navbar notifications inbox
+    console.log('🔔 TOAST: Notification request received but DISABLED - using navbar inbox only')
+    return null
   }
 
   const removeNotification = (id) => {
@@ -56,29 +41,15 @@ export function useNotifications() {
   }
 
   const showMessageNotification = ({ senderName, message, conversationId }) => {
-    console.log('🔔 TOAST: showMessageNotification called with:', { senderName, message, conversationId })
-    
-    return showNotification({
-      title: `New message from ${senderName}`,
-      message: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
-      conversationId,
-      onClick: () => {
-        router.push(`/messages?conversation=${conversationId}`)
-      }
-    })
+    // TOAST NOTIFICATIONS COMPLETELY DISABLED
+    console.log('🔔 TOAST: Message notification request DISABLED - using navbar inbox only')
+    return null
   }
   
   const showRescheduleNotification = ({ senderName, bookingTitle, conversationId }) => {
-    console.log('🔔 TOAST: showRescheduleNotification called with:', { senderName, bookingTitle, conversationId })
-    
-    return showNotification({
-      title: '📅 Reschedule Request',
-      message: `${senderName} has requested to reschedule "${bookingTitle}". Click to review.`,
-      conversationId,
-      onClick: () => {
-        router.push(`/messages?conversation=${conversationId}`)
-      }
-    })
+    // TOAST NOTIFICATIONS COMPLETELY DISABLED
+    console.log('🔔 TOAST: Reschedule notification request DISABLED - using navbar inbox only')
+    return null
   }
 
   return {
