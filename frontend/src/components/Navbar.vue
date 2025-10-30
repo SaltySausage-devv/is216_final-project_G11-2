@@ -603,7 +603,7 @@ export default {
 
         let addedCount = 0;
         
-        // Add notification for each conversation with unread messages
+        // Fetch individual messages for each conversation with unread messages
         for (const conv of conversationsWithUnread) {
           const otherParticipant =
             conv.participant1_id === currentUserId.value
@@ -612,35 +612,97 @@ export default {
 
           const participantName = `${otherParticipant.first_name} ${otherParticipant.last_name}`;
 
-          // Check if we already have a notification for this conversation
-          const existingNotification = notifications.value.find(
-            (n) => n.conversationId === conv.id
+          console.log(
+            `🔔 NAVBAR: Fetching messages for conversation with ${participantName}...`
           );
 
-          if (!existingNotification) {
-            console.log(
-              `🔔 NAVBAR: ➕ Adding notification for ${participantName} (${conv.unreadCount} unread)`
+          try {
+            // Fetch messages for this conversation
+            const messagesResponse = await messagingService.getMessages(conv.id, 1, 50);
+            
+            if (messagesResponse.messages && messagesResponse.messages.length > 0) {
+              // Filter for unread messages (messages not sent by current user and not read yet)
+              const unreadMessages = messagesResponse.messages.filter(msg => {
+                const isFromOtherUser = String(msg.sender_id) !== String(currentUserId.value);
+                const isUnread = !msg.read_at || !msg.read_by?.includes(currentUserId.value);
+                return isFromOtherUser && isUnread;
+              });
+
+              console.log(
+                `🔔 NAVBAR: Found ${unreadMessages.length} unread messages from ${participantName}`
+              );
+
+              // Create individual notification for each unread message
+              for (const msg of unreadMessages) {
+                // Check if we already have a notification for this specific message
+                const existingNotification = notifications.value.find(
+                  (n) => n.id === msg.id
+                );
+
+                if (!existingNotification) {
+                  console.log(
+                    `🔔 NAVBAR: ➕ Adding notification for message ${msg.id.substring(0, 8)}... from ${participantName}`
+                  );
+
+                  // Determine message preview and icon based on type
+                  let messagePreview;
+                  let iconClass = "fas fa-envelope";
+                  
+                  if (msg.message_type === "image") {
+                    messagePreview = "📷 Sent an image";
+                  } else if (msg.message_type === "reschedule_request") {
+                    messagePreview = "📅 Reschedule booking request";
+                    iconClass = "fas fa-calendar-alt text-warning";
+                  } else if (msg.message_type === "reschedule_accepted") {
+                    messagePreview = "✅ Reschedule request accepted";
+                    iconClass = "fas fa-calendar-check text-success";
+                  } else if (msg.message_type === "reschedule_rejected") {
+                    messagePreview = "❌ Reschedule request declined";
+                    iconClass = "fas fa-calendar-times text-danger";
+                  } else if (msg.message_type === "booking_proposal") {
+                    messagePreview = "📝 Booking proposal";
+                  } else if (msg.message_type === "booking_confirmation") {
+                    messagePreview = "✅ Booking confirmed";
+                  } else if (msg.message_type === "booking_cancelled") {
+                    messagePreview = "❌ Booking cancelled";
+                    iconClass = "fas fa-ban text-danger";
+                  } else if (msg.content) {
+                    messagePreview = msg.content.substring(0, 50);
+                  } else {
+                    messagePreview = "New message";
+                  }
+
+                  const notification = {
+                    id: msg.id, // Use message ID as notification ID
+                    icon: iconClass,
+                    title: `New message from ${participantName}`,
+                    message: messagePreview,
+                    time: formatTime(msg.created_at),
+                    timestamp: msg.created_at,
+                    conversationId: conv.id,
+                    unread: true,
+                  };
+
+                  notifications.value.push(notification); // Add to end (older messages)
+                  addedCount++;
+                } else {
+                  console.log(
+                    `🔔 NAVBAR: ⏭️ Skipping - already have notification for message ${msg.id.substring(0, 8)}...`
+                  );
+                }
+              }
+            }
+          } catch (msgError) {
+            console.error(
+              `🔔 NAVBAR: ❌ Error fetching messages for conversation ${conv.id}:`,
+              msgError
             );
-
-            const notification = {
-              id: `conv_${conv.id}_${Date.now()}`, // Unique ID
-              icon: "fas fa-envelope",
-              title: `${conv.unreadCount} unread message${
-                conv.unreadCount > 1 ? "s" : ""
-              } from ${participantName}`,
-              message: conv.last_message_content || "New message",
-              time: formatTime(conv.last_message_at || conv.created_at),
-              timestamp: conv.last_message_at || conv.created_at,
-              conversationId: conv.id,
-              unread: true,
-            };
-
-            notifications.value.unshift(notification);
-            addedCount++;
-          } else {
-            console.log(`🔔 NAVBAR: ⏭️ Skipping - already have notification for ${participantName}`);
+            // Continue with next conversation even if one fails
           }
         }
+
+        // Sort notifications by timestamp (most recent first)
+        notifications.value.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         console.log("🔔 NAVBAR: Current notifications count AFTER adding unread:", notifications.value.length);
         console.log("🔔 NAVBAR: Added", addedCount, "new unread notifications");
