@@ -382,27 +382,48 @@ export default {
     const showAllNotifications = ref(false);
     let messageHandler = null;
 
+    // Watch for any changes to notifications array (debugging)
+    watch(
+      () => notifications.value.length,
+      (newCount, oldCount) => {
+        console.log(`🔔 NAVBAR: 🔄 Notifications count changed: ${oldCount} → ${newCount}`);
+        if (newCount < oldCount) {
+          console.warn(`🔔 NAVBAR: ⚠️ Notifications DECREASED! Possible clear/overwrite`);
+          console.trace("Stack trace:");
+        }
+      }
+    );
+
     // Load notifications from localStorage on init
     const loadNotificationsFromStorage = () => {
       try {
+        console.log("🔔 NAVBAR: 📖 Loading notifications from localStorage...");
         const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+        console.log("🔔 NAVBAR: Raw stored data:", stored ? stored.substring(0, 100) + '...' : 'null');
+        
         if (stored) {
           const parsed = JSON.parse(stored);
+          console.log("🔔 NAVBAR: Parsed array length:", parsed.length);
+          
           // Filter out notifications older than 7 days
           const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
           notifications.value = parsed.filter((n) => {
             const notifTime = new Date(n.timestamp).getTime();
             return notifTime > sevenDaysAgo;
           });
+          
           console.log(
-            "🔔 NAVBAR: Loaded",
+            "🔔 NAVBAR: ✅ Loaded",
             notifications.value.length,
             "notifications from storage"
           );
+          console.log("🔔 NAVBAR: Loaded IDs:", notifications.value.map(n => n.id).join(', '));
+        } else {
+          console.log("🔔 NAVBAR: No stored notifications found");
         }
       } catch (error) {
         console.error(
-          "🔔 NAVBAR: Error loading notifications from storage:",
+          "🔔 NAVBAR: ❌ Error loading notifications from storage:",
           error
         );
         notifications.value = [];
@@ -412,20 +433,29 @@ export default {
     // Save notifications to localStorage
     const saveNotificationsToStorage = () => {
       try {
-        const notificationsData = JSON.stringify(notifications.value);
-        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, notificationsData);
-        console.log(
-          "🔔 NAVBAR: ✅ Saved",
-          notifications.value.length,
-          "notifications to storage (size:",
-          notificationsData.length,
-          "bytes)"
-        );
+        console.log("🔔 NAVBAR: 💾 Starting save...");
+        console.log("🔔 NAVBAR: Saving", notifications.value.length, "notifications");
+        console.log("🔔 NAVBAR: IDs to save:", notifications.value.map(n => n.id));
         
-        // Verify the save worked
+        const notificationsData = JSON.stringify(notifications.value);
+        console.log("🔔 NAVBAR: Stringified data size:", notificationsData.length, "bytes");
+        
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, notificationsData);
+        console.log("🔔 NAVBAR: ✅ localStorage.setItem() completed");
+        
+        // Verify the save worked by reading back
         const verifyRead = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
         if (!verifyRead) {
-          console.error("🔔 NAVBAR: ⚠️ Storage verification failed - data not persisted!");
+          console.error("🔔 NAVBAR: ❌ Storage verification failed - data not persisted!");
+          return;
+        }
+        
+        const verifyParsed = JSON.parse(verifyRead);
+        console.log("🔔 NAVBAR: ✅ Verified:", verifyParsed.length, "notifications in storage");
+        console.log("🔔 NAVBAR: ✅ Verified IDs:", verifyParsed.map(n => n.id));
+        
+        if (verifyParsed.length !== notifications.value.length) {
+          console.error("🔔 NAVBAR: ❌ COUNT MISMATCH! Tried to save", notifications.value.length, "but storage has", verifyParsed.length);
         }
       } catch (error) {
         console.error(
@@ -548,7 +578,9 @@ export default {
     // Load unread messages from conversations and add to notifications
     const loadUnreadMessagesAsNotifications = async () => {
       try {
-        console.log("🔔 NAVBAR: Loading unread messages from conversations...");
+        console.log("🔔 NAVBAR: 📥 Loading unread messages from conversations...");
+        console.log("🔔 NAVBAR: Current notifications count BEFORE loading unread:", notifications.value.length);
+        
         const response = await messagingService.getConversations();
 
         if (!response.conversations || response.conversations.length === 0) {
@@ -569,6 +601,8 @@ export default {
           `🔔 NAVBAR: ${conversationsWithUnread.length} conversations have unread messages`
         );
 
+        let addedCount = 0;
+        
         // Add notification for each conversation with unread messages
         for (const conv of conversationsWithUnread) {
           const otherParticipant =
@@ -585,7 +619,7 @@ export default {
 
           if (!existingNotification) {
             console.log(
-              `🔔 NAVBAR: Adding notification for ${participantName} (${conv.unreadCount} unread)`
+              `🔔 NAVBAR: ➕ Adding notification for ${participantName} (${conv.unreadCount} unread)`
             );
 
             const notification = {
@@ -602,23 +636,31 @@ export default {
             };
 
             notifications.value.unshift(notification);
+            addedCount++;
+          } else {
+            console.log(`🔔 NAVBAR: ⏭️ Skipping - already have notification for ${participantName}`);
           }
         }
 
+        console.log("🔔 NAVBAR: Current notifications count AFTER adding unread:", notifications.value.length);
+        console.log("🔔 NAVBAR: Added", addedCount, "new unread notifications");
+
         // Limit to last 20 notifications
         if (notifications.value.length > 20) {
+          console.log("🔔 NAVBAR: Trimming from", notifications.value.length, "to 20");
           notifications.value = notifications.value.slice(0, 20);
         }
 
         // Save to localStorage
-        if (conversationsWithUnread.length > 0) {
+        if (addedCount > 0) {
+          console.log("🔔 NAVBAR: 💾 Saving notifications after adding unread messages");
           saveNotificationsToStorage();
           console.log(
-            `🔔 NAVBAR: ✅ Added ${conversationsWithUnread.length} notification(s) for unread messages`
+            `🔔 NAVBAR: ✅ Added ${addedCount} notification(s) for unread messages`
           );
         }
       } catch (error) {
-        console.error("🔔 NAVBAR: Error loading unread messages:", error);
+        console.error("🔔 NAVBAR: ❌ Error loading unread messages:", error);
       }
     };
 
@@ -801,6 +843,7 @@ export default {
           };
 
           console.log("🔔 NAVBAR: Before adding - current count:", notifications.value.length);
+          console.log("🔔 NAVBAR: Current IDs:", notifications.value.map(n => n.id));
           console.log("🔔 NAVBAR: New notification to add:", {
             id: notification.id,
             title: notification.title,
@@ -808,24 +851,35 @@ export default {
           });
 
           // Add to beginning of notifications array (most recent first)
-          notifications.value.unshift(notification);
+          // Create a NEW array to ensure Vue reactivity
+          notifications.value = [notification, ...notifications.value];
 
-          console.log("🔔 NAVBAR: After unshift - new count:", notifications.value.length);
+          console.log("🔔 NAVBAR: After adding - new count:", notifications.value.length);
+          console.log("🔔 NAVBAR: New IDs:", notifications.value.map(n => n.id));
+          
+          // Verify the notification was actually added
+          const wasAdded = notifications.value.some(n => n.id === notification.id);
+          if (!wasAdded) {
+            console.error("🔔 NAVBAR: ❌ CRITICAL: Notification was NOT added to array!");
+            return;
+          }
+          console.log("🔔 NAVBAR: ✅ Verified notification was added");
 
           // Limit to last 20 notifications
           if (notifications.value.length > 20) {
-            console.log("🔔 NAVBAR: Trimming to 20 notifications");
+            console.log("🔔 NAVBAR: Trimming from", notifications.value.length, "to 20");
             notifications.value = notifications.value.slice(0, 20);
           }
+
+          console.log(
+            "🔔 NAVBAR: ✅ Final total before save:",
+            notifications.value.length
+          );
 
           // Save to localStorage
           saveNotificationsToStorage();
 
-          console.log(
-            "🔔 NAVBAR: ✅ Added notification, final total:",
-            notifications.value.length
-          );
-          console.log("🔔 NAVBAR: All notification IDs:", 
+          console.log("🔔 NAVBAR: All notification IDs after save:", 
             notifications.value.map(n => n.id).join(', ')
           );
           
