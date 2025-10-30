@@ -13,10 +13,25 @@ export function useNotifications() {
   const router = useRouter()
 
   const showNotification = ({ title, message, conversationId, onClick }) => {
-    console.log('🔔 TOAST: showNotification called but DISABLED - User requested removal of all popup toasts')
-    // DISABLED - User requested complete removal of toast popups
-    // Return early, do nothing
-    return
+    console.log('🔔 TOAST: showNotification called with:', { title, message, conversationId })
+    
+    const id = ++notificationId
+    const notification = {
+      id,
+      title,
+      message,
+      conversationId,
+      onClick
+    }
+    
+    notifications.value.push(notification)
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      removeNotification(id)
+    }, 5000)
+    
+    return id
   }
 
   const removeNotification = (id) => {
@@ -42,13 +57,23 @@ export function useNotifications() {
 
   const showMessageNotification = ({ senderName, message, conversationId }) => {
     console.log('🔔 TOAST: showMessageNotification called with:', { senderName, message, conversationId })
-    // DISABLED - User requested removal of popup toasts
-    // Toast notifications are now disabled, only navbar badge will update
-    return;
     
     return showNotification({
       title: `New message from ${senderName}`,
       message: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+      conversationId,
+      onClick: () => {
+        router.push(`/messages?conversation=${conversationId}`)
+      }
+    })
+  }
+  
+  const showRescheduleNotification = ({ senderName, bookingTitle, conversationId }) => {
+    console.log('🔔 TOAST: showRescheduleNotification called with:', { senderName, bookingTitle, conversationId })
+    
+    return showNotification({
+      title: '📅 Reschedule Request',
+      message: `${senderName} has requested to reschedule "${bookingTitle}". Click to review.`,
       conversationId,
       onClick: () => {
         router.push(`/messages?conversation=${conversationId}`)
@@ -62,7 +87,8 @@ export function useNotifications() {
     removeNotification,
     clearAllNotifications,
     handleNotificationClick,
-    showMessageNotification
+    showMessageNotification,
+    showRescheduleNotification
   }
 }
 

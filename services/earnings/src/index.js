@@ -39,3 +39,5 @@ app.get('/earnings', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Earnings service running on port ${PORT}`);
 });
+
+

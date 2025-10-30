@@ -39,3 +39,5 @@ app.get('/achievements', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Gamification service running on port ${PORT}`);
 });
+
+

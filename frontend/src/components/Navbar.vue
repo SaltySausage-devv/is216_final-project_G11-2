@@ -356,6 +356,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
+import { useNotifications } from "../composables/useNotifications";
 import { animate, stagger, spring } from "animejs";
 import messagingService from "../services/messaging.js";
 import CreditsIcon from "./CreditsIcon.vue";
@@ -369,6 +370,7 @@ export default {
     const authStore = useAuthStore();
     const router = useRouter();
     const isNavbarExpanded = ref(false);
+    const { showNotification, showMessageNotification, showRescheduleNotification } = useNotifications();
 
     const isAuthenticated = computed(() => authStore.isAuthenticated);
     const user = computed(() => authStore.user);
@@ -650,6 +652,18 @@ export default {
         // Check if current user is the sender (using String() to handle UUID type mismatches)
         const isSender = String(message.sender_id) === String(currentUserId.value);
 
+        // Extra logging for reschedule messages
+        if (isRescheduleMessage) {
+          console.log("🔔 NAVBAR: Reschedule message details:", {
+            messageType: message.message_type,
+            senderId: message.sender_id,
+            currentUserId: currentUserId.value,
+            isSender: isSender,
+            senderIdType: typeof message.sender_id,
+            currentUserIdType: typeof currentUserId.value
+          });
+        }
+
         // Determine if we should show notification
         let shouldShow = false;
         if (isBookingMessage) {
@@ -657,7 +671,16 @@ export default {
           shouldShow = !isSender;
         } else if (isRescheduleMessage) {
           // Reschedule messages: only notify receiver (not sender)
-          shouldShow = !isSender;
+          // EXTRA SAFETY: Never show reschedule_accepted or reschedule_rejected to the person who clicked the button
+          if (message.message_type === 'reschedule_accepted' || message.message_type === 'reschedule_rejected') {
+            // These are responses - only show to the person who SENT the original request (not the responder)
+            shouldShow = !isSender;
+            console.log("🔔 NAVBAR: Reschedule response - shouldShow (not sender):", shouldShow);
+          } else {
+            // reschedule_request - show to receiver
+            shouldShow = !isSender;
+            console.log("🔔 NAVBAR: Reschedule request - shouldShow:", shouldShow);
+          }
         } else if (isSystemMessage) {
           // Other system messages: notify receiver
           shouldShow = !isSender;
@@ -718,10 +741,24 @@ export default {
             }
           }
 
+          // Determine icon based on message type
+          let iconClass = "fas fa-envelope";
+          if (message.message_type === 'reschedule_request') {
+            iconClass = "fas fa-calendar-alt text-warning";
+          } else if (message.message_type === 'reschedule_accepted') {
+            iconClass = "fas fa-calendar-check text-success";
+          } else if (message.message_type === 'reschedule_rejected') {
+            iconClass = "fas fa-calendar-times text-danger";
+          } else if (message.message_type === 'booking_cancelled') {
+            iconClass = "fas fa-ban text-danger";
+          } else if (isSystemMessage) {
+            iconClass = "fas fa-bell";
+          }
+
           // Add to notifications list
           const notification = {
             id: message.id,
-            icon: isSystemMessage ? "fas fa-bell" : "fas fa-envelope",
+            icon: iconClass,
             title: title,
             message: messagePreview,
             time: formatTime(message.created_at),
@@ -747,6 +784,36 @@ export default {
             notifications.value.length
           );
           console.log("🔔 NAVBAR: Notification:", notification);
+          
+          // Show toast notification based on message type
+          // IMPORTANT: NO toasts for reschedule_accepted or reschedule_rejected - they show blank
+          // Only show toasts for reschedule REQUESTS and regular messages
+          if (message.message_type === 'reschedule_request') {
+            try {
+              const messageData = JSON.parse(message.content);
+              const bookingTitle = messageData.subject || 'Tutoring Session';
+              showRescheduleNotification({
+                senderName: senderName,
+                bookingTitle: bookingTitle,
+                conversationId: message.conversation_id
+              });
+              console.log("🔔 NAVBAR: ✅ Shown reschedule request toast notification");
+            } catch (error) {
+              console.error("🔔 NAVBAR: Failed to parse reschedule message for toast:", error);
+            }
+          } else if (message.message_type !== 'reschedule_accepted' && 
+                     message.message_type !== 'reschedule_rejected' && 
+                     !isSystemMessage) {
+            // Show regular message toast for non-system messages (excluding reschedule responses)
+            showMessageNotification({
+              senderName: senderName,
+              message: messagePreview,
+              conversationId: message.conversation_id
+            });
+            console.log("🔔 NAVBAR: ✅ Shown message toast notification");
+          } else {
+            console.log("🔔 NAVBAR: ⏭️ Skipping toast notification for system message:", message.message_type);
+          }
         } else {
           console.log(
             "🔔 NAVBAR: ⏭️ Skipping notification (message from self or conditions not met)"

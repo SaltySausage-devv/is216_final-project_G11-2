@@ -639,8 +639,35 @@
                               </p>
                             </div>
                             <div class="booking-actions">
-                              <template v-if="message.senderId !== currentUserId">
-                                <!-- Recipient can accept/reject -->
+                              <!-- Check if this reschedule request has been responded to -->
+                              <template v-if="getRescheduleStatus(message) === 'accepted'">
+                                <span class="booking-status text-success">
+                                  <i class="fas fa-check-circle me-1"></i>
+                                  Request Accepted
+                                </span>
+                                <button
+                                  class="btn btn-outline-primary btn-sm ms-2"
+                                  @click="$router.push('/calendar')"
+                                >
+                                  <i class="fas fa-calendar-check me-1"></i>
+                                  View in Calendar
+                                </button>
+                              </template>
+                              <template v-else-if="getRescheduleStatus(message) === 'rejected'">
+                                <span class="booking-status text-danger">
+                                  <i class="fas fa-times-circle me-1"></i>
+                                  Request Declined
+                                </span>
+                                <button
+                                  class="btn btn-outline-primary btn-sm ms-2"
+                                  @click="$router.push('/calendar')"
+                                >
+                                  <i class="fas fa-calendar-check me-1"></i>
+                                  View in Calendar
+                                </button>
+                              </template>
+                              <template v-else-if="message.senderId !== currentUserId">
+                                <!-- Recipient can accept/reject (only if not yet responded) -->
                                 <button
                                   class="btn btn-success btn-sm me-2"
                                   :disabled="isProcessingReschedule"
@@ -666,7 +693,7 @@
                                 </button>
                               </template>
                               <template v-else>
-                                <!-- Sender sees awaiting response -->
+                                <!-- Sender sees awaiting response (only if not yet responded) -->
                                 <span class="booking-status text-warning">
                                   <i class="fas fa-clock me-1"></i>
                                   Awaiting response
@@ -3659,6 +3686,41 @@ export default {
       }
     };
 
+    // Check if a reschedule request has been responded to
+    const getRescheduleStatus = (rescheduleMessage) => {
+      if (rescheduleMessage.messageType !== 'reschedule_request') {
+        return null;
+      }
+      
+      try {
+        const bookingData = JSON.parse(rescheduleMessage.content);
+        const bookingId = bookingData.bookingId;
+        
+        if (!bookingId) return null;
+        
+        // Check if there's a subsequent reschedule_accepted or reschedule_rejected message
+        // for the same booking
+        for (let i = messages.value.indexOf(rescheduleMessage) + 1; i < messages.value.length; i++) {
+          const msg = messages.value[i];
+          if (msg.messageType === 'reschedule_accepted' || msg.messageType === 'reschedule_rejected') {
+            try {
+              const msgData = JSON.parse(msg.content);
+              if (msgData.bookingId === bookingId) {
+                return msg.messageType === 'reschedule_accepted' ? 'accepted' : 'rejected';
+              }
+            } catch (e) {
+              continue;
+            }
+          }
+        }
+        
+        return null; // No response found
+      } catch (error) {
+        console.error('Error checking reschedule status:', error);
+        return null;
+      }
+    };
+
     // Helper methods for booking messages
     const getBookingData = (message) => {
       // Only attempt to parse JSON for booking-related message types
@@ -5057,6 +5119,7 @@ export default {
       sendBookingProposal,
       // Booking message helpers
       getBookingData,
+      getRescheduleStatus,
       isBookingConfirmationContent,
       isBookingOfferContent,
       formatMessagePreview,

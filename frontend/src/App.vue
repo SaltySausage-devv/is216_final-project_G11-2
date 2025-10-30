@@ -5,6 +5,7 @@
       <router-view />
     </main>
     <Footer />
+    <ToastNotifications />
     <AlertModal
       :visible="alertState.visible"
       :title="alertState.title"
@@ -24,15 +25,18 @@ import { useAlertModal } from "./composables/useAlertModal";
 import messagingService from "./services/messaging.js";
 import AlertModal from "./components/AlertModal.vue";
 
+import ToastNotifications from "./components/ToastNotifications.vue";
+
 export default {
   name: "App",
   components: {
+    ToastNotifications,
     AlertModal,
   },
   setup() {
     const authStore = useAuthStore();
     const route = useRoute();
-    const { showMessageNotification } = useNotifications();
+    const { showMessageNotification, showRescheduleNotification } = useNotifications();
     const { alertState, handleClose, showAlert, showSuccess, showError, showWarning, showInfo } = useAlertModal();
     
     // Make alert functions globally available
@@ -236,7 +240,9 @@ export default {
 
               // Toast popup disabled - user requested removal of popup toasts
               // Notification badge in navbar will still update via Navbar notification system
+              // IMPORTANT: Never show toasts for reschedule_accepted or reschedule_rejected
               console.log("🌐 APP: Message notification (toast disabled, navbar badge will update)");
+              console.log("🌐 APP: Message type:", message.message_type);
             } else {
               console.log(
                 "🌐 APP: On Messages page, not showing notification from App.vue"

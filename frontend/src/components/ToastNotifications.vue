@@ -4,7 +4,7 @@
     style="z-index: 9999"
   >
     <div
-      v-for="notification in notifications"
+      v-for="notification in visibleNotifications"
       :key="notification.id"
       class="toast show cyberpunk-toast"
       role="alert"
@@ -30,6 +30,7 @@
 </template>
 
 <script>
+import { computed } from 'vue';
 import { useNotifications } from "../composables/useNotifications";
 
 export default {
@@ -42,8 +43,20 @@ export default {
       handleNotificationClick(notification);
     };
 
+    // Filter out any notifications that don't have a title or message (prevents blank toasts)
+    const visibleNotifications = computed(() => {
+      return notifications.value.filter(notif => {
+        const hasContent = notif.title || notif.message;
+        if (!hasContent) {
+          console.warn('🔔 TOAST: Filtering out blank notification:', notif);
+        }
+        return hasContent;
+      });
+    });
+
     return {
       notifications,
+      visibleNotifications,
       removeNotification,
       handleClick,
     };

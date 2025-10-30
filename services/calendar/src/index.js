@@ -708,6 +708,15 @@ app.post('/bookings/:id/reschedule', verifyToken, async (req, res) => {
     const recipientId = requesterType === 'tutor' ? booking.student_id : booking.tutor_id;
     console.log(`📧 Sending notification to user ${recipientId} about reschedule request for booking ${id}`);
 
+    // Get requester details for notification
+    const { data: requesterUser } = await supabase
+      .from('users')
+      .select('first_name, last_name')
+      .eq('id', req.user.userId)
+      .single();
+
+    const requesterName = requesterUser ? `${requesterUser.first_name} ${requesterUser.last_name}` : 'A user';
+
     try {
       // Find or create conversation between tutor and student
       const { data: existingConversations } = await supabase
@@ -774,6 +783,42 @@ app.post('/bookings/:id/reschedule', verifyToken, async (req, res) => {
 
         if (sent) {
           console.log(`✅ Reschedule notification sent to user ${recipientId} via messaging service`);
+          
+          // Send notification to notifications service for persistent storage
+          try {
+            const notificationsServiceUrl = process.env.NOTIFICATIONS_SERVICE_URL || 'http://localhost:3007';
+            const authToken = req.headers.authorization?.split(' ')[1];
+            
+            const notificationMessage = `${requesterName} has requested to reschedule your tutoring session for "${booking.subject || 'Tutoring Session'}". Please review and respond to the request.`;
+            
+            await axios.post(
+              `${notificationsServiceUrl}/notifications/send`,
+              {
+                userId: recipientId,
+                type: 'push',
+                subject: 'Reschedule Request',
+                message: notificationMessage,
+                data: {
+                  bookingId: booking.id,
+                  conversationId: conversationId,
+                  requesterId: req.user.userId,
+                  requesterName: requesterName,
+                  requesterType: requesterType,
+                  notificationType: 'reschedule_request'
+                }
+              },
+              {
+                headers: {
+                  'Authorization': `Bearer ${authToken}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log(`✅ Persistent notification created for user ${recipientId}`);
+          } catch (notifServiceError) {
+            console.error('Failed to create persistent notification:', notifServiceError.message);
+            // Don't fail the operation if notification service is down
+          }
         } else {
           console.error('Failed to send reschedule notification via messaging service');
         }
@@ -1669,6 +1714,48 @@ app.post('/bookings/:id/reschedule/accept', verifyToken, async (req, res) => {
 
         if (sent) {
           console.log(`✅ Acceptance notification sent to user ${booking.reschedule_requested_by} via messaging service`);
+          
+          // Send notification to notifications service for persistent storage
+          try {
+            const notificationsServiceUrl = process.env.NOTIFICATIONS_SERVICE_URL || 'http://localhost:3007';
+            const authToken = req.headers.authorization?.split(' ')[1];
+            
+            // Get acceptor details for notification
+            const { data: acceptorUser } = await supabase
+              .from('users')
+              .select('first_name, last_name')
+              .eq('id', userId)
+              .single();
+
+            const acceptorName = acceptorUser ? `${acceptorUser.first_name} ${acceptorUser.last_name}` : 'The other party';
+            const notificationMessage = `${acceptorName} has accepted your reschedule request for "${booking.subject || 'Tutoring Session'}". The booking has been updated to the new time.`;
+            
+            await axios.post(
+              `${notificationsServiceUrl}/notifications/send`,
+              {
+                userId: booking.reschedule_requested_by,
+                type: 'push',
+                subject: 'Reschedule Request Accepted',
+                message: notificationMessage,
+                data: {
+                  bookingId: booking.id,
+                  conversationId: conversationId,
+                  acceptorId: userId,
+                  acceptorName: acceptorName,
+                  notificationType: 'reschedule_accepted'
+                }
+              },
+              {
+                headers: {
+                  'Authorization': `Bearer ${authToken}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log(`✅ Persistent acceptance notification created for user ${booking.reschedule_requested_by}`);
+          } catch (notifServiceError) {
+            console.error('Failed to create persistent acceptance notification:', notifServiceError.message);
+          }
         } else {
           console.error('Failed to send acceptance notification via messaging service');
         }
@@ -1839,6 +1926,48 @@ app.post('/bookings/:id/reschedule/reject', verifyToken, async (req, res) => {
 
         if (sent) {
           console.log(`✅ Rejection notification sent to user ${booking.reschedule_requested_by} via messaging service`);
+          
+          // Send notification to notifications service for persistent storage
+          try {
+            const notificationsServiceUrl = process.env.NOTIFICATIONS_SERVICE_URL || 'http://localhost:3007';
+            const authToken = req.headers.authorization?.split(' ')[1];
+            
+            // Get rejector details for notification
+            const { data: rejectorUser } = await supabase
+              .from('users')
+              .select('first_name, last_name')
+              .eq('id', userId)
+              .single();
+
+            const rejectorName = rejectorUser ? `${rejectorUser.first_name} ${rejectorUser.last_name}` : 'The other party';
+            const notificationMessage = `${rejectorName} has declined your reschedule request for "${booking.subject || 'Tutoring Session'}". The booking remains at the original time.`;
+            
+            await axios.post(
+              `${notificationsServiceUrl}/notifications/send`,
+              {
+                userId: booking.reschedule_requested_by,
+                type: 'push',
+                subject: 'Reschedule Request Declined',
+                message: notificationMessage,
+                data: {
+                  bookingId: booking.id,
+                  conversationId: conversationId,
+                  rejectorId: userId,
+                  rejectorName: rejectorName,
+                  notificationType: 'reschedule_rejected'
+                }
+              },
+              {
+                headers: {
+                  'Authorization': `Bearer ${authToken}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log(`✅ Persistent rejection notification created for user ${booking.reschedule_requested_by}`);
+          } catch (notifServiceError) {
+            console.error('Failed to create persistent rejection notification:', notifServiceError.message);
+          }
         } else {
           console.error('Failed to send rejection notification via messaging service');
         }
