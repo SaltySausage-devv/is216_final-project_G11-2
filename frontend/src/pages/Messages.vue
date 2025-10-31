@@ -2197,105 +2197,51 @@ export default {
       { immediate: true }
     );
 
-    // Watch for date changes to validate time selection
-    // Use a debounce to avoid clearing the field while user is selecting
-    let dateValidationTimeout = null;
+    // Validate date and time together when both are provided
+    // Only check if the combined datetime is in the past
+    let datetimeValidationTimeout = null;
     watch(
-      () => bookingProposal.value.proposedDate,
-      (newDate) => {
+      [() => bookingProposal.value.proposedDate, () => bookingProposal.value.proposedTime],
+      ([newDate, newTime]) => {
         // Clear any pending validation
-        if (dateValidationTimeout) {
-          clearTimeout(dateValidationTimeout);
+        if (datetimeValidationTimeout) {
+          clearTimeout(datetimeValidationTimeout);
+          datetimeValidationTimeout = null;
         }
 
-        if (!newDate) return;
+        // Only validate when BOTH date and time are provided
+        if (!newDate || !newTime) return;
 
-        // Debounce validation to allow date picker to complete
-        dateValidationTimeout = setTimeout(() => {
-          // Check if the selected date is valid before comparing
-          const selectedDate = new Date(newDate + "T00:00:00"); // Add time to avoid timezone issues
+        // Check if both are in valid format
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) return;
+        if (!/^\d{2}:\d{2}$/.test(newTime)) return;
 
-          // Skip validation if date is invalid
-          if (isNaN(selectedDate.getTime())) {
+        // Debounce validation to allow user to finish inputting
+        datetimeValidationTimeout = setTimeout(() => {
+          // Create combined datetime
+          const selectedDateTime = new Date(`${newDate}T${newTime}`);
+          
+          // Skip if datetime is invalid
+          if (isNaN(selectedDateTime.getTime())) {
             return;
           }
 
-          // Check if the date string matches a complete date format (YYYY-MM-DD)
-          // This ensures we only validate when user has finished selecting a complete date
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
-            return;
-          }
-
-          const today = new Date();
-          today.setHours(0, 0, 0, 0); // Reset time to midnight for date comparison
-          selectedDate.setHours(0, 0, 0, 0);
-
-          // Only validate if date is clearly in the past (not today or future)
-          if (selectedDate < today) {
-            // Past date detected - clear it and show error popup
-            bookingProposal.value.proposedDate = "";
-            bookingProposal.value.proposedTime = "";
-            showPastDateError.value = true;
-
-            // Auto-hide after 3 seconds
-            setTimeout(() => {
-              showPastDateError.value = false;
-            }, 3000);
-            return;
-          }
-        }, 300); // 300ms debounce to allow date picker to finish
-
-        // If user selected today's date, check if the selected time is valid
-        if (newDate === today.value && bookingProposal.value.proposedTime) {
-          // Check if the selected time is in the past
-          const selectedDateTime = new Date(
-            `${newDate}T${bookingProposal.value.proposedTime}`
-          );
           const now = new Date();
 
+          // Check if the combined datetime is in the past
           if (selectedDateTime <= now) {
-            // Past time detected - clear fields and show error popup
-            bookingProposal.value.proposedDate = "";
-            bookingProposal.value.proposedTime = "";
+            // Past datetime detected - show error popup (but don't clear fields)
             showPastDateError.value = true;
 
             // Auto-hide after 3 seconds
             setTimeout(() => {
               showPastDateError.value = false;
             }, 3000);
-            return;
           }
-        }
+        }, 500); // 500ms debounce to allow user to finish inputting
       }
     );
 
-    // Watch for time changes to validate past time selection
-    watch(
-      () => bookingProposal.value.proposedTime,
-      (newTime) => {
-        if (!newTime || !bookingProposal.value.proposedDate) return;
-
-        // Only check if today's date is selected
-        if (bookingProposal.value.proposedDate === today.value) {
-          const selectedDateTime = new Date(
-            `${bookingProposal.value.proposedDate}T${newTime}`
-          );
-          const now = new Date();
-
-          if (selectedDateTime <= now) {
-            // Past time detected - clear fields and show error popup
-            bookingProposal.value.proposedDate = "";
-            bookingProposal.value.proposedTime = "";
-            showPastDateError.value = true;
-
-            // Auto-hide after 3 seconds
-            setTimeout(() => {
-              showPastDateError.value = false;
-            }, 3000);
-          }
-        }
-      }
-    );
 
     // Handle input changes and fetch predictions using backend proxy
     const handleLocationInput = async (type, event) => {
@@ -3484,22 +3430,7 @@ export default {
         return;
       }
 
-      // Check if the selected date is in the past
-      const selectedDate = new Date(bookingProposal.value.proposedDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to midnight for date comparison
-
-      if (selectedDate < today) {
-        showPastDateError.value = true;
-        bookingProposal.value.proposedDate = "";
-        bookingProposal.value.proposedTime = "";
-        setTimeout(() => {
-          showPastDateError.value = false;
-        }, 3000);
-        return;
-      }
-
-      // Validate duration
+      // Validate duration (date/time validation is done in the watcher)
       const effectiveDuration =
         bookingProposal.value.customDuration !== ""
           ? bookingProposal.value.customDuration
