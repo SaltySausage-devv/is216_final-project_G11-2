@@ -40,15 +40,18 @@
         <p class="text-muted mt-3">Loading dashboard data...</p>
       </div>
 
-      <!-- Error State -->
-      <div v-else-if="error" class="alert alert-warning" role="alert">
+      <!-- Error State - Show as warning but still display stats -->
+      <div v-if="error" class="alert alert-warning mb-3" role="alert">
         <i class="fas fa-exclamation-triangle me-2"></i>
         {{ error }}
+        <button @click="loadDashboardData" class="btn btn-sm btn-outline-warning ms-2">
+          <i class="fas fa-sync-alt me-1"></i> Retry
+        </button>
       </div>
 
-      <!-- Quick Stats -->
+      <!-- Quick Stats - Show even if there's an error -->
       <motion.div
-        v-else
+        v-if="!isLoading"
         :initial="{ opacity: 0, y: 30 }"
         :animate="{ opacity: 1, y: 0 }"
         :transition="{ duration: 0.6, delay: 0.1 }"
@@ -200,6 +203,128 @@ export default {
       return date.toLocaleDateString();
     };
 
+    // Load recent activity from notifications API
+    const loadRecentActivity = async () => {
+      if (!userId.value) {
+        console.log("⏳ Waiting for userId to load notifications...");
+        return;
+      }
+
+      try {
+        console.log("📬 Loading recent activity from notifications for userId:", userId.value);
+        
+        // Fetch notifications from notifications service
+        // Note: Don't include /api prefix since axios instance already has baseURL: '/api'
+        const notificationsResponse = await api.get(`/notifications/${userId.value}`, {
+          params: { limit: 20 } // Get more to filter relevant ones
+        });
+
+        if (notificationsResponse.data && notificationsResponse.data.notifications) {
+          const notifications = notificationsResponse.data.notifications;
+          
+          console.log("📬 Received notifications:", notifications.length);
+
+          // Also fetch reviews for the user to show in recent activity
+          let reviews = [];
+          try {
+            if (userType.value === "tutor") {
+              // Note: Don't include /api prefix since axios instance already has baseURL: '/api'
+              const reviewsResponse = await api.get(`/reviews/tutor/${userId.value}`);
+              if (reviewsResponse.data && reviewsResponse.data.reviews) {
+                reviews = reviewsResponse.data.reviews.slice(0, 5); // Get recent 5 reviews
+              }
+            }
+          } catch (reviewError) {
+            console.log("⚠️ Could not fetch reviews for activity:", reviewError.message);
+          }
+
+          // Also fetch recent messages to include in activity
+          // We'll get this from the messages/conversations endpoint
+          
+          // Format notifications and reviews into activities
+          const activities = [];
+
+          // Process notifications (messages, booking confirmations, booking requests)
+          notifications.forEach((notification) => {
+            const message = notification.message || notification.subject || "";
+            const data = notification.data || {};
+            
+            let icon = "fas fa-bell";
+            let title = notification.subject || notification.message || "Notification";
+            let status = "New";
+            let badgeClass = "bg-info";
+
+            // Check notification message/content for type
+            if (message.includes("Booking confirmed") || message.includes("booking confirmed") || data.notificationType === "booking_confirmation") {
+              icon = "fas fa-calendar-check";
+              title = "New booking confirmed";
+              status = "Confirmed";
+              badgeClass = "bg-success";
+            } else if (message.includes("Booking request") || message.includes("booking request") || message.includes("Booking offer") || data.notificationType === "booking_offer" || data.notificationType === "booking_request") {
+              icon = "fas fa-calendar-plus";
+              title = "Booking request sent";
+              status = "Pending";
+              badgeClass = "bg-warning";
+            } else if (message.includes("message") || message.includes("Message") || notification.type === "push") {
+              icon = "fas fa-envelope";
+              title = message.includes("from") ? message : `New message${userType.value === "student" ? " from tutor" : " from student"}`;
+              status = "Unread";
+              badgeClass = "bg-warning";
+            } else if (message.includes("review") || message.includes("Review")) {
+              icon = "fas fa-star";
+              // Try to extract rating from message
+              const ratingMatch = message.match(/(\d+)\s*-?\s*star/i);
+              const rating = ratingMatch ? ratingMatch[1] : "5";
+              title = `Received ${rating}-star review`;
+              status = "Completed";
+              badgeClass = "bg-success";
+            }
+
+            activities.push({
+              icon: icon,
+              title: title,
+              time: formatTimeAgo(notification.created_at),
+              status: status,
+              badgeClass: badgeClass,
+              timestamp: notification.created_at,
+            });
+          });
+
+          // Process reviews (for tutors who received reviews)
+          if (userType.value === "tutor" && reviews.length > 0) {
+            reviews.forEach((review) => {
+              activities.push({
+                icon: "fas fa-star",
+                title: `Received ${review.rating}-star review`,
+                time: formatTimeAgo(review.created_at),
+                status: "Completed",
+                badgeClass: "bg-success",
+                timestamp: review.created_at,
+              });
+            });
+          }
+
+          // Sort by timestamp (most recent first) and limit to 5
+          activities.sort((a, b) => {
+            const timeA = new Date(a.timestamp || 0);
+            const timeB = new Date(b.timestamp || 0);
+            return timeB - timeA;
+          });
+
+          // Limit to first 5 items
+          recentActivity.value = activities.slice(0, 5);
+
+          console.log("✅ Recent activity loaded:", recentActivity.value.length, "items");
+        } else {
+          recentActivity.value = [];
+        }
+      } catch (error) {
+        console.error("❌ Error loading recent activity from notifications:", error);
+        // Fallback to empty array
+        recentActivity.value = [];
+      }
+    };
+
     const loadDashboardData = async () => {
       if (!userId.value || !userType.value) {
         console.log("⏳ Waiting for user data...");
@@ -212,26 +337,35 @@ export default {
 
       try {
         // Fetch analytics data for stats
+        // Note: Don't include /api prefix since axios instance already has baseURL: '/api'
         let endpoint = "";
         switch (userType.value) {
           case "tutor":
-            endpoint = `/api/analytics/tutor/${userId.value}`;
+            endpoint = `/analytics/tutor/${userId.value}`;
             break;
           case "student":
-            endpoint = `/api/analytics/student/${userId.value}`;
+            endpoint = `/analytics/student/${userId.value}`;
             break;
           case "centre":
-            endpoint = `/api/analytics/centre/${userId.value}`;
+            endpoint = `/analytics/centre/${userId.value}`;
             break;
           default:
             throw new Error("Invalid user type for analytics");
         }
 
+        console.log("📊 Fetching analytics from:", endpoint);
+
         const response = await api.get(endpoint, {
           params: { period: "30" } // Last 30 days
         });
 
-        if (response.data.success) {
+        console.log("📊 Analytics response:", {
+          success: response.data.success,
+          hasData: !!response.data.data,
+          error: response.data.error
+        });
+
+        if (response.data && response.data.success) {
           const data = response.data.data;
 
           // Set stats based on user type and real data
@@ -306,69 +440,70 @@ export default {
             ];
           }
 
-          // Load recent activity from analytics data
-          const activities = [];
-          if (data.recentActivity && data.recentActivity.length > 0) {
-            data.recentActivity.slice(0, 5).forEach((activity) => {
-              let icon = "fas fa-calendar-check";
-              let status = "Confirmed";
-              let badgeClass = "bg-success";
-
-              // Determine icon and status based on activity type
-              if (activity.status === "completed") {
-                icon = "fas fa-check-circle";
-                status = "Completed";
-                badgeClass = "bg-success";
-              } else if (activity.status === "confirmed") {
-                icon = "fas fa-calendar-check";
-                status = "Confirmed";
-                badgeClass = "bg-success";
-              } else if (activity.status === "pending") {
-                icon = "fas fa-clock";
-                status = "Pending";
-                badgeClass = "bg-warning";
-              } else if (activity.status === "cancelled") {
-                icon = "fas fa-times-circle";
-                status = "Cancelled";
-                badgeClass = "bg-danger";
-              }
-
-              // Check if it's a review
-              if (activity.rating) {
-                icon = "fas fa-star";
-                status = `${activity.rating}-star review`;
-                badgeClass = "bg-success";
-              }
-
-              activities.push({
-                icon: icon,
-                title: activity.subject
-                  ? `${activity.subject} - ${userType.value === "student" ? activity.tutorName || "Tutor" : activity.studentName || "Student"}`
-                  : "Activity",
-                time: formatTimeAgo(activity.date),
-                status: status,
-                badgeClass: badgeClass,
-              });
-            });
+          // Load recent activity from notifications API (not analytics)
+          // Don't let activity loading failure break the dashboard
+          try {
+            await loadRecentActivity();
+          } catch (activityError) {
+            console.error("⚠️ Failed to load recent activity, but continuing:", activityError);
+            // Continue with stats even if activity fails
           }
 
-          // If no recent activity from analytics, show empty state
-          recentActivity.value = activities.length > 0 ? activities : [];
-
-          console.log("✅ Dashboard data loaded, stats count:", stats.value.length, "activities:", activities.length);
+          console.log("✅ Dashboard data loaded, stats count:", stats.value.length, "activities:", recentActivity.value.length);
         } else {
-          throw new Error(response.data.error || "Failed to load dashboard data");
+          const errorMsg = response.data?.error || response.data?.message || "Failed to load dashboard data";
+          console.error("❌ Analytics API returned error:", errorMsg);
+          throw new Error(errorMsg);
         }
       } catch (err) {
         console.error("❌ Dashboard load error:", err);
-        error.value = err.response?.data?.error || err.message || "Failed to load dashboard data";
+        console.error("❌ Error details:", {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+          url: err.config?.url
+        });
+
+        // Try to load activity even if analytics fails
+        try {
+          await loadRecentActivity();
+        } catch (activityError) {
+          console.error("❌ Also failed to load activity:", activityError);
+        }
+
+        // Set error message based on error type
+        if (err.response?.status === 401) {
+          error.value = "Authentication failed. Please log in again.";
+        } else if (err.response?.status === 403) {
+          error.value = "You don't have permission to view this data.";
+        } else if (err.code === "ECONNREFUSED" || err.message?.includes("Network Error") || err.message?.includes("ERR_NETWORK")) {
+          error.value = "Unable to connect to analytics service. Please check your connection.";
+        } else if (err.response?.status === 500) {
+          error.value = "Server error. Please try again later.";
+        } else {
+          error.value = err.response?.data?.error || err.message || "Failed to load dashboard data";
+        }
         
-        // Fallback to empty stats if API fails
-        stats.value = [];
-        recentActivity.value = [];
-        
-        if (err.code === "ECONNREFUSED" || err.message.includes("Network Error")) {
-          error.value = "Analytics service is not available. Using default values.";
+        // Fallback to empty stats if API fails - but don't break the UI
+        // Keep empty stats so the UI still renders
+        if (stats.value.length === 0) {
+          // Set default empty stats so UI doesn't break
+          stats.value = userType.value === "student" ? [
+            { icon: "fas fa-book", label: "Active Bookings", value: "0" },
+            { icon: "fas fa-star", label: "Completed Sessions", value: "0" },
+            { icon: "fas fa-clock", label: "Hours This Month", value: "0h" },
+            { icon: "fas fa-dollar-sign", label: "Total Spent", value: "$0.00" },
+          ] : userType.value === "tutor" ? [
+            { icon: "fas fa-users", label: "Total Students", value: "0" },
+            { icon: "fas fa-star", label: "Average Rating", value: "0.0" },
+            { icon: "fas fa-clock", label: "Hours This Month", value: "0h" },
+            { icon: "fas fa-dollar-sign", label: "Earnings", value: "$0.00" },
+          ] : [
+            { icon: "fas fa-users", label: "Total Students", value: "0" },
+            { icon: "fas fa-star", label: "Average Rating", value: "0.0" },
+            { icon: "fas fa-calendar", label: "Classes This Month", value: "0" },
+            { icon: "fas fa-dollar-sign", label: "Revenue", value: "$0.00" },
+          ];
         }
       } finally {
         isLoading.value = false;
@@ -402,6 +537,7 @@ export default {
       recentActivity,
       isLoading,
       error,
+      loadDashboardData, // Expose for retry button
     };
   },
 };

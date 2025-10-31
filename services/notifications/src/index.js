@@ -252,7 +252,10 @@ app.get('/notifications/:userId', verifyToken, async (req, res) => {
     const { page = 1, limit = 20, type } = req.query;
 
     // Check if user can access these notifications
-    if (req.user.userId !== parseInt(userId) && req.user.userType !== 'admin') {
+    // Support both UUID and numeric IDs
+    const currentUserId = String(req.user.userId || req.user.id || '');
+    const requestedUserId = String(userId);
+    if (currentUserId !== requestedUserId && req.user.userType !== 'admin') {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
