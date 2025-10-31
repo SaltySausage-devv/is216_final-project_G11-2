@@ -190,23 +190,23 @@ export default {
     // Chart color themes based on user type
     const chartColors = computed(() => {
       if (userType.value === 'tutor') {
-        // Tutor theme: Blue/Cyan/Purple gradient
+        // Tutor theme: Teal/Cyan gradient
         return {
-          primary: '#3b82f6',      // Blue
-          primaryLight: 'rgba(59, 130, 246, 0.1)',
-          secondary: '#06b6d4',   // Cyan
-          tertiary: '#8b5cf6',    // Purple
-          accent: '#6366f1',      // Indigo
-          gradient: ['#3b82f6', '#06b6d4', '#8b5cf6', '#6366f1', '#06b6d4', '#3b82f6'],
+          primary: '#14b8a6',      // Teal
+          primaryLight: 'rgba(20, 184, 166, 0.1)',
+          secondary: '#06b6d4',     // Cyan
+          tertiary: '#0d9488',      // Darker teal
+          accent: '#0891b2',        // Sky blue-teal
+          gradient: ['#14b8a6', '#06b6d4', '#0d9488', '#0891b2', '#06b6d4', '#14b8a6'],
           pieColors: [
-            '#3b82f6',  // Blue
+            '#14b8a6',  // Teal
             '#06b6d4',  // Cyan
-            '#8b5cf6',  // Purple
-            '#6366f1',  // Indigo
+            '#0d9488',  // Darker teal
+            '#0891b2',  // Sky blue-teal
             '#10b981',  // Green
-            '#14b8a6'   // Teal
+            '#22d3ee'   // Light cyan
           ],
-          spending: '#06b6d4',    // Cyan for earnings
+          spending: '#06b6d4',      // Cyan for earnings
           spendingLight: 'rgba(6, 182, 212, 0.1)'
         }
       } else {
@@ -897,8 +897,8 @@ export default {
 }
 
 .kpi-icon.tutor-theme {
-  background: linear-gradient(45deg, #3b82f6, #06b6d4);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+  background: linear-gradient(45deg, #14b8a6, #06b6d4);
+  box-shadow: 0 0 20px rgba(20, 184, 166, 0.5);
 }
 
 .kpi-value {
