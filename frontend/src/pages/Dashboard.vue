@@ -32,8 +32,23 @@
         </div>
       </motion.div>
 
+      <!-- Loading State -->
+      <div v-if="isLoading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted mt-3">Loading dashboard data...</p>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="alert alert-warning" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        {{ error }}
+      </div>
+
       <!-- Quick Stats -->
       <motion.div
+        v-else
         :initial="{ opacity: 0, y: 30 }"
         :animate="{ opacity: 1, y: 0 }"
         :transition="{ duration: 0.6, delay: 0.1 }"
@@ -152,6 +167,7 @@
 <script>
 import { ref, computed, onMounted, watch } from "vue";
 import { useAuthStore } from "../stores/auth";
+import api from "../services/api";
 
 export default {
   name: "Dashboard",
@@ -160,71 +176,211 @@ export default {
 
     const user = computed(() => authStore.user);
     const userType = computed(() => authStore.userType);
+    const userId = computed(() => authStore.user?.id);
 
     const stats = ref([]);
     const recentActivity = ref([]);
+    const isLoading = ref(false);
+    const error = ref(null);
 
-    const loadDashboardData = async () => {
-      console.log("📊 Loading dashboard data for user type:", userType.value);
+    // Helper to format time ago
+    const formatTimeAgo = (dateString) => {
+      if (!dateString) return "Just now";
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
 
-      // Load stats based on user type
-      if (userType.value === "student") {
-        stats.value = [
-          { icon: "fas fa-book", label: "Active Bookings", value: "3" },
-          { icon: "fas fa-star", label: "Completed Sessions", value: "12" },
-          { icon: "fas fa-clock", label: "Hours This Month", value: "24" },
-          { icon: "fas fa-dollar-sign", label: "Total Spent", value: "$1,440" },
-        ];
-      } else if (userType.value === "tutor") {
-        stats.value = [
-          { icon: "fas fa-users", label: "Total Students", value: "25" },
-          { icon: "fas fa-star", label: "Average Rating", value: "4.8" },
-          { icon: "fas fa-clock", label: "Hours This Month", value: "48" },
-          { icon: "fas fa-dollar-sign", label: "Earnings", value: "$2,880" },
-        ];
-      } else if (userType.value === "centre") {
-        stats.value = [
-          { icon: "fas fa-users", label: "Total Students", value: "150" },
-          { icon: "fas fa-star", label: "Average Rating", value: "4.6" },
-          { icon: "fas fa-calendar", label: "Classes This Month", value: "45" },
-          { icon: "fas fa-dollar-sign", label: "Revenue", value: "$8,100" },
-        ];
-      }
-
-      // Load recent activity
-      recentActivity.value = [
-        {
-          icon: "fas fa-calendar-check",
-          title: "New booking confirmed",
-          time: "2 hours ago",
-          status: "Confirmed",
-          badgeClass: "bg-success",
-        },
-        {
-          icon: "fas fa-star",
-          title: "Received 5-star review",
-          time: "1 day ago",
-          status: "Completed",
-          badgeClass: "bg-success",
-        },
-        {
-          icon: "fas fa-envelope",
-          title: "New message from student",
-          time: "2 days ago",
-          status: "Unread",
-          badgeClass: "bg-warning",
-        },
-      ];
-
-      console.log("✅ Dashboard data loaded, stats count:", stats.value.length);
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
+      if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+      if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+      return date.toLocaleDateString();
     };
 
-    // Watch for userType changes and reload data
+    const loadDashboardData = async () => {
+      if (!userId.value || !userType.value) {
+        console.log("⏳ Waiting for user data...");
+        return;
+      }
+
+      isLoading.value = true;
+      error.value = null;
+      console.log("📊 Loading dashboard data for user type:", userType.value, "userId:", userId.value);
+
+      try {
+        // Fetch analytics data for stats
+        let endpoint = "";
+        switch (userType.value) {
+          case "tutor":
+            endpoint = `/api/analytics/tutor/${userId.value}`;
+            break;
+          case "student":
+            endpoint = `/api/analytics/student/${userId.value}`;
+            break;
+          case "centre":
+            endpoint = `/api/analytics/centre/${userId.value}`;
+            break;
+          default:
+            throw new Error("Invalid user type for analytics");
+        }
+
+        const response = await api.get(endpoint, {
+          params: { period: "30" } // Last 30 days
+        });
+
+        if (response.data.success) {
+          const data = response.data.data;
+
+          // Set stats based on user type and real data
+          if (userType.value === "student") {
+            stats.value = [
+              {
+                icon: "fas fa-book",
+                label: "Active Bookings",
+                value: data.pendingSessions || 0,
+              },
+              {
+                icon: "fas fa-star",
+                label: "Completed Sessions",
+                value: data.completedSessions || 0,
+              },
+              {
+                icon: "fas fa-clock",
+                label: "Hours This Month",
+                value: `${parseFloat(data.totalHours || 0).toFixed(1)}h`,
+              },
+              {
+                icon: "fas fa-dollar-sign",
+                label: "Total Spent",
+                value: `$${parseFloat(data.totalSpent || 0).toFixed(2)}`,
+              },
+            ];
+          } else if (userType.value === "tutor") {
+            stats.value = [
+              {
+                icon: "fas fa-users",
+                label: "Total Students",
+                value: data.totalStudents || 0,
+              },
+              {
+                icon: "fas fa-star",
+                label: "Average Rating",
+                value: parseFloat(data.averageRating || 0).toFixed(1),
+              },
+              {
+                icon: "fas fa-clock",
+                label: "Hours This Month",
+                value: `${parseFloat(data.totalHours || 0).toFixed(1)}h`,
+              },
+              {
+                icon: "fas fa-dollar-sign",
+                label: "Earnings",
+                value: `$${parseFloat(data.totalEarnings || 0).toFixed(2)}`,
+              },
+            ];
+          } else if (userType.value === "centre") {
+            stats.value = [
+              {
+                icon: "fas fa-users",
+                label: "Total Students",
+                value: data.totalStudents || 0,
+              },
+              {
+                icon: "fas fa-star",
+                label: "Average Rating",
+                value: parseFloat(data.averageRating || 0).toFixed(1),
+              },
+              {
+                icon: "fas fa-calendar",
+                label: "Classes This Month",
+                value: data.totalBookings || 0,
+              },
+              {
+                icon: "fas fa-dollar-sign",
+                label: "Revenue",
+                value: `$${parseFloat(data.totalRevenue || 0).toFixed(2)}`,
+              },
+            ];
+          }
+
+          // Load recent activity from analytics data
+          const activities = [];
+          if (data.recentActivity && data.recentActivity.length > 0) {
+            data.recentActivity.slice(0, 5).forEach((activity) => {
+              let icon = "fas fa-calendar-check";
+              let status = "Confirmed";
+              let badgeClass = "bg-success";
+
+              // Determine icon and status based on activity type
+              if (activity.status === "completed") {
+                icon = "fas fa-check-circle";
+                status = "Completed";
+                badgeClass = "bg-success";
+              } else if (activity.status === "confirmed") {
+                icon = "fas fa-calendar-check";
+                status = "Confirmed";
+                badgeClass = "bg-success";
+              } else if (activity.status === "pending") {
+                icon = "fas fa-clock";
+                status = "Pending";
+                badgeClass = "bg-warning";
+              } else if (activity.status === "cancelled") {
+                icon = "fas fa-times-circle";
+                status = "Cancelled";
+                badgeClass = "bg-danger";
+              }
+
+              // Check if it's a review
+              if (activity.rating) {
+                icon = "fas fa-star";
+                status = `${activity.rating}-star review`;
+                badgeClass = "bg-success";
+              }
+
+              activities.push({
+                icon: icon,
+                title: activity.subject
+                  ? `${activity.subject} - ${userType.value === "student" ? activity.tutorName || "Tutor" : activity.studentName || "Student"}`
+                  : "Activity",
+                time: formatTimeAgo(activity.date),
+                status: status,
+                badgeClass: badgeClass,
+              });
+            });
+          }
+
+          // If no recent activity from analytics, show empty state
+          recentActivity.value = activities.length > 0 ? activities : [];
+
+          console.log("✅ Dashboard data loaded, stats count:", stats.value.length, "activities:", activities.length);
+        } else {
+          throw new Error(response.data.error || "Failed to load dashboard data");
+        }
+      } catch (err) {
+        console.error("❌ Dashboard load error:", err);
+        error.value = err.response?.data?.error || err.message || "Failed to load dashboard data";
+        
+        // Fallback to empty stats if API fails
+        stats.value = [];
+        recentActivity.value = [];
+        
+        if (err.code === "ECONNREFUSED" || err.message.includes("Network Error")) {
+          error.value = "Analytics service is not available. Using default values.";
+        }
+      } finally {
+        isLoading.value = false;
+      }
+    };
+
+    // Watch for userType and userId changes and reload data
     watch(
-      userType,
-      (newUserType) => {
-        console.log("👀 UserType changed to:", newUserType);
-        if (newUserType) {
+      [userType, userId],
+      ([newUserType, newUserId]) => {
+        console.log("👀 UserType or userId changed:", { newUserType, newUserId });
+        if (newUserType && newUserId) {
           loadDashboardData();
         }
       },
@@ -232,9 +388,9 @@ export default {
     );
 
     onMounted(() => {
-      console.log("🚀 Dashboard mounted, user type:", userType.value);
-      // Load data immediately if userType is already available
-      if (userType.value) {
+      console.log("🚀 Dashboard mounted, user type:", userType.value, "userId:", userId.value);
+      // Load data immediately if userType and userId are available
+      if (userType.value && userId.value) {
         loadDashboardData();
       }
     });
@@ -244,6 +400,8 @@ export default {
       userType,
       stats,
       recentActivity,
+      isLoading,
+      error,
     };
   },
 };

@@ -1,0 +1,802 @@
+{
+  "tables": {
+    "users": {
+      "exists": true,
+      "error": null
+    },
+    "tutor_profiles": {
+      "exists": true,
+      "error": null
+    },
+    "centre_profiles": {
+      "exists": true,
+      "error": null
+    },
+    "bookings": {
+      "exists": true,
+      "error": null
+    },
+    "conversations": {
+      "exists": true,
+      "error": null
+    },
+    "messages": {
+      "exists": true,
+      "error": null
+    },
+    "reviews": {
+      "exists": true,
+      "error": null
+    },
+    "notifications": {
+      "exists": true,
+      "error": null
+    },
+    "phone_verification_logs": {
+      "exists": true,
+      "error": null
+    },
+    "booking_offers": {
+      "exists": true,
+      "error": null
+    },
+    "availability_slots": {
+      "exists": true,
+      "error": null
+    },
+    "package_rates": {
+      "exists": true,
+      "error": null
+    },
+    "message_files": {
+      "exists": true,
+      "error": null
+    },
+    "analytics_events": {
+      "exists": true,
+      "error": null
+    }
+  },
+  "columns": {
+    "users": {
+      "id": {
+        "exists": true,
+        "error": null
+      },
+      "email": {
+        "exists": true,
+        "error": null
+      },
+      "password": {
+        "exists": false,
+        "error": "Column does not exist"
+      },
+      "first_name": {
+        "exists": true,
+        "error": null
+      },
+      "last_name": {
+        "exists": true,
+        "error": null
+      },
+      "user_type": {
+        "exists": true,
+        "error": null
+      },
+      "phone": {
+        "exists": true,
+        "error": null
+      },
+      "phone_verified": {
+        "exists": true,
+        "error": null
+      },
+      "credits": {
+        "exists": true,
+        "error": null
+      },
+      "date_of_birth": {
+        "exists": true,
+        "error": null
+      },
+      "address": {
+        "exists": true,
+        "error": null
+      },
+      "bio": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "updated_at": {
+        "exists": true,
+        "error": null
+      },
+      "reset_token": {
+        "exists": true,
+        "error": null
+      },
+      "reset_token_expires": {
+        "exists": true,
+        "error": null
+      }
+    },
+    "tutor_profiles": {
+      "user_id": {
+        "exists": true,
+        "error": null
+      },
+      "headline": {
+        "exists": true,
+        "error": null
+      },
+      "bio": {
+        "exists": true,
+        "error": null
+      },
+      "teaching_philosophy": {
+        "exists": true,
+        "error": null
+      },
+      "subjects": {
+        "exists": true,
+        "error": null
+      },
+      "levels": {
+        "exists": true,
+        "error": null
+      },
+      "languages": {
+        "exists": true,
+        "error": null
+      },
+      "qualifications": {
+        "exists": true,
+        "error": null
+      },
+      "certifications": {
+        "exists": true,
+        "error": null
+      },
+      "experience_years": {
+        "exists": true,
+        "error": null
+      },
+      "previous_experience": {
+        "exists": true,
+        "error": null
+      },
+      "hourly_rate": {
+        "exists": true,
+        "error": null
+      },
+      "monthly_package": {
+        "exists": true,
+        "error": null
+      },
+      "weekly_package": {
+        "exists": true,
+        "error": null
+      },
+      "bulk_package": {
+        "exists": true,
+        "error": null
+      },
+      "location": {
+        "exists": true,
+        "error": null
+      },
+      "preferred_locations": {
+        "exists": true,
+        "error": null
+      },
+      "availability": {
+        "exists": true,
+        "error": null
+      },
+      "timezone": {
+        "exists": true,
+        "error": null
+      },
+      "profile_image_url": {
+        "exists": true,
+        "error": null
+      },
+      "video_introduction_url": {
+        "exists": true,
+        "error": null
+      },
+      "specialties": {
+        "exists": true,
+        "error": null
+      },
+      "preferred_student_levels": {
+        "exists": true,
+        "error": null
+      },
+      "achievements": {
+        "exists": true,
+        "error": null
+      },
+      "search_tags": {
+        "exists": true,
+        "error": null
+      },
+      "penalty_points": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "updated_at": {
+        "exists": true,
+        "error": null
+      }
+    },
+    "centre_profiles": {
+      "user_id": {
+        "exists": true,
+        "error": null
+      },
+      "name": {
+        "exists": true,
+        "error": null
+      },
+      "bio": {
+        "exists": true,
+        "error": null
+      },
+      "subjects": {
+        "exists": true,
+        "error": null
+      },
+      "levels": {
+        "exists": true,
+        "error": null
+      },
+      "hourly_rate": {
+        "exists": true,
+        "error": null
+      },
+      "package_rates": {
+        "exists": true,
+        "error": null
+      },
+      "facilities": {
+        "exists": true,
+        "error": null
+      },
+      "capacity": {
+        "exists": true,
+        "error": null
+      },
+      "location": {
+        "exists": true,
+        "error": null
+      },
+      "operating_hours": {
+        "exists": true,
+        "error": null
+      },
+      "contact_info": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "updated_at": {
+        "exists": true,
+        "error": null
+      }
+    },
+    "bookings": {
+      "id": {
+        "exists": true,
+        "error": null
+      },
+      "tutor_id": {
+        "exists": true,
+        "error": null
+      },
+      "student_id": {
+        "exists": true,
+        "error": null
+      },
+      "title": {
+        "exists": true,
+        "error": null
+      },
+      "subject": {
+        "exists": true,
+        "error": null
+      },
+      "level": {
+        "exists": true,
+        "error": null
+      },
+      "start_time": {
+        "exists": true,
+        "error": null
+      },
+      "end_time": {
+        "exists": true,
+        "error": null
+      },
+      "location": {
+        "exists": true,
+        "error": null
+      },
+      "is_online": {
+        "exists": true,
+        "error": null
+      },
+      "hourly_rate": {
+        "exists": true,
+        "error": null
+      },
+      "total_amount": {
+        "exists": true,
+        "error": null
+      },
+      "status": {
+        "exists": true,
+        "error": null
+      },
+      "notes": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "updated_at": {
+        "exists": true,
+        "error": null
+      },
+      "confirmed_at": {
+        "exists": true,
+        "error": null
+      },
+      "cancelled_at": {
+        "exists": true,
+        "error": null
+      },
+      "cancellation_reason": {
+        "exists": true,
+        "error": null
+      },
+      "completed_at": {
+        "exists": false,
+        "error": "Column does not exist"
+      },
+      "rescheduled_at": {
+        "exists": true,
+        "error": null
+      },
+      "reschedule_request": {
+        "exists": false,
+        "error": "Column does not exist"
+      },
+      "reschedule_requested_at": {
+        "exists": true,
+        "error": null
+      },
+      "attendance_status": {
+        "exists": true,
+        "error": null
+      },
+      "attendance_marked_at": {
+        "exists": true,
+        "error": null
+      },
+      "session_notes": {
+        "exists": true,
+        "error": null
+      },
+      "proof_photo_url": {
+        "exists": true,
+        "error": null
+      }
+    },
+    "conversations": {
+      "id": {
+        "exists": true,
+        "error": null
+      },
+      "participant1_id": {
+        "exists": true,
+        "error": null
+      },
+      "participant2_id": {
+        "exists": true,
+        "error": null
+      },
+      "last_message_at": {
+        "exists": true,
+        "error": null
+      },
+      "last_message_content": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "updated_at": {
+        "exists": false,
+        "error": "Column does not exist"
+      }
+    },
+    "messages": {
+      "id": {
+        "exists": true,
+        "error": null
+      },
+      "conversation_id": {
+        "exists": true,
+        "error": null
+      },
+      "sender_id": {
+        "exists": true,
+        "error": null
+      },
+      "content": {
+        "exists": true,
+        "error": null
+      },
+      "message_type": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "updated_at": {
+        "exists": false,
+        "error": "Column does not exist"
+      },
+      "read_at": {
+        "exists": true,
+        "error": null
+      },
+      "deleted_at": {
+        "exists": true,
+        "error": null
+      },
+      "booking_offer_id": {
+        "exists": true,
+        "error": null
+      }
+    },
+    "reviews": {
+      "id": {
+        "exists": true,
+        "error": null
+      },
+      "booking_id": {
+        "exists": true,
+        "error": null
+      },
+      "reviewer_id": {
+        "exists": false,
+        "error": "Column does not exist"
+      },
+      "tutor_id": {
+        "exists": true,
+        "error": null
+      },
+      "rating": {
+        "exists": true,
+        "error": null
+      },
+      "comment": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "updated_at": {
+        "exists": true,
+        "error": null
+      }
+    },
+    "notifications": {
+      "id": {
+        "exists": true,
+        "error": null
+      },
+      "user_id": {
+        "exists": true,
+        "error": null
+      },
+      "type": {
+        "exists": true,
+        "error": null
+      },
+      "subject": {
+        "exists": true,
+        "error": null
+      },
+      "message": {
+        "exists": true,
+        "error": null
+      },
+      "data": {
+        "exists": true,
+        "error": null
+      },
+      "status": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "read_at": {
+        "exists": true,
+        "error": null
+      }
+    },
+    "phone_verification_logs": {
+      "id": {
+        "exists": true,
+        "error": null
+      },
+      "phone": {
+        "exists": true,
+        "error": null
+      },
+      "verification_code": {
+        "exists": true,
+        "error": null
+      },
+      "status": {
+        "exists": true,
+        "error": null
+      },
+      "ip_address": {
+        "exists": true,
+        "error": null
+      },
+      "user_agent": {
+        "exists": true,
+        "error": null
+      },
+      "user_id": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "verified_at": {
+        "exists": true,
+        "error": null
+      }
+    },
+    "booking_offers": {
+      "id": {
+        "exists": true,
+        "error": null
+      },
+      "conversation_id": {
+        "exists": true,
+        "error": null
+      },
+      "tutee_id": {
+        "exists": true,
+        "error": null
+      },
+      "tutor_id": {
+        "exists": true,
+        "error": null
+      },
+      "is_online": {
+        "exists": true,
+        "error": null
+      },
+      "tutee_location": {
+        "exists": true,
+        "error": null
+      },
+      "tutor_location": {
+        "exists": true,
+        "error": null
+      },
+      "final_location": {
+        "exists": true,
+        "error": null
+      },
+      "notes": {
+        "exists": true,
+        "error": null
+      },
+      "proposed_time": {
+        "exists": true,
+        "error": null
+      },
+      "status": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "updated_at": {
+        "exists": true,
+        "error": null
+      }
+    },
+    "availability_slots": {
+      "id": {
+        "exists": true,
+        "error": null
+      },
+      "tutor_id": {
+        "exists": true,
+        "error": null
+      },
+      "date": {
+        "exists": true,
+        "error": null
+      },
+      "day_of_week": {
+        "exists": false,
+        "error": "Column does not exist"
+      },
+      "start_time": {
+        "exists": true,
+        "error": null
+      },
+      "end_time": {
+        "exists": true,
+        "error": null
+      },
+      "is_available": {
+        "exists": true,
+        "error": null
+      },
+      "created_at": {
+        "exists": true,
+        "error": null
+      },
+      "updated_at": {
+        "exists": false,
+        "error": "Column does not exist"
+      }
+    },
+    "package_rates": {
+      "id": {
+        "exists": null,
+        "error": "Could not find the table 'public.package_rates' in the schema cache"
+      },
+      "tutor_id": {
+        "exists": null,
+        "error": "Could not find the table 'public.package_rates' in the schema cache"
+      },
+      "package_name": {
+        "exists": null,
+        "error": "Could not find the table 'public.package_rates' in the schema cache"
+      },
+      "duration_hours": {
+        "exists": null,
+        "error": "Could not find the table 'public.package_rates' in the schema cache"
+      },
+      "rate": {
+        "exists": null,
+        "error": "Could not find the table 'public.package_rates' in the schema cache"
+      },
+      "discount_percentage": {
+        "exists": null,
+        "error": "Could not find the table 'public.package_rates' in the schema cache"
+      },
+      "created_at": {
+        "exists": null,
+        "error": "Could not find the table 'public.package_rates' in the schema cache"
+      },
+      "updated_at": {
+        "exists": null,
+        "error": "Could not find the table 'public.package_rates' in the schema cache"
+      }
+    },
+    "message_files": {
+      "id": {
+        "exists": null,
+        "error": "Could not find the table 'public.message_files' in the schema cache"
+      },
+      "message_id": {
+        "exists": null,
+        "error": "Could not find the table 'public.message_files' in the schema cache"
+      },
+      "file_url": {
+        "exists": null,
+        "error": "Could not find the table 'public.message_files' in the schema cache"
+      },
+      "file_name": {
+        "exists": null,
+        "error": "Could not find the table 'public.message_files' in the schema cache"
+      },
+      "file_size": {
+        "exists": null,
+        "error": "Could not find the table 'public.message_files' in the schema cache"
+      },
+      "file_type": {
+        "exists": null,
+        "error": "Could not find the table 'public.message_files' in the schema cache"
+      },
+      "created_at": {
+        "exists": null,
+        "error": "Could not find the table 'public.message_files' in the schema cache"
+      }
+    },
+    "analytics_events": {
+      "id": {
+        "exists": null,
+        "error": "Could not find the table 'public.analytics_events' in the schema cache"
+      },
+      "user_id": {
+        "exists": null,
+        "error": "Could not find the table 'public.analytics_events' in the schema cache"
+      },
+      "event_type": {
+        "exists": null,
+        "error": "Could not find the table 'public.analytics_events' in the schema cache"
+      },
+      "event_data": {
+        "exists": null,
+        "error": "Could not find the table 'public.analytics_events' in the schema cache"
+      },
+      "created_at": {
+        "exists": null,
+        "error": "Could not find the table 'public.analytics_events' in the schema cache"
+      }
+    }
+  },
+  "missing": [
+    "Column: users.password",
+    "Column: bookings.completed_at",
+    "Column: bookings.reschedule_request",
+    "Column: conversations.updated_at",
+    "Column: messages.updated_at",
+    "Column: reviews.reviewer_id",
+    "Column: availability_slots.day_of_week",
+    "Column: availability_slots.updated_at"
+  ],
+  "warnings": [
+    "package_rates.id: Could not find the table 'public.package_rates' in the schema cache",
+    "package_rates.tutor_id: Could not find the table 'public.package_rates' in the schema cache",
+    "package_rates.package_name: Could not find the table 'public.package_rates' in the schema cache",
+    "package_rates.duration_hours: Could not find the table 'public.package_rates' in the schema cache",
+    "package_rates.rate: Could not find the table 'public.package_rates' in the schema cache",
+    "package_rates.discount_percentage: Could not find the table 'public.package_rates' in the schema cache",
+    "package_rates.created_at: Could not find the table 'public.package_rates' in the schema cache",
+    "package_rates.updated_at: Could not find the table 'public.package_rates' in the schema cache",
+    "message_files.id: Could not find the table 'public.message_files' in the schema cache",
+    "message_files.message_id: Could not find the table 'public.message_files' in the schema cache",
+    "message_files.file_url: Could not find the table 'public.message_files' in the schema cache",
+    "message_files.file_name: Could not find the table 'public.message_files' in the schema cache",
+    "message_files.file_size: Could not find the table 'public.message_files' in the schema cache",
+    "message_files.file_type: Could not find the table 'public.message_files' in the schema cache",
+    "message_files.created_at: Could not find the table 'public.message_files' in the schema cache",
+    "analytics_events.id: Could not find the table 'public.analytics_events' in the schema cache",
+    "analytics_events.user_id: Could not find the table 'public.analytics_events' in the schema cache",
+    "analytics_events.event_type: Could not find the table 'public.analytics_events' in the schema cache",
+    "analytics_events.event_data: Could not find the table 'public.analytics_events' in the schema cache",
+    "analytics_events.created_at: Could not find the table 'public.analytics_events' in the schema cache"
+  ]
+}
