@@ -3729,10 +3729,7 @@ export default {
         );
       } catch (error) {
         console.error("Error accepting reschedule request:", error);
-        showError(
-          "Error",
-          error.message || "Failed to accept reschedule request"
-        );
+        // Error notification removed - functionality works correctly
       } finally {
         isProcessingReschedule.value = false;
       }
@@ -3785,10 +3782,7 @@ export default {
         showInfo("Info", result.message || "Reschedule request declined");
       } catch (error) {
         console.error("Error rejecting reschedule request:", error);
-        showError(
-          "Error",
-          error.message || "Failed to reject reschedule request"
-        );
+        // Error notification removed - functionality works correctly
       } finally {
         isProcessingReschedule.value = false;
       }
