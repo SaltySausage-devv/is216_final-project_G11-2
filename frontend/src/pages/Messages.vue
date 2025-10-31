@@ -372,7 +372,9 @@
                                 :disabled="isConfirmingBooking"
                               >
                                 <i class="fas fa-check me-1"></i>
-                                <span v-if="isConfirmingBooking">Confirming...</span>
+                                <span v-if="isConfirmingBooking"
+                                  >Confirming...</span
+                                >
                                 <span v-else>Accept & Book</span>
                               </button>
                               <span
@@ -430,7 +432,9 @@
                               </p>
                               <p class="mb-0 mt-2">
                                 <i class="fas fa-info-circle me-1"></i>
-                                <small class="text-muted">Mark attendance from the calendar page</small>
+                                <small class="text-muted"
+                                  >Mark attendance from the calendar page</small
+                                >
                               </p>
                             </div>
 
@@ -640,7 +644,11 @@
                             </div>
                             <div class="booking-actions">
                               <!-- Check if this reschedule request has been responded to -->
-                              <template v-if="getRescheduleStatus(message) === 'accepted'">
+                              <template
+                                v-if="
+                                  getRescheduleStatus(message) === 'accepted'
+                                "
+                              >
                                 <span class="booking-status text-success">
                                   <i class="fas fa-check-circle me-1"></i>
                                   Request Accepted
@@ -653,7 +661,11 @@
                                   View in Calendar
                                 </button>
                               </template>
-                              <template v-else-if="getRescheduleStatus(message) === 'rejected'">
+                              <template
+                                v-else-if="
+                                  getRescheduleStatus(message) === 'rejected'
+                                "
+                              >
                                 <span class="booking-status text-danger">
                                   <i class="fas fa-times-circle me-1"></i>
                                   Request Declined
@@ -666,7 +678,9 @@
                                   View in Calendar
                                 </button>
                               </template>
-                              <template v-else-if="message.senderId !== currentUserId">
+                              <template
+                                v-else-if="message.senderId !== currentUserId"
+                              >
                                 <!-- Recipient can accept/reject (only if not yet responded) -->
                                 <button
                                   class="btn btn-success btn-sm me-2"
@@ -711,11 +725,9 @@
                         </div>
 
                         <!-- Reschedule Accepted Message -->
-                        <!-- Only show to the original requester (not the person who accepted) -->
                         <div
                           v-else-if="
-                            message.messageType === 'reschedule_accepted' &&
-                            message.senderId !== currentUserId
+                            message.messageType === 'reschedule_accepted'
                           "
                           class="message-content booking-message reschedule-accepted"
                         >
@@ -733,7 +745,10 @@
                               </p>
                               <p class="mb-2">
                                 <strong>Subject:</strong>
-                                {{ getBookingData(message).subject || 'Tutoring Session' }}
+                                {{
+                                  getBookingData(message).subject ||
+                                  "Tutoring Session"
+                                }}
                               </p>
                               <p class="mb-2">
                                 <strong>New Time:</strong>
@@ -780,8 +795,7 @@
                         <!-- Only show to the original requester (not the person who declined) -->
                         <div
                           v-else-if="
-                            message.messageType === 'reschedule_rejected' &&
-                            message.senderId !== currentUserId
+                            message.messageType === 'reschedule_rejected'
                           "
                           class="message-content booking-message reschedule-rejected"
                         >
@@ -959,7 +973,9 @@
                           >
                             <div class="booking-header">
                               <i class="fas fa-check-circle me-2"></i>
-                              <span class="booking-title">Booking Confirmed!</span>
+                              <span class="booking-title"
+                                >Booking Confirmed!</span
+                              >
                             </div>
                             <div class="booking-details">
                               <div v-if="getBookingData(message)">
@@ -991,17 +1007,24 @@
                             class="message-content"
                           >
                             <div class="booking-simple-message">
-                              <i class="fas fa-calendar-plus me-2 text-warning"></i>
+                              <i
+                                class="fas fa-calendar-plus me-2 text-warning"
+                              ></i>
                               <span>Booking offer sent</span>
                             </div>
                           </div>
                           <!-- Check if it's raw booking JSON that failed detection -->
                           <div
-                            v-else-if="message.content && message.content.includes('bookingOfferId')"
+                            v-else-if="
+                              message.content &&
+                              message.content.includes('bookingOfferId')
+                            "
                             class="message-content"
                           >
                             <div class="booking-simple-message">
-                              <i class="fas fa-calendar-plus me-2 text-warning"></i>
+                              <i
+                                class="fas fa-calendar-plus me-2 text-warning"
+                              ></i>
                               <span>Booking offer sent</span>
                             </div>
                           </div>
@@ -1039,7 +1062,7 @@
                             <span>{{ message.fileName }}</span>
                           </div>
                         </div>
-                        
+
                         <!-- Fallback for unknown message types - try to detect booking confirmation -->
                         <!-- Hide reschedule_accepted/reschedule_rejected when sender is current user (they accepted/declined) -->
                         <div
@@ -1056,7 +1079,9 @@
                           >
                             <div class="booking-header">
                               <i class="fas fa-check-circle me-2"></i>
-                              <span class="booking-title">Booking Confirmed!</span>
+                              <span class="booking-title"
+                                >Booking Confirmed!</span
+                              >
                             </div>
                             <div class="booking-details">
                               <div v-if="getBookingData(message)">
@@ -1085,11 +1110,12 @@
                           <!-- Fallback for other unknown types -->
                           <div v-else class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Unknown message type:</strong> {{ message.messageType || 'undefined' }}
+                            <strong>Unknown message type:</strong>
+                            {{ message.messageType || "undefined" }}
                           </div>
                         </div>
                         <!-- Hidden message: reschedule_accepted/rejected when sender is current user (receiver who accepted/declined) -->
-                        <div v-else style="display: none;"></div>
+                        <div v-else style="display: none"></div>
                         <div class="message-footer">
                           <div class="message-time">
                             {{ formatTime(message.createdAt) }}
@@ -1131,7 +1157,7 @@
                       :disabled="isLoading"
                     />
                   </div>
-                  
+
                   <!-- Row 2: Buttons -->
                   <div class="message-buttons-row">
                     <!-- Hidden file input for images only -->
@@ -1588,7 +1614,11 @@
                     type="time"
                     class="form-control"
                     v-model="bookingProposal.proposedTime"
-                    :min="bookingProposal.proposedDate === today ? minTimeForToday : undefined"
+                    :min="
+                      bookingProposal.proposedDate === today
+                        ? minTimeForToday
+                        : undefined
+                    "
                     required
                   />
                 </div>
@@ -1828,7 +1858,6 @@
       </div>
     </div>
 
-
     <!-- Session End Modal -->
     <SessionEndModal
       v-if="sessionEndModal && selectedBookingForSessionEnd"
@@ -1881,7 +1910,9 @@
           ></button>
         </div>
         <div class="popup-body">
-          <p class="mb-0">Please select the current date or a future date to book a session.</p>
+          <p class="mb-0">
+            Please select the current date or a future date to book a session.
+          </p>
         </div>
       </div>
     </div>
@@ -1915,7 +1946,7 @@ export default {
     // Get today's date in YYYY-MM-DD format for date input min attribute
     const today = computed(() => {
       const today = new Date();
-      return today.toISOString().split('T')[0];
+      return today.toISOString().split("T")[0];
     });
 
     // Get minimum time for today (current time + 15 minutes buffer)
@@ -2007,7 +2038,11 @@ export default {
     const tutorDropdown = ref(null);
 
     // Initialize Google Maps proxy composable
-    const { getAutocompletePredictions, getPlaceDetails, generateSessionToken } = useGoogleMapsProxy();
+    const {
+      getAutocompletePredictions,
+      getPlaceDetails,
+      generateSessionToken,
+    } = useGoogleMapsProxy();
     const sessionToken = ref(generateSessionToken());
 
     // Custom autocomplete state
@@ -2054,46 +2089,50 @@ export default {
     // Handle chat route with specific tutor ID
     const handleChatRoute = async (tutorId) => {
       try {
-        console.log('🔄 Handling chat route for tutor:', tutorId);
-        
+        console.log("🔄 Handling chat route for tutor:", tutorId);
+
         // Load conversations first
         await loadConversations();
-        
+
         // Check if conversation already exists with this tutor
-        const existingConversation = conversations.value.find(conv => {
+        const existingConversation = conversations.value.find((conv) => {
           return conv.participant.id === tutorId;
         });
 
         if (existingConversation) {
-          console.log('✅ Found existing conversation, selecting it');
+          console.log("✅ Found existing conversation, selecting it");
           await selectConversationWithRoom(existingConversation);
           return;
         }
 
         // If no existing conversation, create a new one
-        console.log('🆕 Creating new conversation with tutor:', tutorId);
+        console.log("🆕 Creating new conversation with tutor:", tutorId);
         await createConversationWithTutor(tutorId);
-        
       } catch (error) {
-        console.error('❌ Error handling chat route:', error);
-        showNotification('Error', 'Failed to start conversation with tutor', 'error');
+        console.error("❌ Error handling chat route:", error);
+        showNotification(
+          "Error",
+          "Failed to start conversation with tutor",
+          "error"
+        );
       }
     };
 
     // Create conversation with specific tutor
     const createConversationWithTutor = async (tutorId) => {
       try {
-        console.log('🔄 Creating conversation with tutor:', tutorId);
-        
+        console.log("🔄 Creating conversation with tutor:", tutorId);
+
         // Use the messaging service to create conversation
         const response = await messagingService.createConversation(tutorId);
-        console.log('✅ Conversation created:', response.conversation);
-        
+        console.log("✅ Conversation created:", response.conversation);
+
         // Map the new conversation to frontend format
         const backendConversation = response.conversation;
-        const otherParticipant = backendConversation.participant1_id === currentUserId.value
-          ? backendConversation.participant2
-          : backendConversation.participant1;
+        const otherParticipant =
+          backendConversation.participant1_id === currentUserId.value
+            ? backendConversation.participant2
+            : backendConversation.participant1;
 
         const mappedConversation = {
           id: backendConversation.id,
@@ -2102,22 +2141,31 @@ export default {
             name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
             type: otherParticipant.user_type,
           },
-          lastMessage: formatMessagePreview(backendConversation.last_message_content, backendConversation.last_message_type) || "No messages yet",
-          lastMessageAt: backendConversation.last_message_at || backendConversation.created_at,
+          lastMessage:
+            formatMessagePreview(
+              backendConversation.last_message_content,
+              backendConversation.last_message_type
+            ) || "No messages yet",
+          lastMessageAt:
+            backendConversation.last_message_at ||
+            backendConversation.created_at,
         };
 
-        console.log('✅ Mapped new conversation:', mappedConversation);
-        
+        console.log("✅ Mapped new conversation:", mappedConversation);
+
         // Add the new conversation to the list
         conversations.value.push(mappedConversation);
-        
+
         // Select the new conversation
-        console.log('✅ Selecting new conversation');
+        console.log("✅ Selecting new conversation");
         await selectConversationWithRoom(mappedConversation);
-        
       } catch (error) {
-        console.error('❌ Error creating conversation:', error);
-        showNotification('Error', `Failed to create conversation: ${error.message}`, 'error');
+        console.error("❌ Error creating conversation:", error);
+        showNotification(
+          "Error",
+          `Failed to create conversation: ${error.message}`,
+          "error"
+        );
         throw error;
       }
     };
@@ -2126,9 +2174,13 @@ export default {
     watch(
       () => route.params.id,
       async (tutorId) => {
-        console.log('🔗 Route watcher triggered:', { tutorId, hasUser: !!authStore.user, isAuthenticated: authStore.isAuthenticated });
+        console.log("🔗 Route watcher triggered:", {
+          tutorId,
+          hasUser: !!authStore.user,
+          isAuthenticated: authStore.isAuthenticated,
+        });
         if (tutorId && authStore.user && authStore.isAuthenticated) {
-          console.log('🔗 Chat route detected with tutor ID:', tutorId);
+          console.log("🔗 Chat route detected with tutor ID:", tutorId);
           await handleChatRoute(tutorId);
         }
       },
@@ -2145,13 +2197,13 @@ export default {
         const selectedDate = new Date(newDate);
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Reset time to midnight for date comparison
-        
+
         if (selectedDate < today) {
           // Past date detected - clear it and show error popup
           bookingProposal.value.proposedDate = "";
           bookingProposal.value.proposedTime = "";
           showPastDateError.value = true;
-          
+
           // Auto-hide after 3 seconds
           setTimeout(() => {
             showPastDateError.value = false;
@@ -2162,15 +2214,17 @@ export default {
         // If user selected today's date, check if the selected time is valid
         if (newDate === today.value && bookingProposal.value.proposedTime) {
           // Check if the selected time is in the past
-          const selectedDateTime = new Date(`${newDate}T${bookingProposal.value.proposedTime}`);
+          const selectedDateTime = new Date(
+            `${newDate}T${bookingProposal.value.proposedTime}`
+          );
           const now = new Date();
-          
+
           if (selectedDateTime <= now) {
             // Past time detected - clear fields and show error popup
             bookingProposal.value.proposedDate = "";
             bookingProposal.value.proposedTime = "";
             showPastDateError.value = true;
-            
+
             // Auto-hide after 3 seconds
             setTimeout(() => {
               showPastDateError.value = false;
@@ -2189,15 +2243,17 @@ export default {
 
         // Only check if today's date is selected
         if (bookingProposal.value.proposedDate === today.value) {
-          const selectedDateTime = new Date(`${bookingProposal.value.proposedDate}T${newTime}`);
+          const selectedDateTime = new Date(
+            `${bookingProposal.value.proposedDate}T${newTime}`
+          );
           const now = new Date();
-          
+
           if (selectedDateTime <= now) {
             // Past time detected - clear fields and show error popup
             bookingProposal.value.proposedDate = "";
             bookingProposal.value.proposedTime = "";
             showPastDateError.value = true;
-            
+
             // Auto-hide after 3 seconds
             setTimeout(() => {
               showPastDateError.value = false;
@@ -2221,7 +2277,10 @@ export default {
       clearTimeout(inputTimeout);
       inputTimeout = setTimeout(async () => {
         try {
-          const results = await getAutocompletePredictions(query, sessionToken.value);
+          const results = await getAutocompletePredictions(
+            query,
+            sessionToken.value
+          );
           console.log(`📍 Predictions for ${type}:`, results);
 
           if (results && results.length > 0) {
@@ -2543,7 +2602,11 @@ export default {
               name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
               type: otherParticipant.user_type,
             },
-            lastMessage: formatMessagePreview(conv.last_message_content, conv.last_message_type) || "No messages yet",
+            lastMessage:
+              formatMessagePreview(
+                conv.last_message_content,
+                conv.last_message_type
+              ) || "No messages yet",
             lastMessageAt: conv.last_message_at || conv.created_at,
             unreadCount: conv.unreadCount || 0,
           };
@@ -2554,11 +2617,17 @@ export default {
 
         // Handle different error types
         if (error.response?.status === 429) {
-          showWarning("Too Many Requests", "Please wait a moment and try again.");
+          showWarning(
+            "Too Many Requests",
+            "Please wait a moment and try again."
+          );
         } else if (error.response?.status === 401) {
           showError("Authentication Error", "Please log in again.");
         } else {
-          showError("Error", "Failed to load conversations. Please refresh the page and try again.");
+          showError(
+            "Error",
+            "Failed to load conversations. Please refresh the page and try again."
+          );
         }
       } finally {
         isLoading.value = false;
@@ -2753,7 +2822,11 @@ export default {
         messages.value = messages.value.filter(
           (msg) => msg.id !== `temp_${Date.now()}`
         );
-        showNotification('Error', 'Failed to send message. Please try again.', 'error');
+        showNotification(
+          "Error",
+          "Failed to send message. Please try again.",
+          "error"
+        );
       } finally {
         isLoading.value = false;
       }
@@ -2783,7 +2856,10 @@ export default {
         showParticipantSelection.value = true;
       } catch (error) {
         console.error("Error loading participants:", error);
-        showError("Error", "Failed to load available participants: " + error.message);
+        showError(
+          "Error",
+          "Failed to load available participants: " + error.message
+        );
       }
     };
 
@@ -2874,7 +2950,11 @@ export default {
         }
       } catch (error) {
         console.error("Error creating conversation:", error);
-        showNotification('Error', 'Failed to create conversation: ' + error.message, 'error');
+        showNotification(
+          "Error",
+          "Failed to create conversation: " + error.message,
+          "error"
+        );
       }
     };
 
@@ -2909,7 +2989,11 @@ export default {
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        showNotification('Warning', 'Image is too large. Maximum size is 5MB.', 'warning');
+        showNotification(
+          "Warning",
+          "Image is too large. Maximum size is 5MB.",
+          "warning"
+        );
         event.target.value = "";
         return;
       }
@@ -3024,8 +3108,8 @@ export default {
           formData,
           {
             headers: {
-              "Content-Type": "multipart/form-data"
-            }
+              "Content-Type": "multipart/form-data",
+            },
           }
         );
 
@@ -3059,7 +3143,10 @@ export default {
         } else if (error.response?.data?.error) {
           showError("Upload Error", error.response.data.error);
         } else {
-          showError("Upload Error", "Failed to upload image. Please try again.");
+          showError(
+            "Upload Error",
+            "Failed to upload image. Please try again."
+          );
         }
       } finally {
         isLoading.value = false;
@@ -3278,7 +3365,7 @@ export default {
         messageToDelete.value = null;
       } catch (error) {
         console.error("Error deleting message:", error);
-        showNotification('Error', 'Failed to delete message', 'error');
+        showNotification("Error", "Failed to delete message", "error");
       } finally {
         isDeleting.value = false;
       }
@@ -3349,14 +3436,18 @@ export default {
 
         // Show booking request success popup
         showBookingRequestSuccess.value = true;
-        
+
         // Auto-hide after 3 seconds
         setTimeout(() => {
           showBookingRequestSuccess.value = false;
         }, 3000);
       } catch (error) {
         console.error("Error creating booking offer:", error);
-        showNotification('Error', 'Failed to send booking request. Please try again.', 'error');
+        showNotification(
+          "Error",
+          "Failed to send booking request. Please try again.",
+          "error"
+        );
       } finally {
         isCreatingBooking.value = false;
       }
@@ -3367,11 +3458,19 @@ export default {
 
       // Validate required fields
       if (!bookingProposal.value.proposedDate) {
-        showNotification('Warning', 'Please select a date for the booking', 'warning');
+        showNotification(
+          "Warning",
+          "Please select a date for the booking",
+          "warning"
+        );
         return;
       }
       if (!bookingProposal.value.proposedTime) {
-        showNotification('Warning', 'Please select a time for the booking', 'warning');
+        showNotification(
+          "Warning",
+          "Please select a time for the booking",
+          "warning"
+        );
         return;
       }
 
@@ -3379,7 +3478,7 @@ export default {
       const selectedDate = new Date(bookingProposal.value.proposedDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Reset time to midnight for date comparison
-      
+
       if (selectedDate < today) {
         showPastDateError.value = true;
         bookingProposal.value.proposedDate = "";
@@ -3397,7 +3496,10 @@ export default {
           : bookingProposal.value.duration;
 
       if (!effectiveDuration || effectiveDuration < 15) {
-        showWarning("Invalid Duration", "Please select a valid duration (minimum 15 minutes)");
+        showWarning(
+          "Invalid Duration",
+          "Please select a valid duration (minimum 15 minutes)"
+        );
         return;
       }
 
@@ -3447,7 +3549,10 @@ export default {
         } else {
           finalLocation = bookingProposal.value.tutorLocation;
           if (!finalLocation) {
-            showWarning("Location Required", "Please enter a location for the session");
+            showWarning(
+              "Location Required",
+              "Please enter a location for the session"
+            );
             isCreatingProposal.value = false;
             return;
           }
@@ -3494,10 +3599,18 @@ export default {
         selectedBookingOffer.value = null;
 
         // Show success message
-        showNotification('Success', 'Booking proposal sent successfully!', 'success');
+        showNotification(
+          "Success",
+          "Booking proposal sent successfully!",
+          "success"
+        );
       } catch (error) {
         console.error("Error creating booking proposal:", error);
-        showNotification('Error', 'Failed to send booking proposal. Please try again.', 'error');
+        showNotification(
+          "Error",
+          "Failed to send booking proposal. Please try again.",
+          "error"
+        );
       } finally {
         isCreatingProposal.value = false;
       }
@@ -3569,10 +3682,18 @@ export default {
         selectedDate.value = null;
         selectedTimeSlot.value = null;
 
-        showNotification('Success', 'Booking proposal sent successfully!', 'success');
+        showNotification(
+          "Success",
+          "Booking proposal sent successfully!",
+          "success"
+        );
       } catch (error) {
         console.error("Error sending booking proposal:", error);
-        showNotification('Error', 'Failed to send booking proposal. Please try again.', 'error');
+        showNotification(
+          "Error",
+          "Failed to send booking proposal. Please try again.",
+          "error"
+        );
       } finally {
         isSendingProposal.value = false;
       }
@@ -3581,7 +3702,9 @@ export default {
     // Reschedule handlers
     const handleAcceptReschedule = async (message) => {
       if (isProcessingReschedule.value) {
-        console.log("⚠️ Reschedule processing already in progress, ignoring duplicate click");
+        console.log(
+          "⚠️ Reschedule processing already in progress, ignoring duplicate click"
+        );
         return;
       }
 
@@ -3609,10 +3732,14 @@ export default {
 
         if (!response.ok) {
           const errorData = await response.json();
-          const errorMsg = errorData.error || "Failed to accept reschedule request";
-          
+          const errorMsg =
+            errorData.error || "Failed to accept reschedule request";
+
           // Check for insufficient credits error
-          if (errorData.error && errorData.error.includes("Insufficient credits")) {
+          if (
+            errorData.error &&
+            errorData.error.includes("Insufficient credits")
+          ) {
             if (errorData.details && errorData.details.shortfall) {
               creditService.showInsufficientCreditsNotification(
                 errorData.details.requiredCredits,
@@ -3629,19 +3756,26 @@ export default {
         }
 
         const result = await response.json();
-        
+
         // Refresh credit balance after successful reschedule acceptance
         await creditService.refreshCredits();
-        
+
         // Reload messages to show the updated reschedule_accepted message
         if (selectedConversation.value) {
           await loadMessages(selectedConversation.value.id);
         }
-        
-        showNotification('Success', result.message || 'Reschedule request accepted successfully', 'success');
+
+        showNotification(
+          "Success",
+          result.message || "Reschedule request accepted successfully",
+          "success"
+        );
       } catch (error) {
         console.error("Error accepting reschedule request:", error);
-        showError("Error", error.message || "Failed to accept reschedule request");
+        showError(
+          "Error",
+          error.message || "Failed to accept reschedule request"
+        );
       } finally {
         isProcessingReschedule.value = false;
       }
@@ -3649,7 +3783,9 @@ export default {
 
     const handleRejectReschedule = async (message) => {
       if (isProcessingReschedule.value) {
-        console.log("⚠️ Reschedule processing already in progress, ignoring duplicate click");
+        console.log(
+          "⚠️ Reschedule processing already in progress, ignoring duplicate click"
+        );
         return;
       }
 
@@ -3677,20 +3813,29 @@ export default {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to reject reschedule request");
+          throw new Error(
+            errorData.error || "Failed to reject reschedule request"
+          );
         }
 
         const result = await response.json();
-        
+
         // Reload messages to show the updated reschedule_rejected message
         if (selectedConversation.value) {
           await loadMessages(selectedConversation.value.id);
         }
-        
-        showNotification('Info', result.message || 'Reschedule request declined', 'info');
+
+        showNotification(
+          "Info",
+          result.message || "Reschedule request declined",
+          "info"
+        );
       } catch (error) {
         console.error("Error rejecting reschedule request:", error);
-        showError("Error", error.message || "Failed to reject reschedule request");
+        showError(
+          "Error",
+          error.message || "Failed to reject reschedule request"
+        );
       } finally {
         isProcessingReschedule.value = false;
       }
@@ -3698,28 +3843,35 @@ export default {
 
     // Check if a reschedule request has been responded to
     const getRescheduleStatus = (rescheduleMessage) => {
-      if (rescheduleMessage.messageType !== 'reschedule_request') {
+      if (rescheduleMessage.messageType !== "reschedule_request") {
         return null;
       }
-      
+
       try {
         const bookingData = JSON.parse(rescheduleMessage.content);
         const bookingId = bookingData.bookingId;
-        
+
         if (!bookingId) return null;
-        
+
         // Check ALL messages (both before and after) for reschedule_accepted or reschedule_rejected
         // Messages might not be in chronological order, so search the entire array
         for (const msg of messages.value) {
-          if (msg.messageType === 'reschedule_accepted' || msg.messageType === 'reschedule_rejected') {
+          if (
+            msg.messageType === "reschedule_accepted" ||
+            msg.messageType === "reschedule_rejected"
+          ) {
             try {
               const msgData = JSON.parse(msg.content);
               if (msgData.bookingId === bookingId) {
                 // Found a matching response - check if it's after the request (chronologically)
-                const requestTime = new Date(rescheduleMessage.createdAt).getTime();
+                const requestTime = new Date(
+                  rescheduleMessage.createdAt
+                ).getTime();
                 const responseTime = new Date(msg.createdAt).getTime();
                 if (responseTime > requestTime) {
-                  return msg.messageType === 'reschedule_accepted' ? 'accepted' : 'rejected';
+                  return msg.messageType === "reschedule_accepted"
+                    ? "accepted"
+                    : "rejected";
                 }
               }
             } catch (e) {
@@ -3727,10 +3879,10 @@ export default {
             }
           }
         }
-        
+
         return null; // No response found
       } catch (error) {
-        console.error('Error checking reschedule status:', error);
+        console.error("Error checking reschedule status:", error);
         return null;
       }
     };
@@ -3739,39 +3891,46 @@ export default {
     const getBookingData = (message) => {
       // Only attempt to parse JSON for booking-related message types
       const bookingMessageTypes = [
-        'booking_offer',
-        'booking_proposal',
-        'booking_confirmation',
-        'booking_rejection',
-        'booking_cancelled',
-        'reschedule_request',
-        'reschedule_accepted',
-        'reschedule_rejected',
-        'attendance_notification'
+        "booking_offer",
+        "booking_proposal",
+        "booking_confirmation",
+        "booking_rejection",
+        "booking_cancelled",
+        "reschedule_request",
+        "reschedule_accepted",
+        "reschedule_rejected",
+        "attendance_notification",
       ];
-      
+
       // If message type is not a booking type, don't try to parse
-      if (!message.messageType || !bookingMessageTypes.includes(message.messageType)) {
+      if (
+        !message.messageType ||
+        !bookingMessageTypes.includes(message.messageType)
+      ) {
         return null;
       }
-      
+
       try {
         // Check if content looks like JSON (starts with { or [)
-        if (!message.content || typeof message.content !== 'string') {
+        if (!message.content || typeof message.content !== "string") {
           return null;
         }
-        
+
         const trimmed = message.content.trim();
-        if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+        if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
           return null;
         }
-        
+
         return JSON.parse(message.content);
       } catch (error) {
         // Silently fail - this is expected for non-booking messages
         // Only log in development or if it's actually a booking message
         if (bookingMessageTypes.includes(message.messageType)) {
-          console.warn("Error parsing booking data for booking message:", error, message);
+          console.warn(
+            "Error parsing booking data for booking message:",
+            error,
+            message
+          );
         }
         return null;
       }
@@ -3792,24 +3951,39 @@ export default {
     const isBookingOfferContent = (content) => {
       try {
         // Check if content starts with booking JSON pattern
-        if (content && typeof content === 'string' && content.includes('"bookingOfferId"')) {
+        if (
+          content &&
+          typeof content === "string" &&
+          content.includes('"bookingOfferId"')
+        ) {
           // Try to parse the JSON
           const parsed = JSON.parse(content);
-          return parsed && parsed.bookingOfferId && (parsed.tuteeLocation || parsed.isOnline !== undefined);
+          return (
+            parsed &&
+            parsed.bookingOfferId &&
+            (parsed.tuteeLocation || parsed.isOnline !== undefined)
+          );
         }
         return false;
       } catch (error) {
         // If JSON parsing fails, check if it looks like booking data
-        return content && typeof content === 'string' && 
-               content.includes('"bookingOfferId"') && 
-               (content.includes('"tuteeLocation"') || content.includes('"isOnline"'));
+        return (
+          content &&
+          typeof content === "string" &&
+          content.includes('"bookingOfferId"') &&
+          (content.includes('"tuteeLocation"') ||
+            content.includes('"isOnline"'))
+        );
       }
     };
 
     // Format message content for previews (conversation list, notifications, etc.)
     const formatMessagePreview = (content, messageType) => {
-      console.log('🔍 formatMessagePreview called with:', { content, messageType });
-      
+      console.log("🔍 formatMessagePreview called with:", {
+        content,
+        messageType,
+      });
+
       if (messageType === "image") {
         return "📷 Sent an image";
       } else if (messageType === "reschedule_request") {
@@ -3828,7 +4002,7 @@ export default {
         return "❌ Booking cancelled";
       } else if (messageType === "attendance_notification") {
         return "📋 Attendance marked";
-      } else if (content && content.includes('bookingOfferId')) {
+      } else if (content && content.includes("bookingOfferId")) {
         // Handle raw booking JSON that wasn't properly typed
         console.log('🔍 Detected booking JSON, returning "Booking offer sent"');
         return "Booking offer sent";
@@ -4011,7 +4185,9 @@ export default {
     const confirmBooking = async (message) => {
       // Prevent double-clicks
       if (isConfirmingBooking.value) {
-        console.log("⚠️ Booking confirmation already in progress, ignoring duplicate click");
+        console.log(
+          "⚠️ Booking confirmation already in progress, ignoring duplicate click"
+        );
         return;
       }
 
@@ -4094,10 +4270,18 @@ export default {
         await creditService.refreshCredits();
 
         // Show success message
-        showNotification('Success', 'Booking confirmed successfully! The session has been added to your calendar.', 'success');
+        showNotification(
+          "Success",
+          "Booking confirmed successfully! The session has been added to your calendar.",
+          "success"
+        );
       } catch (error) {
         console.error("Error confirming booking:", error);
-        showNotification('Error', 'Failed to confirm booking. Please try again.', 'error');
+        showNotification(
+          "Error",
+          "Failed to confirm booking. Please try again.",
+          "error"
+        );
       } finally {
         isConfirmingBooking.value = false;
       }
@@ -4148,12 +4332,15 @@ export default {
             "🔔 RECEIVER: Received new message via Socket.io:",
             message
           );
-            console.log("🔔 RECEIVER: Current user ID:", currentUserId.value);
-            console.log("🔔 RECEIVER: Message sender ID:", message.sender_id);
-            console.log("🔔 RECEIVER: Message content:", message.content);
-            console.log("🔔 RECEIVER: Message type:", message.message_type);
-            console.log("🔔 RECEIVER: Message created_at:", message.created_at);
-            console.log("🔔 RECEIVER: Message type check - is booking_confirmation?", message.message_type === 'booking_confirmation');
+          console.log("🔔 RECEIVER: Current user ID:", currentUserId.value);
+          console.log("🔔 RECEIVER: Message sender ID:", message.sender_id);
+          console.log("🔔 RECEIVER: Message content:", message.content);
+          console.log("🔔 RECEIVER: Message type:", message.message_type);
+          console.log("🔔 RECEIVER: Message created_at:", message.created_at);
+          console.log(
+            "🔔 RECEIVER: Message type check - is booking_confirmation?",
+            message.message_type === "booking_confirmation"
+          );
           console.log(
             "🔔 RECEIVER: Current selected conversation:",
             selectedConversation.value?.id
@@ -4218,8 +4405,11 @@ export default {
                 msg.content === message.content
             );
 
-            console.log("🔔 RECEIVER: Creating new message with type:", message.message_type);
-            
+            console.log(
+              "🔔 RECEIVER: Creating new message with type:",
+              message.message_type
+            );
+
             // Fix message type if it's undefined but content looks like booking data
             let messageType = message.message_type;
             if (!messageType) {
@@ -4227,18 +4417,25 @@ export default {
                 const parsed = JSON.parse(message.content);
                 if (parsed.bookingOfferId) {
                   if (parsed.confirmedTime) {
-                    messageType = 'booking_confirmation';
-                    console.log("🔔 RECEIVER: Fixed message type to booking_confirmation based on content");
-                  } else if (parsed.tuteeLocation || parsed.isOnline !== undefined) {
-                    messageType = 'booking_offer';
-                    console.log("🔔 RECEIVER: Fixed message type to booking_offer based on content");
+                    messageType = "booking_confirmation";
+                    console.log(
+                      "🔔 RECEIVER: Fixed message type to booking_confirmation based on content"
+                    );
+                  } else if (
+                    parsed.tuteeLocation ||
+                    parsed.isOnline !== undefined
+                  ) {
+                    messageType = "booking_offer";
+                    console.log(
+                      "🔔 RECEIVER: Fixed message type to booking_offer based on content"
+                    );
                   }
                 }
               } catch (error) {
                 // Not JSON, keep original type
               }
             }
-            
+
             const newMessage = {
               id: message.id,
               senderId: message.sender_id,
@@ -4320,16 +4517,17 @@ export default {
               message.message_type === "booking_proposal" ||
               message.message_type === "booking_confirmation" ||
               message.message_type === "booking_offer";
-            
+
             // For reschedule messages, only notify the RECEIVER (not the requester/sender)
-            const isRescheduleMessage = 
+            const isRescheduleMessage =
               message.message_type === "reschedule_request" ||
               message.message_type === "reschedule_accepted" ||
               message.message_type === "reschedule_rejected";
-            
+
             // Check if current user is the sender (using String() to handle UUID type mismatches)
-            const isSender = String(message.sender_id) === String(currentUserId.value);
-            
+            const isSender =
+              String(message.sender_id) === String(currentUserId.value);
+
             let shouldShowNotification = false;
             if (isBookingMessage) {
               // Booking messages: only show to receiver (not sender)
@@ -4361,7 +4559,10 @@ export default {
               message.message_type === "attendance_notification";
 
             // For system messages (like reschedule_request), we still want to show notification even if sender is missing
-            const shouldShow = shouldShowNotification && (message.sender || isSystemMessage || isRescheduleMessage) || isAttendanceNotification;
+            const shouldShow =
+              (shouldShowNotification &&
+                (message.sender || isSystemMessage || isRescheduleMessage)) ||
+              isAttendanceNotification;
 
             if (shouldShow) {
               const senderName =
@@ -4374,7 +4575,10 @@ export default {
                   : `${message.sender.first_name} ${message.sender.last_name}`;
 
               // Generate user-friendly message preview based on message type
-              const messagePreview = formatMessagePreview(message.content, message.message_type);
+              const messagePreview = formatMessagePreview(
+                message.content,
+                message.message_type
+              );
 
               console.log("🔔 SHOWING NOTIFICATION:", {
                 senderName,
@@ -4387,7 +4591,9 @@ export default {
 
               // Toast popup disabled - user requested removal of popup toasts
               // Notification badge in navbar will still update via Navbar notification system
-              console.log("🔔 Messages: Message notification (toast disabled, navbar badge will update)");
+              console.log(
+                "🔔 Messages: Message notification (toast disabled, navbar badge will update)"
+              );
             }
           }
 
@@ -4416,7 +4622,10 @@ export default {
             const conversation = updatedConversations[conversationIndex];
 
             // Update conversation properties
-            conversation.lastMessage = formatMessagePreview(message.content, message.message_type);
+            conversation.lastMessage = formatMessagePreview(
+              message.content,
+              message.message_type
+            );
             conversation.lastMessageAt = message.created_at;
 
             // If message is from someone else and not in current conversation, increment unread count
@@ -4456,7 +4665,10 @@ export default {
                 name: `${otherParticipant.first_name} ${otherParticipant.last_name}`,
                 type: otherParticipant.user_type,
               },
-              lastMessage: formatMessagePreview(message.content, message.message_type),
+              lastMessage: formatMessagePreview(
+                message.content,
+                message.message_type
+              ),
               lastMessageAt: message.created_at,
               unreadCount: message.sender_id !== currentUserId.value ? 1 : 0,
             };
@@ -4504,7 +4716,10 @@ export default {
         // Handle message errors
         messageHandlers.messageError = (error) => {
           console.error("Message error:", error);
-          showError("Send Error", `Failed to send message: ${error.error || "Unknown error"}`);
+          showError(
+            "Send Error",
+            `Failed to send message: ${error.error || "Unknown error"}`
+          );
         };
         messagingService.on("message_error", messageHandlers.messageError);
 
@@ -4580,7 +4795,7 @@ export default {
     onMounted(async () => {
       // Clear any persisted notifications from previous page loads
       clearAllNotifications();
-      
+
       // Initialize auth store first
       await authStore.initializeAuth();
 
@@ -4619,7 +4834,10 @@ export default {
       // Check if we're on a chat route with a specific tutor ID
       const tutorIdFromRoute = route.params.id;
       if (tutorIdFromRoute) {
-        console.log("🔗 Messages: Chat route detected on mount with tutor ID:", tutorIdFromRoute);
+        console.log(
+          "🔗 Messages: Chat route detected on mount with tutor ID:",
+          tutorIdFromRoute
+        );
         await handleChatRoute(tutorIdFromRoute);
       }
 
@@ -4899,14 +5117,16 @@ export default {
     // Show mark attendance modal - REMOVED: Attendance marking only available in calendar
     const showMarkAttendanceModal = (message) => {
       // Redirect to calendar page for attendance marking
-      window.location.href = '/calendar';
+      window.location.href = "/calendar";
     };
 
     // Handle attendance marked event - REMOVED: No longer used in messages
     const handleAttendanceMarked = async (attendanceData) => {
       // Function kept for compatibility but no longer used
       // Attendance marking now only available in calendar
-      console.log('handleAttendanceMarked called but attendance marking removed from messages');
+      console.log(
+        "handleAttendanceMarked called but attendance marking removed from messages"
+      );
     };
 
     // Session end functionality
