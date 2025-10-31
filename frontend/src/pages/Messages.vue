@@ -4425,6 +4425,49 @@ export default {
             await nextTick();
             scrollToBottom();
 
+            // Show notification to requester when reschedule is accepted/declined
+            if (
+              (messageType === "reschedule_accepted" ||
+                messageType === "reschedule_rejected") &&
+              message.sender_id !== currentUserId.value
+            ) {
+              // Current user is the requester (not the sender of the response)
+              try {
+                const messageData = JSON.parse(message.content || "{}");
+                const bookingSubject =
+                  messageData.subject || "Tutoring Session";
+
+                if (messageType === "reschedule_accepted") {
+                  showSuccess(
+                    "Reschedule Accepted",
+                    `Your reschedule request for "${bookingSubject}" has been accepted! The booking time has been updated.`
+                  );
+                } else if (messageType === "reschedule_rejected") {
+                  showInfo(
+                    "Reschedule Declined",
+                    `Your reschedule request for "${bookingSubject}" has been declined. The booking remains at the original time.`
+                  );
+                }
+              } catch (error) {
+                console.error(
+                  "Error parsing reschedule response message:",
+                  error
+                );
+                // Show generic notification if parsing fails
+                if (messageType === "reschedule_accepted") {
+                  showSuccess(
+                    "Reschedule Accepted",
+                    "Your reschedule request has been accepted! The booking time has been updated."
+                  );
+                } else if (messageType === "reschedule_rejected") {
+                  showInfo(
+                    "Reschedule Declined",
+                    "Your reschedule request has been declined. The booking remains at the original time."
+                  );
+                }
+              }
+            }
+
             // Auto-mark messages as read when user is actively viewing the conversation
             if (message.sender_id !== currentUserId.value) {
               console.log(
@@ -4530,6 +4573,49 @@ export default {
 
               // Mark notification as processed to prevent duplicates
               processedNotifications.value.add(notificationKey);
+
+              // Show modal notification for reschedule accepted/rejected to requester
+              if (
+                (message.message_type === "reschedule_accepted" ||
+                  message.message_type === "reschedule_rejected") &&
+                !isSender
+              ) {
+                // Current user is the requester (not the sender of the response)
+                try {
+                  const messageData = JSON.parse(message.content || "{}");
+                  const bookingSubject =
+                    messageData.subject || "Tutoring Session";
+
+                  if (message.message_type === "reschedule_accepted") {
+                    showSuccess(
+                      "Reschedule Accepted",
+                      `Your reschedule request for "${bookingSubject}" has been accepted! The booking time has been updated.`
+                    );
+                  } else if (message.message_type === "reschedule_rejected") {
+                    showInfo(
+                      "Reschedule Declined",
+                      `Your reschedule request for "${bookingSubject}" has been declined. The booking remains at the original time.`
+                    );
+                  }
+                } catch (error) {
+                  console.error(
+                    "Error parsing reschedule response message:",
+                    error
+                  );
+                  // Show generic notification if parsing fails
+                  if (message.message_type === "reschedule_accepted") {
+                    showSuccess(
+                      "Reschedule Accepted",
+                      "Your reschedule request has been accepted! The booking time has been updated."
+                    );
+                  } else if (message.message_type === "reschedule_rejected") {
+                    showInfo(
+                      "Reschedule Declined",
+                      "Your reschedule request has been declined. The booking remains at the original time."
+                    );
+                  }
+                }
+              }
 
               // Toast popup disabled - user requested removal of popup toasts
               // Notification badge in navbar will still update via Navbar notification system
