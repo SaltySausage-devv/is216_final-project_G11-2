@@ -711,9 +711,11 @@
                         </div>
 
                         <!-- Reschedule Accepted Message -->
+                        <!-- Only show to the original requester (not the person who accepted) -->
                         <div
                           v-else-if="
-                            message.messageType === 'reschedule_accepted'
+                            message.messageType === 'reschedule_accepted' &&
+                            message.senderId !== currentUserId
                           "
                           class="message-content booking-message reschedule-accepted"
                         >
@@ -775,9 +777,11 @@
                         </div>
 
                         <!-- Reschedule Rejected Message -->
+                        <!-- Only show to the original requester (not the person who declined) -->
                         <div
                           v-else-if="
-                            message.messageType === 'reschedule_rejected'
+                            message.messageType === 'reschedule_rejected' &&
+                            message.senderId !== currentUserId
                           "
                           class="message-content booking-message reschedule-rejected"
                         >
