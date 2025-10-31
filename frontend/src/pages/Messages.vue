@@ -62,11 +62,20 @@
                       <div class="d-flex align-items-start">
                         <div
                           class="conversation-avatar bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3 spring-smooth"
-                          style="width: 45px; height: 45px; flex-shrink: 0; min-width: 45px; min-height: 45px;"
+                          style="
+                            width: 45px;
+                            height: 45px;
+                            flex-shrink: 0;
+                            min-width: 45px;
+                            min-height: 45px;
+                          "
                         >
                           <i class="fas fa-user text-primary"></i>
                         </div>
-                        <div class="flex-grow-1 d-flex flex-column" style="min-width: 0; overflow: hidden;">
+                        <div
+                          class="flex-grow-1 d-flex flex-column"
+                          style="min-width: 0; overflow: hidden"
+                        >
                           <!-- Top row: Name and Time -->
                           <div
                             class="d-flex justify-content-between align-items-center"
@@ -84,7 +93,7 @@
                           >
                             <div
                               class="d-flex align-items-center"
-                              style="max-width: 70%; min-width: 0; flex: 1;"
+                              style="max-width: 70%; min-width: 0; flex: 1"
                             >
                               <div
                                 v-if="isImageMessage(conversation.lastMessage)"
@@ -112,7 +121,11 @@
                               <p
                                 v-else
                                 class="text-muted mb-0 small text-truncate"
-                                style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                style="
+                                  overflow: hidden;
+                                  text-overflow: ellipsis;
+                                  white-space: nowrap;
+                                "
                                 :class="{
                                   'fw-bold': conversation.unreadCount > 0,
                                 }"
@@ -922,16 +935,20 @@
                                   >
                                     Student will receive
                                     {{
-                                      getBookingCancellationData(message)
-                                        .refundPolicy.creditsToRefund
+                                      Number(
+                                        getBookingCancellationData(message)
+                                          .refundPolicy.creditsToRefund
+                                      ).toFixed(2)
                                     }}
                                     credits back (tutor cancelled)
                                   </span>
                                   <span v-else>
                                     Student will receive
                                     {{
-                                      getBookingCancellationData(message)
-                                        .refundPolicy.creditsToRefund
+                                      Number(
+                                        getBookingCancellationData(message)
+                                          .refundPolicy.creditsToRefund
+                                      ).toFixed(2)
                                     }}
                                     credits back (cancelled more than 24 hours
                                     before)
