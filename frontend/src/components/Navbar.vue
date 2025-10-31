@@ -643,12 +643,13 @@ export default {
         }
 
         // Remove notifications for messages that are now read
-        // BUT keep reschedule_accepted/rejected notifications visible - they're important status updates
+        // BUT keep reschedule notifications (request, accepted, rejected) visible - they're important status updates
         if (readMessageIds.size > 0) {
           const beforeCount = notifications.value.length;
           notifications.value = notifications.value.filter(
             (n) =>
               !readMessageIds.has(n.id) ||
+              n.type === "reschedule_request" ||
               n.type === "reschedule_accepted" ||
               n.type === "reschedule_rejected"
           );
@@ -656,7 +657,7 @@ export default {
           
           if (removedCount > 0) {
             console.log(
-              `🔔 NAVBAR: 🗑️ Removed ${removedCount} notification(s) for read messages (kept reschedule response notifications)`
+              `🔔 NAVBAR: 🗑️ Removed ${removedCount} notification(s) for read messages (kept reschedule notifications)`
             );
           }
         }
@@ -958,20 +959,22 @@ export default {
         );
 
         // Remove notifications from this conversation
-        // BUT keep reschedule_accepted/rejected notifications visible - they're important status updates
+        // BUT keep reschedule notifications (request, accepted, rejected) visible - they're important status updates
         const beforeCount = notifications.value.length;
         notifications.value = notifications.value.filter(
           (n) =>
             n.conversationId !== data.conversationId ||
-            (n.type === "reschedule_accepted" || n.type === "reschedule_rejected")
+            (n.type === "reschedule_request" ||
+              n.type === "reschedule_accepted" ||
+              n.type === "reschedule_rejected")
         );
         const afterCount = notifications.value.length;
         const removedCount = beforeCount - afterCount;
 
-        if (removedCount > 0) {
-          console.log(
-            `🔔 NAVBAR: Auto-cleared ${removedCount} notification(s) from conversation ${data.conversationId} (kept reschedule response notifications)`
-          );
+          if (removedCount > 0) {
+            console.log(
+              `🔔 NAVBAR: Auto-cleared ${removedCount} notification(s) from conversation ${data.conversationId} (kept reschedule notifications)`
+            );
           saveNotificationsToStorage();
         }
       });
