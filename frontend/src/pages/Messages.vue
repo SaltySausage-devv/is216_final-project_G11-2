@@ -4469,7 +4469,15 @@ export default {
             }
 
             // Auto-mark messages as read when user is actively viewing the conversation
-            if (message.sender_id !== currentUserId.value) {
+            // BUT don't auto-mark reschedule_accepted/rejected messages - let user see them in notifications
+            const isRescheduleResponseMessage =
+              messageType === "reschedule_accepted" ||
+              messageType === "reschedule_rejected";
+
+            if (
+              message.sender_id !== currentUserId.value &&
+              !isRescheduleResponseMessage
+            ) {
               console.log(
                 "🔔 RECEIVER: Auto-marking messages as read since user is viewing conversation"
               );
@@ -4484,6 +4492,10 @@ export default {
                   error
                 );
               }
+            } else if (isRescheduleResponseMessage) {
+              console.log(
+                "🔔 RECEIVER: Skipping auto-mark-as-read for reschedule response message - user should see notification"
+              );
             }
           } else {
             // Show notification if message is not in the currently viewed conversation
