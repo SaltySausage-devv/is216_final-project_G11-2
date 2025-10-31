@@ -597,10 +597,7 @@ export default {
 
         // Track message IDs that are currently read on the server
         const readMessageIds = new Set();
-        // Cache messages by conversation ID to avoid duplicate API calls
-        const messagesCache = new Map();
         let removedCount = 0;
-        let addedCount = 0;
 
         // Find conversations with unread messages OR conversations that have existing notifications
         const conversationsWithUnread = response.conversations.filter(
@@ -624,10 +621,7 @@ export default {
             // Fetch messages for this conversation to check read status
             const messagesResponse = await messagingService.getMessages(conv.id, 1, 50);
             
-            // Cache messages for this conversation
             if (messagesResponse.messages && messagesResponse.messages.length > 0) {
-              messagesCache.set(conv.id, messagesResponse.messages);
-              
               // Find all messages that are read by current user
               messagesResponse.messages.forEach(msg => {
                 const isRead = msg.read_at && (
@@ -663,119 +657,22 @@ export default {
           }
         }
 
+        // NOTE: We only clean up read notifications here.
+        // New notifications are added by Socket.IO events, not bulk-loaded here.
+        // This prevents loading all historical unread messages on every page load/refresh.
+        
         console.log(
           `🔔 NAVBAR: ${conversationsWithUnread.length} conversations have unread messages`
         );
-        
-        // Fetch individual messages for each conversation with unread messages
-        for (const conv of conversationsWithUnread) {
-          const otherParticipant =
-            conv.participant1_id === currentUserId.value
-              ? conv.participant2
-              : conv.participant1;
-
-          const participantName = `${otherParticipant.first_name} ${otherParticipant.last_name}`;
-
-          console.log(
-            `🔔 NAVBAR: Fetching messages for conversation with ${participantName}...`
-          );
-
-          try {
-            // Use cached messages if available, otherwise fetch
-            let messages = messagesCache.get(conv.id);
-            if (!messages) {
-              const messagesResponse = await messagingService.getMessages(conv.id, 1, 50);
-              messages = messagesResponse.messages || [];
-              messagesCache.set(conv.id, messages);
-            }
-            
-            if (messages && messages.length > 0) {
-              // Filter for unread messages (messages not sent by current user and not read yet)
-              const unreadMessages = messages.filter(msg => {
-                const isFromOtherUser = String(msg.sender_id) !== String(currentUserId.value);
-                const isUnread = !msg.read_at || !msg.read_by?.includes(currentUserId.value);
-                return isFromOtherUser && isUnread;
-              });
-
-              console.log(
-                `🔔 NAVBAR: Found ${unreadMessages.length} unread messages from ${participantName}`
-              );
-
-              // Create individual notification for each unread message
-              for (const msg of unreadMessages) {
-                // Check if we already have a notification for this specific message
-                const existingNotification = notifications.value.find(
-                  (n) => n.id === msg.id
-                );
-
-                if (!existingNotification) {
-                  console.log(
-                    `🔔 NAVBAR: ➕ Adding notification for message ${msg.id.substring(0, 8)}... from ${participantName}`
-                  );
-
-                  // Determine message preview and icon based on type
-                  let messagePreview;
-                  let iconClass = "fas fa-envelope";
-                  
-                  if (msg.message_type === "image") {
-                    messagePreview = "📷 Sent an image";
-                  } else if (msg.message_type === "reschedule_request") {
-                    messagePreview = "📅 Reschedule booking request";
-                    iconClass = "fas fa-calendar-alt text-warning";
-                  } else if (msg.message_type === "reschedule_accepted") {
-                    messagePreview = "✅ Reschedule request accepted";
-                    iconClass = "fas fa-calendar-check text-success";
-                  } else if (msg.message_type === "reschedule_rejected") {
-                    messagePreview = "❌ Reschedule request declined";
-                    iconClass = "fas fa-calendar-times text-danger";
-                  } else if (msg.message_type === "booking_proposal") {
-                    messagePreview = "📝 Booking proposal";
-                  } else if (msg.message_type === "booking_confirmation") {
-                    messagePreview = "✅ Booking confirmed";
-                  } else if (msg.message_type === "booking_cancelled") {
-                    messagePreview = "❌ Booking cancelled";
-                    iconClass = "fas fa-ban text-danger";
-                  } else if (msg.content) {
-                    messagePreview = msg.content.substring(0, 50);
-                  } else {
-                    messagePreview = "New message";
-                  }
-
-                  const notification = {
-                    id: msg.id, // Use message ID as notification ID
-                    icon: iconClass,
-                    title: `New message from ${participantName}`,
-                    message: messagePreview,
-                    time: formatTime(msg.created_at),
-                    timestamp: msg.created_at,
-                    conversationId: conv.id,
-                    unread: true,
-                  };
-
-                  notifications.value.push(notification); // Add to end (older messages)
-                  addedCount++;
-                } else {
-                  console.log(
-                    `🔔 NAVBAR: ⏭️ Skipping - already have notification for message ${msg.id.substring(0, 8)}...`
-                  );
-                }
-              }
-            }
-          } catch (msgError) {
-            console.error(
-              `🔔 NAVBAR: ❌ Error fetching messages for conversation ${conv.id}:`,
-              msgError
-            );
-            // Continue with next conversation even if one fails
-          }
-        }
+        console.log(
+          `🔔 NAVBAR: Skipping bulk-loading of unread messages - Socket.IO will handle new notifications`
+        );
 
         // Sort notifications by timestamp (most recent first)
         notifications.value.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
         console.log("🔔 NAVBAR: Current notifications count AFTER sync:", notifications.value.length);
         console.log("🔔 NAVBAR: Removed", removedCount, "read notifications");
-        console.log("🔔 NAVBAR: Added", addedCount, "new unread notifications");
 
         // Limit to last 20 notifications
         if (notifications.value.length > 20) {
@@ -783,12 +680,12 @@ export default {
           notifications.value = notifications.value.slice(0, 20);
         }
 
-        // Save to localStorage if there were any changes
-        if (removedCount > 0 || addedCount > 0) {
+        // Save to localStorage if there were any changes (removed read notifications)
+        if (removedCount > 0) {
           console.log("🔔 NAVBAR: 💾 Saving notifications after sync");
           saveNotificationsToStorage();
           console.log(
-            `🔔 NAVBAR: ✅ Sync complete - ${removedCount} removed, ${addedCount} added`
+            `🔔 NAVBAR: ✅ Sync complete - ${removedCount} read notification(s) removed`
           );
         }
       } catch (error) {
