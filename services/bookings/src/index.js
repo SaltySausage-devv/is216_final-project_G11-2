@@ -1085,10 +1085,34 @@ app.post('/booking-confirmations', verifyToken, async (req, res) => {
       console.error('Failed to create final booking:', bookingError);
     }
 
-    // NOTE: Credits are NOT transferred at confirmation time
+    // Deduct credits from student but NOT transfer to tutor yet
     // Credits will be held in student account and transferred to tutor only after session completion
     // This prevents tutors from receiving payment for sessions that don't actually happen
-    console.log(`💰 Credits held: ${totalAmount} credits reserved for booking confirmation. Will transfer to tutor after session completion.`);
+    if (student.user_type === 'student') {
+      try {
+        const newStudentCredits = Math.max(0, (student.credits || 0) - totalAmount);
+        console.log(`💸 Reserving ${totalAmount} credits from student. Old: ${student.credits}, New: ${newStudentCredits}`);
+        
+        const { error: studentUpdateError } = await supabase
+          .from('users')
+          .update({ 
+            credits: newStudentCredits,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', bookingOffer.tutee_id);
+          
+        if (studentUpdateError) {
+          console.error('❌ Error updating student credits:', studentUpdateError);
+        } else {
+          console.log('✅ Student credits reserved successfully');
+        }
+
+        console.log(`💰 Credits reserved: ${totalAmount} credits held until session completion`);
+      } catch (creditError) {
+        console.error('Error processing credit transaction:', creditError);
+        // Don't fail the booking confirmation if credit processing fails
+      }
+    }
 
     // Create confirmation message
     const { error: messageError } = await supabase
