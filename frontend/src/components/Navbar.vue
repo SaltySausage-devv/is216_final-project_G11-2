@@ -558,55 +558,16 @@ export default {
     };
 
     const handleNotificationClick = (notification) => {
-      // For reschedule notifications, navigate to calendar with booking
-      if (notification.bookingId) {
-        console.log(
-          "🔔 NAVBAR: Clicked reschedule notification, navigating to calendar with bookingId:",
-          notification.bookingId
-        );
-
-        // Remove this notification
-        notifications.value = notifications.value.filter(
-          (n) => n.id !== notification.id
-        );
-
-        // Save updated state to localStorage
-        saveNotificationsToStorage();
-
-        // Close dropdown
-        const dropdowns = document.querySelectorAll(".dropdown-menu.show");
-        dropdowns.forEach((dropdown) => dropdown.classList.remove("show"));
-
-        // Navigate to calendar page with bookingId
-        // Only open reschedule modal for reschedule_request, otherwise just show booking details
-        if (notification.type === 'reschedule_request') {
-          router.push(`/calendar?bookingId=${notification.bookingId}&reschedule=true`);
-        } else {
-          router.push(`/calendar?bookingId=${notification.bookingId}`);
-        }
-        return;
-      }
-
-      // For other notifications, navigate to messages
+      // For all notifications, navigate to messages to show the card
       if (notification.conversationId) {
         console.log(
           "🔔 NAVBAR: Clicked notification for conversation:",
           notification.conversationId
         );
 
-        // Remove ALL notifications from the same conversation
-        const conversationId = notification.conversationId;
-        const beforeCount = notifications.value.length;
-
+        // Remove this specific notification
         notifications.value = notifications.value.filter(
-          (n) => n.conversationId !== conversationId
-        );
-
-        const afterCount = notifications.value.length;
-        const removedCount = beforeCount - afterCount;
-
-        console.log(
-          `🔔 NAVBAR: Removed ${removedCount} notification(s) from conversation ${conversationId}`
+          (n) => n.id !== notification.id
         );
 
         // Save updated state to localStorage
