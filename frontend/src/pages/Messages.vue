@@ -798,8 +798,8 @@
                                 class="btn btn-outline-primary btn-sm"
                                 @click="$router.push('/calendar')"
                               >
-                                <i class="fas fa-calendar me-1"></i>
-                                View Calendar
+                                <i class="fas fa-calendar-check me-1"></i>
+                                View in Calendar
                               </button>
                             </div>
                           </div>
@@ -849,11 +849,11 @@
                             </div>
                             <div class="booking-actions">
                               <button
-                                class="btn btn-primary btn-sm"
+                                class="btn btn-outline-primary btn-sm"
                                 @click="$router.push('/calendar')"
                               >
-                                <i class="fas fa-calendar me-1"></i>
-                                View Calendar
+                                <i class="fas fa-calendar-check me-1"></i>
+                                View in Calendar
                               </button>
                             </div>
                           </div>
@@ -971,11 +971,11 @@
                             </div>
                             <div class="booking-actions">
                               <button
-                                class="btn btn-primary btn-sm"
+                                class="btn btn-outline-primary btn-sm"
                                 @click="$router.push('/calendar')"
                               >
-                                <i class="fas fa-calendar me-1"></i>
-                                View Calendar
+                                <i class="fas fa-calendar-check me-1"></i>
+                                View in Calendar
                               </button>
                             </div>
                           </div>
