@@ -646,14 +646,6 @@ export default {
     }
 
     onMounted(() => {
-      // If user is already authenticated, force logout when entering login page
-      if (authStore.isAuthenticated) {
-        try {
-          authStore.logout()
-        } catch (e) {
-          console.warn('Logout on login page mount failed:', e)
-        }
-      }
       // Check if redirected from password reset
       const urlParams = new URLSearchParams(window.location.search)
       const hasShownResetToast = sessionStorage.getItem('resetToastShown') === '1'

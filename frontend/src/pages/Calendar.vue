@@ -323,11 +323,11 @@ export default {
         // Wait for bookings to load
         await nextTick();
         
-        // Find the booking
-        const booking = bookings.value.find((b) => b.id === bookingId);
-        if (booking) {
+        // Find the booking event - need to access extendedProps
+        const bookingEvent = bookings.value.find((b) => b.id === bookingId);
+        if (bookingEvent && bookingEvent.extendedProps) {
           console.log('📅 Opening booking and reschedule modal from query params:', bookingId);
-          selectedBooking.value = booking;
+          selectedBooking.value = bookingEvent.extendedProps;
           showRescheduleRequestModal.value = true;
           
           // Clean up URL
@@ -341,6 +341,9 @@ export default {
     // Watch for route changes (e.g., when navigating from notifications)
     watch(() => route.query, async (newQuery) => {
       if (newQuery.bookingId && newQuery.reschedule === 'true') {
+        // Fetch fresh data to ensure we have the latest booking info including reschedule request
+        console.log('📅 Route changed with bookingId, fetching fresh data...');
+        await fetchCalendarData();
         await handleQueryParams();
       }
     }, { immediate: false });

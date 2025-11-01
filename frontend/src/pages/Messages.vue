@@ -911,8 +911,10 @@
                               <p class="mb-2">
                                 <strong>Reason:</strong>
                                 {{
-                                  getBookingCancellationData(message)
-                                    .cancellationReason
+                                  formatCancellationReason(
+                                    getBookingCancellationData(message)
+                                      .cancellationReason
+                                  )
                                 }}
                               </p>
                               <div class="refund-info">
@@ -3941,6 +3943,19 @@ export default {
       }
     };
 
+    const formatCancellationReason = (reason) => {
+      const reasonMap = {
+        tutor_unavailable: "Tutor unavailable",
+        student_unavailable: "Student unavailable",
+        emergency: "Emergency",
+        scheduling_conflict: "Scheduling conflict",
+        technical_issue: "Technical issue",
+        personal_reason: "Personal reason",
+        other: "Other"
+      };
+      return reasonMap[reason] || reason;
+    };
+
     const isBookingCancelledByMe = (message) => {
       const cancellationData = getBookingCancellationData(message);
       if (!cancellationData) return false;
@@ -5390,6 +5405,7 @@ export default {
       loadTutorProfile,
       // Booking cancellation helpers
       getBookingCancellationData,
+      formatCancellationReason,
       isBookingCancelledByMe,
       // Attendance marking - REMOVED from messages (only available in calendar)
       // Keeping status check functions for potential future use but not modal functionality

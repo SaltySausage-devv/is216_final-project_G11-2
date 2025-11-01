@@ -558,10 +558,10 @@ export default {
     };
 
     const handleNotificationClick = (notification) => {
-      // For reschedule_request notifications, navigate to calendar with booking
+      // For reschedule notifications, navigate to calendar with booking
       if (notification.bookingId) {
         console.log(
-          "🔔 NAVBAR: Clicked reschedule_request notification, navigating to calendar with bookingId:",
+          "🔔 NAVBAR: Clicked reschedule notification, navigating to calendar with bookingId:",
           notification.bookingId
         );
 
@@ -577,8 +577,13 @@ export default {
         const dropdowns = document.querySelectorAll(".dropdown-menu.show");
         dropdowns.forEach((dropdown) => dropdown.classList.remove("show"));
 
-        // Navigate to calendar page with bookingId and reschedule=true to open reschedule modal
-        router.push(`/calendar?bookingId=${notification.bookingId}&reschedule=true`);
+        // Navigate to calendar page with bookingId
+        // Only open reschedule modal for reschedule_request, otherwise just show booking details
+        if (notification.type === 'reschedule_request') {
+          router.push(`/calendar?bookingId=${notification.bookingId}&reschedule=true`);
+        } else {
+          router.push(`/calendar?bookingId=${notification.bookingId}`);
+        }
         return;
       }
 
@@ -884,14 +889,16 @@ export default {
             title = `New message from ${senderName}`;
           }
 
-          // Extract bookingId from reschedule_request messages for calendar navigation
+          // Extract bookingId from reschedule messages for calendar navigation
           let bookingId = null;
-          if (message.message_type === 'reschedule_request' && message.content) {
+          if ((message.message_type === 'reschedule_request' || 
+               message.message_type === 'reschedule_accepted' || 
+               message.message_type === 'reschedule_rejected') && message.content) {
             try {
               const messageData = JSON.parse(message.content);
               bookingId = messageData.bookingId || null;
             } catch (error) {
-              console.error('Failed to parse reschedule_request message content:', error);
+              console.error('Failed to parse reschedule message content:', error);
             }
           }
 
@@ -1066,9 +1073,6 @@ export default {
 
       // Animations disabled
 
-      // Wait for auth and messaging to be ready
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       // Set up message notifications if authenticated
       if (authStore.isAuthenticated) {
         console.log("🔔 NAVBAR: Setting up notifications on mount");
@@ -1077,12 +1081,11 @@ export default {
           messagingService.isConnected
         );
 
-        // Try to set up notifications even if not connected yet
+        // Set up message notifications immediately - don't wait
         // The messaging service will be connected by App.vue
         setupMessageNotifications();
 
         // Load unread messages as notifications
-        await new Promise((resolve) => setTimeout(resolve, 1500));
         await loadUnreadMessagesAsNotifications();
 
         // Retry setup after a delay if service isn't connected
@@ -1110,13 +1113,10 @@ export default {
           console.log("🔔 NAVBAR: User logged in, setting up notifications");
           // Load notifications from storage
           loadNotificationsFromStorage();
-          // Wait a bit for messaging service to connect
-          setTimeout(async () => {
-            setupMessageNotifications();
-            // Load unread messages as notifications after a short delay
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            await loadUnreadMessagesAsNotifications();
-          }, 1000);
+          // Set up notifications immediately - don't wait
+          setupMessageNotifications();
+          // Load unread messages as notifications
+          await loadUnreadMessagesAsNotifications();
         } else {
           // Clean up on logout
           if (messageHandler) {

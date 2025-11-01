@@ -1065,9 +1065,9 @@ export default {
         // Rating filter
         if (filters.ratings.length > 0) {
           filtered = filtered.filter((tutor) => {
-            // Round the average rating to nearest integer for filtering
-            const roundedRating = Math.round(tutor.rating || 0);
-            return filters.ratings.includes(roundedRating);
+            // Floor the average rating to map to the appropriate star rating bucket
+            const flooredRating = Math.floor(tutor.rating || 0);
+            return filters.ratings.includes(flooredRating);
           });
         }
 
@@ -1136,8 +1136,8 @@ export default {
       // Rating filter
       if (filters.ratings.length > 0) {
         filtered = filtered.filter((tutor) => {
-          const roundedRating = Math.round(tutor.rating || 0);
-          return filters.ratings.includes(roundedRating);
+          const flooredRating = Math.floor(tutor.rating || 0);
+          return filters.ratings.includes(flooredRating);
         });
       }
 
@@ -1180,12 +1180,12 @@ export default {
     };
 
     // Get dynamic count of tutors by rating
-    // Count tutors whose average rating rounds to the specified star rating
+    // Count tutors whose average rating floors to the specified star rating
     const getRatingCount = (rating) => {
       return allTutors.value.filter((tutor) => {
-        // Round the average rating to nearest integer for comparison
-        const roundedRating = Math.round(tutor.rating || 0);
-        return roundedRating === rating;
+        // Floor the average rating to map to the appropriate star rating bucket
+        const flooredRating = Math.floor(tutor.rating || 0);
+        return flooredRating === rating;
       }).length;
     };
 
@@ -1260,9 +1260,9 @@ export default {
       // Rating filter
       if (filters.ratings.length > 0) {
         filtered = filtered.filter((tutor) => {
-          // Round the average rating to nearest integer for filtering
-          const roundedRating = Math.round(tutor.rating || 0);
-          return filters.ratings.includes(roundedRating);
+          // Floor the average rating to map to the appropriate star rating bucket
+          const flooredRating = Math.floor(tutor.rating || 0);
+          return filters.ratings.includes(flooredRating);
         });
       }
 
