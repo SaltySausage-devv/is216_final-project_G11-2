@@ -352,6 +352,14 @@
                                     getBookingData(message).proposedTime
                                   )
                                 }}
+                                <template v-if="getBookingData(message).proposedEndTime">
+                                  -
+                                  {{
+                                    formatTimeOnly(
+                                      getBookingData(message).proposedEndTime
+                                    )
+                                  }}
+                                </template>
                               </p>
                               <p
                                 v-if="getBookingData(message).finalLocation"
