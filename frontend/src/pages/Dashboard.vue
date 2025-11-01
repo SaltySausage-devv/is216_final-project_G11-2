@@ -188,15 +188,38 @@ export default {
 
     // Helper to format time ago
     const formatTimeAgo = (dateString) => {
-      if (!dateString) return "Just now";
+      if (!dateString) {
+        console.warn("⚠️ formatTimeAgo: Missing dateString, returning 'Just now'");
+        return "Just now";
+      }
+      
       const date = new Date(dateString);
       const now = new Date();
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn("⚠️ formatTimeAgo: Invalid date:", dateString);
+        return "Just now";
+      }
+      
       const diffMs = now - date;
+      
+      // If date is in the future, return "Just now" (shouldn't happen but handle gracefully)
+      if (diffMs < 0) {
+        console.warn("⚠️ formatTimeAgo: Date is in the future:", dateString);
+        return "Just now";
+      }
+      
       const diffMins = Math.floor(diffMs / 60000);
       const diffHours = Math.floor(diffMs / 3600000);
       const diffDays = Math.floor(diffMs / 86400000);
+      const diffSecs = Math.floor(diffMs / 1000);
 
-      if (diffMins < 1) return "Just now";
+      // Show "Just now" for less than 1 minute (0-59 seconds)
+      if (diffMins < 1) {
+        if (diffSecs < 5) return "Just now";
+        return `${diffSecs} seconds ago`;
+      }
       if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? "minute" : "minutes"} ago`;
       if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
       if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
@@ -282,7 +305,7 @@ export default {
             let icon = "fas fa-bell";
             let title = notification.subject || notification.message || "Notification";
             let status = "New";
-            let badgeClass = "bg-info";
+            let badgeClass = "bg-success"; // Changed from bg-info (blue) to bg-success (green)
 
             // Check notification message/content for type
             if (message.includes("Booking confirmed") || message.includes("booking confirmed") || data.notificationType === "booking_confirmation") {
