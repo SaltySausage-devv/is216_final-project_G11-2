@@ -53,6 +53,7 @@ async function sendMessageViaMessagingService(conversationId, content, messageTy
     const messagingServiceUrl = process.env.MESSAGING_SERVICE_URL || 'http://localhost:3005';
     console.log(`📧 Sending to messaging service: ${messagingServiceUrl}/messaging/system-message`);
     console.log(`📧 Request data:`, { conversationId, content, messageType });
+    console.log(`📧 Auth token available:`, !!authToken);
     
     const response = await axios.post(`${messagingServiceUrl}/messaging/system-message`, {
       conversationId,
@@ -62,22 +63,18 @@ async function sendMessageViaMessagingService(conversationId, content, messageTy
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken}`
-      }
+      },
+      timeout: 10000 // 10 second timeout
     });
 
     console.log('✅ Message sent via messaging service:', response.data);
     return true;
   } catch (error) {
-    console.error('❌ Error sending message via messaging service:', error.response?.data || error.message);
+    console.error('❌ Error sending message via messaging service:', error.message);
+    console.error('❌ Error response data:', error.response?.data);
     console.error('❌ Error status:', error.response?.status);
-    console.error('❌ Error headers:', error.response?.headers);
+    console.error('❌ Error code:', error.code);
     console.error('❌ Full error:', error);
-    console.error('❌ Request URL:', `${messagingServiceUrl}/messaging/system-message`);
-    console.error('❌ Request data:', { conversationId, content, messageType });
-    console.error('❌ Auth token length:', authToken ? authToken.length : 'NO TOKEN');
-    console.error('❌ ERROR RESPONSE BODY:', error.response?.data);
-    console.error('❌ ERROR MESSAGE:', error.message);
-    console.error('❌ ERROR CODE:', error.code);
     return false;
   }
 }
