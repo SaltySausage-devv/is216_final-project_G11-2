@@ -382,9 +382,7 @@ export default {
               badgeClass = "bg-success";
             }
 
-            // Use timestamp field (from localStorage) or created_at (from API)
-            const notificationTimestamp = notification.timestamp || notification.created_at;
-            
+            // Use the notificationTimestamp already declared above (line 328)
             activities.push({
               icon: icon,
               title: title,
