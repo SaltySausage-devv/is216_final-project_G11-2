@@ -1306,25 +1306,64 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
         const messageContent = JSON.stringify(messageData);
         console.log(`📧 Message content to send:`, messageContent);
         
-        // Get auth token for messaging service
-        const authToken = req.headers.authorization?.split(' ')[1];
-        
-        // Send message via messaging service (with Socket.IO broadcast to both parties)
-        const sent = await sendMessageViaMessagingService(
-          conversationId,
-          messageContent,
-          'session_completed',
-          authToken
-        );
+        // Try to send via messaging service HTTP call first
+        try {
+          const authToken = req.headers.authorization?.split(' ')[1];
+          const sent = await sendMessageViaMessagingService(
+            conversationId,
+            messageContent,
+            'session_completed',
+            authToken
+          );
 
-        if (sent) {
-          console.log(`✅ Completion notification sent to both parties via messaging service`);
-        } else {
-          console.error('Failed to send completion notification via messaging service');
+          if (sent) {
+            console.log(`✅ Completion notification sent to both parties via messaging service`);
+          }
+        } catch (error) {
+          console.log('⚠️ Messaging service HTTP call failed, inserting directly to database');
         }
 
-        // Also send notifications via notifications service
+        // Fallback: Insert message directly to database if HTTP call fails or service unavailable
         try {
+          const { data: directMessage, error: messageError } = await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conversationId,
+              sender_id: req.user.userId, // Use current user ID
+              content: messageContent,
+              message_type: 'session_completed',
+              created_at: new Date().toISOString()
+            })
+            .select(`
+              *,
+              sender:sender_id (
+                first_name,
+                last_name,
+                user_type
+              )
+            `)
+            .maybeSingle();
+
+          if (messageError) {
+            console.error('Failed to insert completion message directly:', messageError);
+          } else {
+            console.log('✅ Completion message inserted directly to database');
+            // Update conversation last message
+            await supabase
+              .from('conversations')
+              .update({
+                last_message_at: new Date().toISOString(),
+                last_message_content: 'Session completed'
+              })
+              .eq('id', conversationId);
+          }
+        } catch (directError) {
+          console.error('Failed to insert message directly:', directError);
+        }
+
+        // Try to send notifications via notifications service
+        try {
+          const authToken = req.headers.authorization?.split(' ')[1];
           const notificationsServiceUrl = process.env.NOTIFICATIONS_SERVICE_URL || 'http://localhost:3007';
           
           // Send notification to tutor
@@ -1345,7 +1384,8 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
               headers: {
                 'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
-              }
+              },
+              timeout: 5000
             }
           );
 
@@ -1367,13 +1407,57 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
               headers: {
                 'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
-              }
+              },
+              timeout: 5000
             }
           );
           console.log(`✅ Persistent notifications created for both parties`);
         } catch (notifServiceError) {
-          console.error('Failed to create persistent notifications:', notifServiceError.message);
-          // Don't fail the operation if notification service is down
+          console.log('⚠️ Notification service HTTP call failed, inserting directly to database');
+          
+          // Fallback: Insert notifications directly to database
+          try {
+            const notifications = [
+              {
+                user_id: booking.tutor_id,
+                type: 'push',
+                subject: 'Session Completed',
+                message: `Your session with ${booking.student?.first_name || 'Student'} has been completed. ${creditsAmount} credits have been added to your account.`,
+                data: {
+                  bookingId: booking.id,
+                  conversationId: conversationId,
+                  notificationType: 'session_completed'
+                },
+                status: 'pending',
+                created_at: new Date().toISOString()
+              },
+              {
+                user_id: booking.student_id,
+                type: 'push',
+                subject: 'Session Completed',
+                message: `Your session with ${booking.tutor?.first_name || 'Tutor'} has been completed. Please leave a review!`,
+                data: {
+                  bookingId: booking.id,
+                  conversationId: conversationId,
+                  notificationType: 'session_completed'
+                },
+                status: 'pending',
+                created_at: new Date().toISOString()
+              }
+            ];
+
+            const { error: insertError } = await supabase
+              .from('notifications')
+              .insert(notifications);
+
+            if (insertError) {
+              console.error('Failed to insert notifications directly:', insertError);
+            } else {
+              console.log('✅ Notifications inserted directly to database');
+            }
+          } catch (directNotifError) {
+            console.error('Failed to insert notifications directly:', directNotifError);
+          }
         }
       }
     } catch (notificationError) {
