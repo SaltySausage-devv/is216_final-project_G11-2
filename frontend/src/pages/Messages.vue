@@ -1731,6 +1731,13 @@
               <span>Student Request</span>
             </div>
             <div class="summary-content">
+              <span
+                v-if="selectedBookingOffer.subject"
+                class="summary-item"
+              >
+                <i class="fas fa-book me-1"></i>
+                {{ selectedBookingOffer.subject }}
+              </span>
               <span class="summary-item">
                 <i class="fas fa-laptop me-1"></i>
                 {{ selectedBookingOffer.isOnline ? "Online" : "On-site" }}
@@ -4236,6 +4243,7 @@ export default {
       if (bookingData) {
         selectedBookingOffer.value = {
           id: bookingData.bookingOfferId,
+          subject: bookingData.subject,
           isOnline: bookingData.isOnline,
           tuteeLocation: bookingData.tuteeLocation,
           notes: bookingData.notes,
