@@ -211,18 +211,48 @@ export default {
       }
 
       try {
-        console.log("📬 Loading recent activity from notifications for userId:", userId.value);
+        console.log("📬 Loading recent activity for userId:", userId.value);
         
-        // Fetch notifications from notifications service
-        // Note: Don't include /api prefix since axios instance already has baseURL: '/api'
-        const notificationsResponse = await api.get(`/notifications/${userId.value}`, {
-          params: { limit: 20 } // Get more to filter relevant ones
-        });
-
-        if (notificationsResponse.data && notificationsResponse.data.notifications) {
-          const notifications = notificationsResponse.data.notifications;
+        // First, try to load from localStorage (same as Navbar uses)
+        const NOTIFICATIONS_STORAGE_KEY = "tutorconnect_notifications";
+        const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+        let localNotifications = [];
+        
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            // Filter out notifications older than 7 days
+            const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            localNotifications = parsed.filter((n) => {
+              const notifTime = new Date(n.timestamp || n.created_at || 0).getTime();
+              return notifTime > sevenDaysAgo;
+            });
+            console.log("📬 Loaded notifications from localStorage:", localNotifications.length);
+          } catch (e) {
+            console.error("⚠️ Failed to parse localStorage notifications:", e);
+          }
+        }
+        
+        // Also fetch from API as fallback/update
+        let apiNotifications = [];
+        try {
+          // Note: Don't include /api prefix since axios instance already has baseURL: '/api'
+          const notificationsResponse = await api.get(`/notifications/${userId.value}`, {
+            params: { limit: 20 } // Get more to filter relevant ones
+          });
           
-          console.log("📬 Received notifications:", notifications.length);
+          if (notificationsResponse.data && notificationsResponse.data.notifications) {
+            apiNotifications = notificationsResponse.data.notifications;
+            console.log("📬 Received notifications from API:", apiNotifications.length);
+          }
+        } catch (apiError) {
+          console.warn("⚠️ Could not fetch notifications from API, using localStorage:", apiError.message);
+        }
+        
+        // Combine both sources, prioritizing API data but using localStorage as fallback
+        const notifications = apiNotifications.length > 0 ? apiNotifications : localNotifications;
+
+        if (notifications && notifications.length > 0) {
 
           // Also fetch reviews for the user to show in recent activity
           let reviews = [];
