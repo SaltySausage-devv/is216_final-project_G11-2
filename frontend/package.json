@@ -2,6 +2,10 @@
   "name": "tutorconnect-frontend",
   "version": "1.0.0",
   "description": "TutorConnect Frontend - Vue.js application",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "node node_modules/vite/bin/vite.js",
     "prebuild": "echo '🔍 Checking env vars...' && env | grep VITE_ || echo '⚠️ No VITE_ env vars found'",
