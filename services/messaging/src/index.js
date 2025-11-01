@@ -939,12 +939,15 @@ app.get('/messaging/conversations/:id/unread-count', verifyToken, async (req, re
 // Create booking offer
 app.post('/messaging/booking-offers', verifyToken, async (req, res) => {
   try {
+    console.log('📝 BOOKING OFFER: Creating booking offer, request body:', req.body);
     const { error, value } = createBookingOfferSchema.validate(req.body);
     if (error) {
+      console.error('❌ BOOKING OFFER: Validation error:', error.details[0].message);
       return res.status(400).json({ error: error.details[0].message });
     }
 
     const { conversationId, isOnline, tuteeLocation, notes, subject } = value;
+    console.log('📝 BOOKING OFFER: Parsed values:', { conversationId, isOnline, tuteeLocation, notes, subject });
 
     // Verify user is participant in conversation
     const { data: conversation } = await supabase
@@ -956,6 +959,7 @@ app.post('/messaging/booking-offers', verifyToken, async (req, res) => {
     if (!conversation ||
         (conversation.participant1_id !== req.user.userId &&
          conversation.participant2_id !== req.user.userId)) {
+      console.error('❌ BOOKING OFFER: User is not a participant in conversation');
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -963,31 +967,40 @@ app.post('/messaging/booking-offers', verifyToken, async (req, res) => {
     const tutorId = conversation.participant1_id === req.user.userId ?
                    conversation.participant2_id : conversation.participant1_id;
     const tuteeId = req.user.userId;
+    console.log('📝 BOOKING OFFER: Tutor ID:', tutorId, 'Tutee ID:', tuteeId);
 
     // Create booking offer
+    const bookingOfferData = {
+      conversation_id: conversationId,
+      tutee_id: tuteeId,
+      tutor_id: tutorId,
+      is_online: isOnline,
+      tutee_location: tuteeLocation,
+      notes: notes,
+      subject: subject,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+    console.log('📝 BOOKING OFFER: Inserting data:', JSON.stringify(bookingOfferData, null, 2));
+    
     const { data: bookingOffer, error: insertError } = await supabase
       .from('booking_offers')
-      .insert({
-        conversation_id: conversationId,
-        tutee_id: tuteeId,
-        tutor_id: tutorId,
-        is_online: isOnline,
-        tutee_location: tuteeLocation,
-        notes: notes,
-        subject: subject,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      })
+      .insert(bookingOfferData)
       .select()
       .maybeSingle();
 
     if (insertError) {
+      console.error('❌ BOOKING OFFER: Insert error:', insertError);
+      console.error('❌ BOOKING OFFER: Insert error details:', JSON.stringify(insertError, null, 2));
       throw insertError;
     }
+    
+    console.log('✅ BOOKING OFFER: Successfully created booking offer:', bookingOffer.id);
 
     // Create booking offer message
     const messageContent = JSON.stringify({
       bookingOfferId: bookingOffer.id,
+      subject: subject,
       isOnline: isOnline,
       tuteeLocation: tuteeLocation,
       notes: notes

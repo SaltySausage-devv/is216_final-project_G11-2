@@ -271,6 +271,10 @@
                           </div>
                           <div class="booking-details">
                             <div v-if="getBookingData(message)">
+                              <p class="mb-2" v-if="getBookingData(message).subject">
+                                <strong>Subject:</strong>
+                                {{ getBookingData(message).subject }}
+                              </p>
                               <p class="mb-2">
                                 <strong>Session Type:</strong>
                                 {{
