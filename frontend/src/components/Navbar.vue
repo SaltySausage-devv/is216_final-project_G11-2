@@ -819,8 +819,13 @@ export default {
           // For session_completed, only show to student (not the tutor who marked it)
           if (message.message_type === 'session_completed') {
             shouldShow = !isSender;
-            console.log("🔔 NAVBAR: session_completed - isSender:", isSender, "shouldShow:", shouldShow);
-            console.log("🔔 NAVBAR: sender_id:", message.sender_id, "currentUserId:", currentUserId.value);
+            console.log("🔔 NAVBAR: session_completed MESSAGE DETECTED!");
+            console.log("🔔 NAVBAR: sender_id:", message.sender_id, "(type:", typeof message.sender_id, ")");
+            console.log("🔔 NAVBAR: currentUserId:", currentUserId.value, "(type:", typeof currentUserId.value, ")");
+            console.log("🔔 NAVBAR: isSender:", isSender);
+            console.log("🔔 NAVBAR: userType:", userType.value);
+            console.log("🔔 NAVBAR: shouldShow:", shouldShow);
+            console.log("🔔 NAVBAR: message content:", message.content);
           } else {
             shouldShow = !isSender;
           }
@@ -831,7 +836,9 @@ export default {
 
         if (shouldShow) {
           // Check if message has already been read by current user
-          const isAlreadyRead = message.read_at && (
+          // BUT: Don't filter out session_completed messages even if read - they're important status updates
+          const isSessionCompleted = message.message_type === 'session_completed';
+          const isAlreadyRead = !isSessionCompleted && message.read_at && (
             message.read_by?.includes(currentUserId.value) || 
             (Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(currentUserId.value)))
           );
@@ -842,6 +849,10 @@ export default {
               message.id
             );
             return; // Don't add notification if message is already read
+          }
+          
+          if (isSessionCompleted) {
+            console.log("🔔 NAVBAR: ✅ session_completed passed all checks, proceeding to create notification");
           }
 
           console.log("🔔 NAVBAR: Message is from another user or system message, creating notification");

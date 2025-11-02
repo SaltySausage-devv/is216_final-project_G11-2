@@ -1753,23 +1753,31 @@ app.post('/messaging/system-message', verifyToken, async (req, res) => {
       throw insertError;
     }
 
-    // Broadcast message to conversation room via Socket.IO
-    console.log(`📢 Broadcasting ${messageType} message to room: conversation_${conversationId}`);
-    io.to(`conversation_${conversationId}`).emit('new_message', message);
-    
-    // For system messages (like session_completed), also send directly to participants if connected
-    // This ensures delivery even if they haven't joined the conversation room yet
+    // For system messages (like session_completed), ensure both participants are in the room
+    // and send directly to them if connected
     if (isSystemMessage) {
-      console.log(`📢 Also sending ${messageType} directly to participants if connected`);
       const participants = [conversation.participant1_id, conversation.participant2_id];
+      console.log(`📢 System message ${messageType}: Ensuring participants are in room and broadcasting`);
+      
       participants.forEach(participantId => {
         const socket = activeConnections.get(participantId);
         if (socket) {
+          // Automatically join them to the conversation room
+          socket.join(`conversation_${conversationId}`);
+          console.log(`📢 Auto-joined user ${participantId} to conversation room: conversation_${conversationId}`);
+          
+          // Send directly to their socket
           console.log(`📢 Sending ${messageType} directly to user ${participantId}`);
           socket.emit('new_message', message);
+        } else {
+          console.log(`📢 User ${participantId} not currently connected`);
         }
       });
     }
+    
+    // Broadcast message to conversation room via Socket.IO
+    console.log(`📢 Broadcasting ${messageType} message to room: conversation_${conversationId}`);
+    io.to(`conversation_${conversationId}`).emit('new_message', message);
 
     // Update conversation last message
     const lastMessagePreview = messageType === 'text' ? content : 
