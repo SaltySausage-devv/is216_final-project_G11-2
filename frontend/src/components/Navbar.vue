@@ -694,15 +694,78 @@ export default {
           }
         }
 
-        // NOTE: We only clean up read notifications here.
-        // New notifications are added by Socket.IO events, not bulk-loaded here.
-        // This prevents loading all historical unread messages on every page load/refresh.
+        // Also check for unread session_completed messages and add them as notifications
+        // This ensures students see notifications even if they weren't connected when the message was sent
+        console.log(`🔔 NAVBAR: Checking for unread session_completed messages...`);
+        let addedNotifications = 0;
+        // Check ALL conversations for session_completed messages, not just those with unreadCount > 0
+        // because session_completed might be the only message in a conversation
+        for (const conv of response.conversations) {
+          try {
+            const messagesResponse = await messagingService.getMessages(conv.id, 1, 50);
+            
+            if (messagesResponse.messages && messagesResponse.messages.length > 0) {
+              messagesResponse.messages.forEach(msg => {
+                // Check if this is a session_completed message
+                if (msg.message_type === 'session_completed') {
+                  // Check if current user is NOT the sender (should be student, not tutor)
+                  const isSender = String(msg.sender_id) === String(currentUserId.value);
+                  
+                  if (!isSender) {
+                    // Check if we already have this notification
+                    const existingNotification = notifications.value.find(
+                      (n) => n.id === msg.id
+                    );
+                    
+                    if (!existingNotification) {
+                      console.log(`🔔 NAVBAR: Found unread session_completed message, creating notification:`, msg.id);
+                      
+                      // Parse message content
+                      let messagePreview = "✅ Session marked as completed";
+                      let bookingId = null;
+                      try {
+                        const messageData = JSON.parse(msg.content);
+                        const tutorName = messageData.tutorName || 'Your tutor';
+                        messagePreview = `✅ ${tutorName} marked your session as completed`;
+                        bookingId = messageData.bookingId || null;
+                      } catch (error) {
+                        console.error('Failed to parse session_completed message:', error);
+                      }
+                      
+                      // Create notification
+                      const notification = {
+                        id: msg.id,
+                        icon: "fas fa-check-double text-success",
+                        title: messagePreview,
+                        message: messagePreview,
+                        time: formatTime(msg.created_at),
+                        timestamp: msg.created_at,
+                        conversationId: msg.conversation_id,
+                        bookingId: bookingId,
+                        type: msg.message_type,
+                        unread: true,
+                      };
+                      
+                      // Add to notifications
+                      notifications.value = [notification, ...notifications.value];
+                      addedNotifications++;
+                      console.log(`🔔 NAVBAR: ✅ Added session_completed notification from database`);
+                    }
+                  }
+                }
+              });
+            }
+          } catch (msgError) {
+            console.error(`🔔 NAVBAR: Error checking messages for session_completed:`, msgError);
+          }
+        }
+        
+        if (addedNotifications > 0) {
+          console.log(`🔔 NAVBAR: Added ${addedNotifications} session_completed notification(s) from database`);
+        }
         
         console.log(
           `🔔 NAVBAR: ${conversationsWithUnread.length} conversations have unread messages`
-        );
-        console.log(
-          `🔔 NAVBAR: Skipping bulk-loading of unread messages - Socket.IO will handle new notifications`
         );
 
         // Sort notifications by timestamp (most recent first)
@@ -717,12 +780,12 @@ export default {
           notifications.value = notifications.value.slice(0, 20);
         }
 
-        // Save to localStorage if there were any changes (removed read notifications)
-        if (removedCount > 0) {
+        // Save to localStorage if there were any changes (removed read notifications or added new ones)
+        if (removedCount > 0 || addedNotifications > 0) {
           console.log("🔔 NAVBAR: 💾 Saving notifications after sync");
           saveNotificationsToStorage();
           console.log(
-            `🔔 NAVBAR: ✅ Sync complete - ${removedCount} read notification(s) removed`
+            `🔔 NAVBAR: ✅ Sync complete - ${removedCount} read notification(s) removed, ${addedNotifications} session_completed notification(s) added, total now: ${notifications.value.length}`
           );
         }
       } catch (error) {
@@ -955,7 +1018,7 @@ export default {
             time: formatTime(message.created_at),
             timestamp: message.created_at,
             conversationId: message.conversation_id,
-            bookingId: bookingId, // Store bookingId for reschedule_request notifications
+            bookingId: bookingId, // Store bookingId for reschedule_request and session_completed notifications
             type: message.message_type, // Store message type to filter reschedule responses
             unread: true,
           };
@@ -965,8 +1028,21 @@ export default {
           console.log("🔔 NAVBAR: New notification to add:", {
             id: notification.id,
             title: notification.title,
-            type: message.message_type
+            type: message.message_type,
+            messageType: message.message_type,
+            bookingId: bookingId
           });
+          
+          if (message.message_type === 'session_completed') {
+            console.log("🔔 NAVBAR: ⭐⭐⭐ SESSION_COMPLETED NOTIFICATION CREATED ⭐⭐⭐");
+            console.log("🔔 NAVBAR: Notification details:", notification);
+            console.log("🔔 NAVBAR: Message details:", {
+              id: message.id,
+              sender_id: message.sender_id,
+              message_type: message.message_type,
+              content: message.content
+            });
+          }
 
           // Add to beginning of notifications array (most recent first)
           // Create a NEW array to ensure Vue reactivity
