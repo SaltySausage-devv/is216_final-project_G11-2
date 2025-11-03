@@ -604,10 +604,12 @@ export default {
                                attendanceData.attendance_status || 
                                attendanceData.attendanceStatus;
       
-      // Emit the attendance data along with the update event
-      // so the parent can update the booking immediately without waiting for a refresh
+      // Emit the attendance data along with the update event immediately
+      // so the parent can update the booking reactively and the "Mark as Completed" button appears
+      // The MarkAttendanceModal will close itself after emitting
       emit("updated", { 
         attendance_status: attendanceStatus,
+        session_notes: attendanceData.booking?.session_notes || attendanceData.session_notes,
         ...attendanceData 
       });
     }

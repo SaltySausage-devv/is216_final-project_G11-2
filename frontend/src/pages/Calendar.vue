@@ -345,26 +345,30 @@ export default {
       // If updateData contains attendance_status, update selectedBooking immediately
       // This ensures the "Mark as Completed" button appears without needing a refresh
       if (updateData && updateData.attendance_status && selectedBooking.value) {
+        // Create a new reactive object to trigger Vue's reactivity system
+        // This ensures computed properties like canComplete recalculate immediately
         selectedBooking.value = {
           ...selectedBooking.value,
           attendance_status: updateData.attendance_status,
+          // Also update session_notes if provided
+          ...(updateData.session_notes && { session_notes: updateData.session_notes }),
         };
         console.log("✅ Updated selectedBooking with attendance_status:", updateData.attendance_status);
       }
 
-      // Refresh calendar data to get the latest from backend
-      await fetchCalendarData();
-
-      // Update the selectedBooking with fresh data if it exists
-      if (selectedBooking.value) {
-        const updatedEvent = bookings.value.find(
-          (booking) => booking.id === selectedBooking.value.id
-        );
-        if (updatedEvent && updatedEvent.extendedProps) {
-          // Update with the fresh booking data from extendedProps
-          selectedBooking.value = updatedEvent.extendedProps;
+      // Refresh calendar data to get the latest from backend (in background)
+      fetchCalendarData().then(() => {
+        // Update the selectedBooking with fresh data if it exists
+        if (selectedBooking.value) {
+          const updatedEvent = bookings.value.find(
+            (booking) => booking.id === selectedBooking.value.id
+          );
+          if (updatedEvent && updatedEvent.extendedProps) {
+            // Update with the fresh booking data from extendedProps
+            selectedBooking.value = updatedEvent.extendedProps;
+          }
         }
-      }
+      });
 
       showToast("Booking updated successfully", "success");
     }
