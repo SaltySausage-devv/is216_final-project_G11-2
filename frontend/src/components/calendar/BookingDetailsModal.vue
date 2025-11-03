@@ -280,7 +280,7 @@
 </template>
 
 <script>
-import { ref, computed, watch, onMounted, reactive } from "vue";
+import { ref, computed, watch, onMounted, reactive, nextTick } from "vue";
 import { useAuthStore } from "../../stores/auth";
 import { useToast } from "../../composables/useToast";
 import RescheduleModal from "./RescheduleModal.vue";
@@ -315,9 +315,37 @@ export default {
     // This ensures computed properties update when the prop changes
     const localBooking = reactive({ ...props.booking });
     
+    // Track if we're updating locally to prevent watch from overwriting
+    let isLocalUpdate = false;
+    
     // Watch the booking prop and update localBooking whenever it changes
+    // But skip if we just made a local update (to preserve our immediate changes)
     watch(() => props.booking, (newBooking) => {
-      Object.assign(localBooking, newBooking);
+      // Don't overwrite if we just made a local update
+      if (isLocalUpdate) {
+        isLocalUpdate = false;
+        // Merge in any new properties from prop update, but preserve our local changes
+        const currentAttendanceStatus = localBooking.attendance_status;
+        const currentSessionNotes = localBooking.session_notes;
+        const currentStatus = localBooking.status;
+        
+        // Update from prop
+        Object.assign(localBooking, newBooking);
+        
+        // Restore local changes if they exist (they're more recent)
+        if (currentAttendanceStatus) {
+          localBooking.attendance_status = currentAttendanceStatus;
+        }
+        if (currentSessionNotes) {
+          localBooking.session_notes = currentSessionNotes;
+        }
+        if (currentStatus) {
+          localBooking.status = currentStatus;
+        }
+      } else {
+        // Normal prop update - merge all properties
+        Object.assign(localBooking, newBooking);
+      }
     }, { deep: true, immediate: true });
 
     // Reactive data
@@ -574,6 +602,9 @@ export default {
 
         const result = await response.json();
         
+        // Mark that we're doing a local update to prevent watch from overwriting
+        isLocalUpdate = true;
+        
         // Immediately update local booking status to "completed" so UI updates without refresh
         if (result.data) {
           localBooking.status = "completed";
@@ -622,13 +653,16 @@ export default {
       emit("updated");
     }
 
-    function handleAttendanceMarked(attendanceData) {
+    async function handleAttendanceMarked(attendanceData) {
       // Extract attendance_status from the response
       // The backend returns { message, booking: { attendance_status, ... } }
       // But if already_marked, it's directly in attendanceData
       const attendanceStatus = attendanceData.booking?.attendance_status || 
                                attendanceData.attendance_status || 
                                attendanceData.attendanceStatus;
+      
+      // Mark that we're doing a local update to prevent watch from overwriting
+      isLocalUpdate = true;
       
       // Immediately update localBooking reactively so the "Mark as Completed" button appears instantly
       if (attendanceStatus) {
@@ -639,9 +673,19 @@ export default {
           localBooking.session_notes = sessionNotes;
         }
         console.log("✅ Updated localBooking with attendance_status:", attendanceStatus);
+        
+        // Wait for next tick to ensure reactivity is processed
+        await nextTick();
+        
+        // Log computed property state for debugging
+        console.log("✅ canComplete value:", canComplete.value);
+        console.log("✅ localBooking.attendance_status:", localBooking.attendance_status);
+        console.log("✅ localBooking.status:", localBooking.status);
+        console.log("✅ isTutor:", isTutor.value);
+        console.log("✅ isPastBooking:", isPastBooking());
       }
       
-      // Emit the attendance data along with the update event immediately
+      // Emit the attendance data along with the update event after local update
       // so the parent can update the booking reactively too
       // The MarkAttendanceModal will close itself after emitting
       emit("updated", { 
