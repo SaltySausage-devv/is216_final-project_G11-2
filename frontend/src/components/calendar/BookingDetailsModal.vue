@@ -280,7 +280,7 @@
 </template>
 
 <script>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, reactive } from "vue";
 import { useAuthStore } from "../../stores/auth";
 import { useToast } from "../../composables/useToast";
 import RescheduleModal from "./RescheduleModal.vue";
@@ -311,6 +311,15 @@ export default {
     const authStore = useAuthStore();
     const { showToast } = useToast();
 
+    // Create a reactive local copy of the booking prop to ensure reactivity
+    // This ensures computed properties update when the prop changes
+    const localBooking = reactive({ ...props.booking });
+    
+    // Watch the booking prop and update localBooking whenever it changes
+    watch(() => props.booking, (newBooking) => {
+      Object.assign(localBooking, newBooking);
+    }, { deep: true, immediate: true });
+
     // Reactive data
     const loading = ref(false);
     const showRescheduleModal = ref(false);
@@ -322,22 +331,22 @@ export default {
     const isTutor = computed(() => {
       return (
         authStore.userType === "tutor" &&
-        authStore.user?.id === props.booking.tutor_id
+        authStore.user?.id === localBooking.tutor_id
       );
     });
 
     const isStudent = computed(() => {
       return (
         authStore.userType === "student" &&
-        authStore.user?.id === props.booking.student_id
+        authStore.user?.id === localBooking.student_id
       );
     });
 
     // Helper: Check if session is locked (attendance marked)
     const isSessionLocked = computed(() => {
       // Once attendance is marked, session becomes locked and cannot be rescheduled or cancelled
-      const hasAttendanceMarked = props.booking.attendance_status && 
-        (props.booking.attendance_status === 'attended' || props.booking.attendance_status === 'no_show');
+      const hasAttendanceMarked = localBooking.attendance_status && 
+        (localBooking.attendance_status === 'attended' || localBooking.attendance_status === 'no_show');
       return hasAttendanceMarked;
     });
 
@@ -346,7 +355,7 @@ export default {
       // 1. Status is not scheduled or confirmed
       // 2. Attendance has been marked (session is locked)
       return (
-        ["scheduled", "confirmed"].includes(props.booking.status) &&
+        ["scheduled", "confirmed"].includes(localBooking.status) &&
         (isTutor.value || isStudent.value) &&
         !isSessionLocked.value // Cannot reschedule after attendance is marked
       );
@@ -357,14 +366,14 @@ export default {
       // 1. Status is not scheduled or confirmed
       // 2. Attendance has been marked (session is locked)
       return (
-        ["scheduled", "confirmed"].includes(props.booking.status) &&
+        ["scheduled", "confirmed"].includes(localBooking.status) &&
         (isTutor.value || isStudent.value) &&
         !isSessionLocked.value // Cannot cancel after attendance is marked
       );
     });
 
     const canConfirm = computed(() => {
-      return props.booking.status === "scheduled" && isTutor.value;
+      return localBooking.status === "scheduled" && isTutor.value;
     });
 
     const canMarkAttendance = computed(() => {
@@ -372,11 +381,11 @@ export default {
       // Only show if attendance hasn't been marked yet (sequential requirement)
       // Cannot mark attendance if booking is already completed
       return (
-        props.booking.status === "confirmed" &&
+        localBooking.status === "confirmed" &&
         isTutor.value &&
         isSessionStarted() && // Session has started (changed from isPastBooking)
-        !props.booking.attendance_status && // Attendance not yet marked
-        props.booking.status !== "completed" // Not already completed
+        !localBooking.attendance_status && // Attendance not yet marked
+        localBooking.status !== "completed" // Not already completed
       );
     });
 
@@ -384,36 +393,36 @@ export default {
       // Tutors can mark as completed only after attendance has been marked
       // Sequential requirement: attendance must be marked first
       // Cannot complete if already completed
-      const hasAttendanceMarked = props.booking.attendance_status && 
-        (props.booking.attendance_status === 'attended' || props.booking.attendance_status === 'no_show');
+      const hasAttendanceMarked = localBooking.attendance_status && 
+        (localBooking.attendance_status === 'attended' || localBooking.attendance_status === 'no_show');
       const pastBooking = isPastBooking();
       
       return (
-        props.booking.status === "confirmed" &&
+        localBooking.status === "confirmed" &&
         isTutor.value &&
         pastBooking &&
         hasAttendanceMarked && // Must have attendance marked first (sequential flow)
-        props.booking.status !== "completed" // Not already completed
+        localBooking.status !== "completed" // Not already completed
       );
     });
 
     const canJoinMeeting = computed(() => {
       return (
-        props.booking.is_online &&
-        ["confirmed"].includes(props.booking.status) &&
+        localBooking.is_online &&
+        ["confirmed"].includes(localBooking.status) &&
         isWithinMeetingWindow()
       );
     });
 
     const getRescheduleRequestMessage = computed(() => {
-      if (props.booking.reschedule_status !== "pending") return "";
+      if (localBooking.reschedule_status !== "pending") return "";
 
       const isRequester =
-        props.booking.reschedule_requested_by === authStore.user?.id;
+        localBooking.reschedule_requested_by === authStore.user?.id;
       if (isRequester) {
         return "Waiting for the other party to respond to your reschedule request.";
       } else {
-        const requesterType = props.booking.reschedule_requester_type;
+        const requesterType = localBooking.reschedule_requester_type;
         return `The ${requesterType} has requested to reschedule this session.`;
       }
     });
@@ -497,19 +506,19 @@ export default {
     }
 
     function isPastBooking() {
-      return new Date(props.booking.end || props.booking.end_time) < new Date();
+      return new Date(localBooking.end || localBooking.end_time) < new Date();
     }
 
     function isSessionStarted() {
-      return new Date(props.booking.start || props.booking.start_time) <= new Date();
+      return new Date(localBooking.start || localBooking.start_time) <= new Date();
     }
 
     function isWithinMeetingWindow() {
       const now = new Date();
       const startTime = new Date(
-        props.booking.start || props.booking.start_time
+        localBooking.start || localBooking.start_time
       );
-      const endTime = new Date(props.booking.end || props.booking.end_time);
+      const endTime = new Date(localBooking.end || localBooking.end_time);
 
       // Allow joining 15 minutes before start time
       const joinWindow = new Date(startTime.getTime() - 15 * 60 * 1000);
@@ -522,7 +531,7 @@ export default {
         loading.value = true;
 
         const response = await fetch(
-          `/api/bookings/${props.booking.id}/confirm`,
+          `/api/bookings/${localBooking.id}/confirm`,
           {
             method: "POST",
             headers: {
@@ -550,7 +559,7 @@ export default {
         loading.value = true;
 
         const response = await fetch(
-          `/api/bookings/${props.booking.id}/complete`,
+          `/api/bookings/${localBooking.id}/complete`,
           {
             method: "POST",
             headers: {
@@ -575,7 +584,7 @@ export default {
 
     function joinMeeting() {
       const meetLink =
-        props.booking.google_meet_link || props.booking.zoom_meeting_link;
+        localBooking.google_meet_link || localBooking.zoom_meeting_link;
       if (meetLink) {
         window.open(meetLink, "_blank");
       }
@@ -616,7 +625,7 @@ export default {
 
     // Watch for showRescheduleRequest prop to open modal
     watch(() => props.showRescheduleRequest, (shouldShow) => {
-      if (shouldShow && props.booking.reschedule_status === 'pending') {
+      if (shouldShow && localBooking.reschedule_status === 'pending') {
         showRescheduleRequestModal.value = true;
       }
     }, { immediate: true });
@@ -624,7 +633,7 @@ export default {
     // Lifecycle
     onMounted(() => {
       // If prop says to show reschedule request, open it
-      if (props.showRescheduleRequest && props.booking.reschedule_status === 'pending') {
+      if (props.showRescheduleRequest && localBooking.reschedule_status === 'pending') {
         showRescheduleRequestModal.value = true;
       }
     });
