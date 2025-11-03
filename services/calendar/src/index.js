@@ -53,6 +53,7 @@ async function sendMessageViaMessagingService(conversationId, content, messageTy
     const messagingServiceUrl = process.env.MESSAGING_SERVICE_URL || 'http://localhost:3005';
     console.log(`📧 Sending to messaging service: ${messagingServiceUrl}/messaging/system-message`);
     console.log(`📧 Request data:`, { conversationId, content, messageType });
+    console.log(`📧 Auth token available:`, !!authToken);
     
     const response = await axios.post(`${messagingServiceUrl}/messaging/system-message`, {
       conversationId,
@@ -62,22 +63,18 @@ async function sendMessageViaMessagingService(conversationId, content, messageTy
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${authToken}`
-      }
+      },
+      timeout: 10000 // 10 second timeout
     });
 
     console.log('✅ Message sent via messaging service:', response.data);
     return true;
   } catch (error) {
-    console.error('❌ Error sending message via messaging service:', error.response?.data || error.message);
+    console.error('❌ Error sending message via messaging service:', error.message);
+    console.error('❌ Error response data:', error.response?.data);
     console.error('❌ Error status:', error.response?.status);
-    console.error('❌ Error headers:', error.response?.headers);
+    console.error('❌ Error code:', error.code);
     console.error('❌ Full error:', error);
-    console.error('❌ Request URL:', `${messagingServiceUrl}/messaging/system-message`);
-    console.error('❌ Request data:', { conversationId, content, messageType });
-    console.error('❌ Auth token length:', authToken ? authToken.length : 'NO TOKEN');
-    console.error('❌ ERROR RESPONSE BODY:', error.response?.data);
-    console.error('❌ ERROR MESSAGE:', error.message);
-    console.error('❌ ERROR CODE:', error.code);
     return false;
   }
 }
@@ -245,7 +242,12 @@ app.get('/calendar', verifyToken, async (req, res) => {
       reschedule_reason: booking.reschedule_reason,
       reschedule_requested_at: booking.reschedule_requested_at,
       reschedule_responded_at: booking.reschedule_responded_at,
-      reschedule_response_message: booking.reschedule_response_message
+      reschedule_response_message: booking.reschedule_response_message,
+      // Include attendance fields
+      attendance_status: booking.attendance_status,
+      attendance_marked_at: booking.attendance_marked_at,
+      session_notes: booking.session_notes,
+      proof_photo_url: booking.proof_photo_url
     }));
 
     console.log(`📤 Sending ${formattedBookings.length} formatted bookings`);
@@ -938,65 +940,14 @@ app.post('/bookings/:id/cancel', verifyToken, async (req, res) => {
         }
       }
 
-      // Tutor loses credits (they were already given when booking was confirmed)
-      const { data: tutor, error: tutorError } = await supabase
-        .from('users')
-        .select('credits')
-        .eq('id', booking.tutor_id)
-        .single();
-
-      if (tutorError) {
-        console.error('❌ Error fetching tutor credits:', tutorError);
-      } else {
-        const newTutorCredits = Math.max(0, (tutor.credits || 0) - creditsToRefund);
-        console.log(`💸 Deducting ${creditsToRefund} credits from tutor. Old: ${tutor.credits}, New: ${newTutorCredits}`);
-        
-        const { error: tutorUpdateError } = await supabase
-          .from('users')
-          .update({ 
-            credits: newTutorCredits,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', booking.tutor_id);
-          
-        if (tutorUpdateError) {
-          console.error('❌ Error updating tutor credits:', tutorUpdateError);
-        } else {
-          console.log('✅ Tutor credits deducted successfully');
-        }
-      }
+      // NOTE: No tutor credit deduction needed - credits were never transferred to tutor
+      // Credits were only reserved at booking confirmation, so refunding student is all that's needed
+      console.log('ℹ️ No tutor credit action needed - credits were held, not transferred');
     } else {
       // Only happens when student cancels less than 24 hours before
-      console.log('❌ Student cancelled less than 24 hours - no refund for student, tutor still loses credits');
-      
-      // Student gets no refund (credits stay with tutor)
-      // Tutor still loses credits (they were already given when booking was confirmed)
-      const { data: tutor, error: tutorError } = await supabase
-        .from('users')
-        .select('credits')
-        .eq('id', booking.tutor_id)
-        .single();
-
-      if (tutorError) {
-        console.error('❌ Error fetching tutor credits:', tutorError);
-      } else {
-        const newTutorCredits = Math.max(0, (tutor.credits || 0) - creditsToRefund);
-        console.log(`💸 Deducting ${creditsToRefund} credits from tutor (late cancellation). Old: ${tutor.credits}, New: ${newTutorCredits}`);
-        
-        const { error: tutorUpdateError } = await supabase
-          .from('users')
-          .update({ 
-            credits: newTutorCredits,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', booking.tutor_id);
-          
-        if (tutorUpdateError) {
-          console.error('❌ Error updating tutor credits:', tutorUpdateError);
-        } else {
-          console.log('✅ Tutor credits deducted successfully (late cancellation)');
-        }
-      }
+      console.log('❌ Student cancelled less than 24 hours - no refund for student');
+      console.log('ℹ️ Credits remain deducted from student account as late cancellation penalty');
+      // NOTE: No tutor credit deduction needed since credits were never transferred
     }
 
     // Handle penalty points for tutors
@@ -1096,7 +1047,7 @@ app.post('/bookings/:id/cancel', verifyToken, async (req, res) => {
             isMoreThan24Hours,
             creditsToRefund,
             studentRefunded: shouldRefundStudent,
-            tutorCreditsDeducted: true,
+            tutorCreditsDeducted: false,
             isTutorCancelling: isTutorCancelling
           },
           subject: booking.subject || 'Tutoring Session',
@@ -1142,7 +1093,7 @@ app.post('/bookings/:id/cancel', verifyToken, async (req, res) => {
         isMoreThan24Hours,
         creditsToRefund,
         studentRefunded: isMoreThan24Hours,
-        tutorCreditsDeducted: true
+        tutorCreditsDeducted: false
       }
     });
   } catch (error) {
@@ -1199,7 +1150,19 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
     // Get booking and verify user is involved
     const { data: booking, error: fetchError } = await supabase
       .from('bookings')
-      .select('*')
+      .select(`
+        *,
+        tutor:tutor_id (
+          id,
+          first_name,
+          last_name
+        ),
+        student:student_id (
+          id,
+          first_name,
+          last_name
+        )
+      `)
       .eq('id', id)
       .single();
 
@@ -1234,71 +1197,50 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
                           new Date(booking.start_time || booking.start)) / (1000 * 60 * 60);
     const creditsAmount = parseFloat((booking.hourly_rate * durationHours).toFixed(2));
 
-    console.log(`💰 Completing booking: ${creditsAmount} credits to transfer`);
+    console.log(`💰 Completing booking: ${creditsAmount} credits to release to tutor`);
     console.log(`   - Hourly rate: ${booking.hourly_rate}`);
     console.log(`   - Duration: ${durationHours.toFixed(2)} hours`);
+    console.log(`   - NOTE: Student credits were already deducted at booking confirmation`);
 
-    // Transfer credits from student to tutor
-    // Get current credit balances
-    const { data: student, error: studentError } = await supabase
-      .from('users')
-      .select('credits')
-      .eq('id', booking.student_id)
-      .single();
-
+    // Transfer held credits to tutor (student was already charged at confirmation)
     const { data: tutor, error: tutorError } = await supabase
       .from('users')
       .select('credits')
       .eq('id', booking.tutor_id)
       .single();
 
-    if (studentError || tutorError) {
-      console.error('❌ Error fetching credit balances:', { studentError, tutorError });
-      return res.status(500).json({ error: 'Failed to fetch credit balances' });
+    if (tutorError) {
+      console.error('❌ Error fetching tutor credit balance:', tutorError);
+      return res.status(500).json({ error: 'Failed to fetch tutor credits' });
     }
 
-    // Calculate new credit balances
-    const currentStudentCredits = student.credits || 0;
+    // Calculate new tutor credit balance
     const currentTutorCredits = tutor.credits || 0;
-    
-    const newStudentCredits = parseFloat(Math.max(0, currentStudentCredits - creditsAmount).toFixed(2));
     const newTutorCredits = parseFloat((currentTutorCredits + creditsAmount).toFixed(2));
 
-    console.log(`💸 Credit transfer: Student ${currentStudentCredits} → ${newStudentCredits}`);
-    console.log(`💰 Credit transfer: Tutor ${currentTutorCredits} → ${newTutorCredits}`);
+    console.log(`💰 Credit transfer: Tutor ${currentTutorCredits} → ${newTutorCredits} (releasing held credits)`);
 
-    // Update credits for both student and tutor
-    const [studentUpdate, tutorUpdate] = await Promise.all([
-      supabase
-        .from('users')
-        .update({ 
-          credits: newStudentCredits,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', booking.student_id),
-      supabase
-        .from('users')
-        .update({ 
-          credits: newTutorCredits,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', booking.tutor_id)
-    ]);
+    // Update tutor credits only
+    const { error: tutorUpdateError } = await supabase
+      .from('users')
+      .update({ 
+        credits: newTutorCredits,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', booking.tutor_id);
 
-    if (studentUpdate.error || tutorUpdate.error) {
-      console.error('❌ Error updating credits:', { studentUpdate: studentUpdate.error, tutorUpdate: tutorUpdate.error });
-      return res.status(500).json({ error: 'Failed to transfer credits' });
+    if (tutorUpdateError) {
+      console.error('❌ Error updating tutor credits:', tutorUpdateError);
+      return res.status(500).json({ error: 'Failed to transfer credits to tutor' });
     }
 
-    console.log('✅ Credits transferred successfully');
+    console.log('✅ Credits released to tutor successfully');
 
-    // Update booking status to completed and payment status to paid
+    // Update booking status to completed
     const { data: updatedBooking, error: updateError } = await supabase
       .from('bookings')
       .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        payment_status: 'paid'
+        status: 'completed'
       })
       .eq('id', id)
       .select()
@@ -1308,11 +1250,260 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
       throw updateError;
     }
 
+    // Send notifications to both tutor and student
+    console.log(`📧 Sending completion notifications to both parties`);
+    try {
+      // Find or create conversation between tutor and student
+      console.log(`📧 Looking for existing conversation between tutor ${booking.tutor_id} and student ${booking.student_id}`);
+      
+      const { data: existingConversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .or(`and(participant1_id.eq.${booking.tutor_id},participant2_id.eq.${booking.student_id}),and(participant1_id.eq.${booking.student_id},participant2_id.eq.${booking.tutor_id})`)
+        .limit(1);
+
+      console.log(`📧 Found existing conversations:`, existingConversations);
+
+      let conversationId;
+      if (existingConversations && existingConversations.length > 0) {
+        conversationId = existingConversations[0].id;
+        console.log(`📧 Using existing conversation: ${conversationId}`);
+      } else {
+        // Create new conversation if none exists
+        const { data: newConversation, error: conversationError } = await supabase
+          .from('conversations')
+          .insert({
+            participant1_id: booking.tutor_id,
+            participant2_id: booking.student_id,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (conversationError) {
+          console.error('Failed to create conversation for completion notification:', conversationError);
+        } else {
+          conversationId = newConversation.id;
+        }
+      }
+
+      if (conversationId) {
+        // Format the completion message data for both parties
+        const messageData = {
+          bookingId: booking.id,
+          subject: booking.subject || 'Tutoring Session',
+          startTime: booking.start_time,
+          endTime: booking.end_time,
+          location: booking.location,
+          creditsTransfered: creditsAmount,
+          tutorId: booking.tutor_id,
+          studentId: booking.student_id,
+          tutorName: booking.tutor?.first_name && booking.tutor?.last_name 
+            ? `${booking.tutor.first_name} ${booking.tutor.last_name}` 
+            : 'Your tutor'
+        };
+
+        const messageContent = JSON.stringify(messageData);
+        console.log(`📧 Message content to send:`, messageContent);
+        
+        // Send via messaging service - this will broadcast via Socket.IO
+        try {
+          const authToken = req.headers.authorization?.split(' ')[1];
+          const sent = await sendMessageViaMessagingService(
+            conversationId,
+            messageContent,
+            'session_completed',
+            authToken
+          );
+
+          if (sent) {
+            console.log(`✅ Completion notification sent to both parties via messaging service`);
+          } else {
+            console.error('❌ Messaging service call returned false - message may not have been sent');
+            // If messaging service call fails, we still insert to database
+            // The frontend will pick it up when they fetch messages
+            const { data: directMessage, error: messageError } = await supabase
+              .from('messages')
+              .insert({
+                conversation_id: conversationId,
+                sender_id: req.user.userId,
+                content: messageContent,
+                message_type: 'session_completed',
+                created_at: new Date().toISOString()
+              })
+              .select(`
+                *,
+                sender:sender_id (
+                  first_name,
+                  last_name,
+                  user_type
+                )
+              `)
+              .maybeSingle();
+
+            if (messageError) {
+              console.error('❌ Failed to insert completion message directly:', messageError);
+            } else {
+              console.log('✅ Completion message inserted directly to database (no Socket.IO broadcast)');
+              // Update conversation last message
+              await supabase
+                .from('conversations')
+                .update({
+                  last_message_at: new Date().toISOString(),
+                  last_message_content: 'Session completed'
+                })
+                .eq('id', conversationId);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error sending completion notification via messaging service:', error);
+          // Fallback: Insert message directly to database
+          try {
+            const { data: directMessage, error: messageError } = await supabase
+              .from('messages')
+              .insert({
+                conversation_id: conversationId,
+                sender_id: req.user.userId,
+                content: messageContent,
+                message_type: 'session_completed',
+                created_at: new Date().toISOString()
+              })
+              .select(`
+                *,
+                sender:sender_id (
+                  first_name,
+                  last_name,
+                  user_type
+                )
+              `)
+              .maybeSingle();
+
+            if (messageError) {
+              console.error('❌ Failed to insert completion message directly:', messageError);
+            } else {
+              console.log('✅ Completion message inserted directly to database (no Socket.IO broadcast)');
+              // Update conversation last message
+              await supabase
+                .from('conversations')
+                .update({
+                  last_message_at: new Date().toISOString(),
+                  last_message_content: 'Session completed'
+                })
+                .eq('id', conversationId);
+            }
+          } catch (directError) {
+            console.error('❌ Failed to insert message directly:', directError);
+          }
+        }
+
+        // Try to send notifications via notifications service
+        try {
+          const authToken = req.headers.authorization?.split(' ')[1];
+          const notificationsServiceUrl = process.env.NOTIFICATIONS_SERVICE_URL || 'http://localhost:3007';
+          
+          // Send notification to tutor
+          await axios.post(
+            `${notificationsServiceUrl}/notifications/send`,
+            {
+              userId: booking.tutor_id,
+              type: 'push',
+              subject: 'Session Completed',
+              message: `Your session with ${booking.student?.first_name || 'Student'} has been completed. ${creditsAmount} credits have been added to your account.`,
+              data: {
+                bookingId: booking.id,
+                conversationId: conversationId,
+                notificationType: 'session_completed'
+              }
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: 5000
+            }
+          );
+
+          // Send notification to student
+          await axios.post(
+            `${notificationsServiceUrl}/notifications/send`,
+            {
+              userId: booking.student_id,
+              type: 'push',
+              subject: 'Session Completed',
+              message: `Your session with ${booking.tutor?.first_name || 'Tutor'} has been completed. Please leave a review!`,
+              data: {
+                bookingId: booking.id,
+                conversationId: conversationId,
+                notificationType: 'session_completed'
+              }
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+              },
+              timeout: 5000
+            }
+          );
+          console.log(`✅ Persistent notifications created for both parties`);
+        } catch (notifServiceError) {
+          console.log('⚠️ Notification service HTTP call failed, inserting directly to database');
+          
+          // Fallback: Insert notifications directly to database
+          try {
+            const notifications = [
+              {
+                user_id: booking.tutor_id,
+                type: 'push',
+                subject: 'Session Completed',
+                message: `Your session with ${booking.student?.first_name || 'Student'} has been completed. ${creditsAmount} credits have been added to your account.`,
+                data: {
+                  bookingId: booking.id,
+                  conversationId: conversationId,
+                  notificationType: 'session_completed'
+                },
+                status: 'pending',
+                created_at: new Date().toISOString()
+              },
+              {
+                user_id: booking.student_id,
+                type: 'push',
+                subject: 'Session Completed',
+                message: `Your session with ${booking.tutor?.first_name || 'Tutor'} has been completed. Please leave a review!`,
+                data: {
+                  bookingId: booking.id,
+                  conversationId: conversationId,
+                  notificationType: 'session_completed'
+                },
+                status: 'pending',
+                created_at: new Date().toISOString()
+              }
+            ];
+
+            const { error: insertError } = await supabase
+              .from('notifications')
+              .insert(notifications);
+
+            if (insertError) {
+              console.error('Failed to insert notifications directly:', insertError);
+            } else {
+              console.log('✅ Notifications inserted directly to database');
+            }
+          } catch (directNotifError) {
+            console.error('Failed to insert notifications directly:', directNotifError);
+          }
+        }
+      }
+    } catch (notificationError) {
+      // Don't fail the whole operation if notification fails
+      console.error('Error sending completion notification:', notificationError);
+    }
+
     res.json({ 
       data: updatedBooking,
       creditsTransfered: {
         amount: creditsAmount,
-        studentCredits: newStudentCredits,
         tutorCredits: newTutorCredits
       }
     });

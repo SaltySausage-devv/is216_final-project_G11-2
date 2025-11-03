@@ -405,12 +405,25 @@ export default {
           const parsed = JSON.parse(stored);
           console.log("🔔 NAVBAR: Parsed array length:", parsed.length);
           
-          // Filter out notifications older than 7 days
+          // Filter out notifications older than 7 days and recalculate time
           const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-          notifications.value = parsed.filter((n) => {
-            const notifTime = new Date(n.timestamp).getTime();
-            return notifTime > sevenDaysAgo;
-          });
+          notifications.value = parsed
+            .filter((n) => {
+              const notifTime = new Date(n.timestamp || n.created_at || 0).getTime();
+              return notifTime > sevenDaysAgo;
+            })
+            .map((n) => {
+              // Recalculate time from timestamp (fixes "Just now" issue for old notifications)
+              const timestamp = n.timestamp || n.created_at;
+              if (timestamp) {
+                n.time = formatTime(timestamp);
+                // Ensure timestamp field exists
+                if (!n.timestamp) {
+                  n.timestamp = timestamp;
+                }
+              }
+              return n;
+            });
           
           console.log(
             "🔔 NAVBAR: ✅ Loaded",
@@ -500,6 +513,7 @@ export default {
       showAllNotifications.value = !showAllNotifications.value;
     };
 
+    // Calculates: current time - timestamp, rounds to 2 decimal places
     const formatTime = (timestamp) => {
       if (!timestamp) return "Just now";
 
@@ -509,20 +523,58 @@ export default {
       const now = new Date();
       const diff = now - date;
 
-      if (diff < 60000) return "Just now";
-      if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
-      if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-      if (diff < 172800000) return "Yesterday";
+      // Calculate precise differences
+      const diffSecs = diff / 1000;
+      const diffMins = diff / 60000;
+      const diffHours = diff / 3600000;
+      const diffDays = diff / 86400000;
+
+      // Show "Just now" for less than 5 seconds
+      if (diffSecs < 5) return "Just now";
+      
+      // For less than 1 minute: show seconds with 2 decimal places
+      if (diffMins < 1) {
+        const roundedSecs = Math.round(diffSecs * 100) / 100; // Round to 2dp
+        return `${roundedSecs.toFixed(2)}s ago`;
+      }
+      
+      // For less than 1 hour: show minutes with 2 decimal places
+      if (diffHours < 1) {
+        const roundedMins = Math.round(diffMins * 100) / 100; // Round to 2dp
+        return `${roundedMins.toFixed(2)} min ago`;
+      }
+      
+      // For less than 24 hours: show hours with 2 decimal places
+      if (diffDays < 1) {
+        const roundedHours = Math.round(diffHours * 100) / 100; // Round to 2dp
+        return `${roundedHours.toFixed(2)}h ago`;
+      }
+      
+      // For yesterday: show "Yesterday"
+      if (diffDays < 2) return "Yesterday";
+      
+      // For older: show the actual date
       return date.toLocaleDateString();
     };
 
-    const handleNotificationClick = (notification) => {
-      // For reschedule_request notifications, navigate to calendar with booking
-      if (notification.bookingId) {
+    const handleNotificationClick = async (notification) => {
+      // For session_completed notifications, navigate to calendar
+      if (notification.type === 'session_completed' && notification.bookingId) {
         console.log(
-          "🔔 NAVBAR: Clicked reschedule_request notification, navigating to calendar with bookingId:",
+          "🔔 NAVBAR: Clicked session_completed notification, navigating to calendar with bookingId:",
           notification.bookingId
         );
+
+        // Mark the message as read in the database
+        if (notification.conversationId) {
+          try {
+            console.log(`🔔 NAVBAR: Marking session_completed message as read for conversation: ${notification.conversationId}`);
+            await messagingService.markAsRead(notification.conversationId);
+            console.log(`🔔 NAVBAR: ✅ Session_completed message marked as read`);
+          } catch (error) {
+            console.error(`🔔 NAVBAR: ❌ Error marking session_completed message as read:`, error);
+          }
+        }
 
         // Remove this notification
         notifications.value = notifications.value.filter(
@@ -536,31 +588,30 @@ export default {
         const dropdowns = document.querySelectorAll(".dropdown-menu.show");
         dropdowns.forEach((dropdown) => dropdown.classList.remove("show"));
 
-        // Navigate to calendar page with bookingId and reschedule=true to open reschedule modal
-        router.push(`/calendar?bookingId=${notification.bookingId}&reschedule=true`);
+        // Navigate to calendar page
+        router.push(`/calendar`);
         return;
       }
 
-      // For other notifications, navigate to messages
+      // For all other notifications, navigate to messages to show the card
       if (notification.conversationId) {
         console.log(
           "🔔 NAVBAR: Clicked notification for conversation:",
           notification.conversationId
         );
 
-        // Remove ALL notifications from the same conversation
-        const conversationId = notification.conversationId;
-        const beforeCount = notifications.value.length;
+        // Mark messages as read in the database
+        try {
+          console.log(`🔔 NAVBAR: Marking messages as read for conversation: ${notification.conversationId}`);
+          await messagingService.markAsRead(notification.conversationId);
+          console.log(`🔔 NAVBAR: ✅ Messages marked as read`);
+        } catch (error) {
+          console.error(`🔔 NAVBAR: ❌ Error marking messages as read:`, error);
+        }
 
+        // Remove this specific notification
         notifications.value = notifications.value.filter(
-          (n) => n.conversationId !== conversationId
-        );
-
-        const afterCount = notifications.value.length;
-        const removedCount = beforeCount - afterCount;
-
-        console.log(
-          `🔔 NAVBAR: Removed ${removedCount} notification(s) from conversation ${conversationId}`
+          (n) => n.id !== notification.id
         );
 
         // Save updated state to localStorage
@@ -643,29 +694,107 @@ export default {
         }
 
         // Remove notifications for messages that are now read
+        // BUT keep reschedule and session_completed notifications visible - they're important status updates
         if (readMessageIds.size > 0) {
           const beforeCount = notifications.value.length;
           notifications.value = notifications.value.filter(
-            (n) => !readMessageIds.has(n.id)
+            (n) =>
+              !readMessageIds.has(n.id) ||
+              n.type === "reschedule_request" ||
+              n.type === "reschedule_accepted" ||
+              n.type === "reschedule_rejected" ||
+              n.type === "session_completed"
           );
           removedCount = beforeCount - notifications.value.length;
           
           if (removedCount > 0) {
             console.log(
-              `🔔 NAVBAR: 🗑️ Removed ${removedCount} notification(s) for read messages`
+              `🔔 NAVBAR: 🗑️ Removed ${removedCount} notification(s) for read messages (kept reschedule notifications)`
             );
           }
         }
 
-        // NOTE: We only clean up read notifications here.
-        // New notifications are added by Socket.IO events, not bulk-loaded here.
-        // This prevents loading all historical unread messages on every page load/refresh.
+        // Also check for unread session_completed messages and add them as notifications
+        // This ensures students see notifications even if they weren't connected when the message was sent
+        console.log(`🔔 NAVBAR: Checking for unread session_completed messages...`);
+        let addedNotifications = 0;
+        // Check ALL conversations for session_completed messages, not just those with unreadCount > 0
+        // because session_completed might be the only message in a conversation
+        for (const conv of response.conversations) {
+          try {
+            const messagesResponse = await messagingService.getMessages(conv.id, 1, 50);
+            
+            if (messagesResponse.messages && messagesResponse.messages.length > 0) {
+              messagesResponse.messages.forEach(msg => {
+                // Check if this is a session_completed message
+                if (msg.message_type === 'session_completed') {
+                  // Check if current user is NOT the sender (should be student, not tutor)
+                  const isSender = String(msg.sender_id) === String(currentUserId.value);
+                  
+                  if (!isSender) {
+                    // Check if message is already read
+                    // If read_at is set, it means the recipient (current user) has read it
+                    const isAlreadyRead = msg.read_at !== null && msg.read_at !== undefined;
+                    
+                    if (isAlreadyRead) {
+                      console.log(`🔔 NAVBAR: Skipping session_completed message - already read (read_at: ${msg.read_at}):`, msg.id);
+                      return;
+                    }
+                    
+                    // Check if we already have this notification
+                    const existingNotification = notifications.value.find(
+                      (n) => n.id === msg.id
+                    );
+                    
+                    if (!existingNotification) {
+                      console.log(`🔔 NAVBAR: Found unread session_completed message, creating notification:`, msg.id);
+                      
+                      // Parse message content
+                      let messagePreview = "✅ Session marked as completed";
+                      let bookingId = null;
+                      try {
+                        const messageData = JSON.parse(msg.content);
+                        const tutorName = messageData.tutorName || 'Your tutor';
+                        messagePreview = `✅ ${tutorName} marked your session as completed`;
+                        bookingId = messageData.bookingId || null;
+                      } catch (error) {
+                        console.error('Failed to parse session_completed message:', error);
+                      }
+                      
+                      // Create notification
+                      const notification = {
+                        id: msg.id,
+                        icon: "fas fa-check-double text-success",
+                        title: messagePreview,
+                        message: messagePreview,
+                        time: formatTime(msg.created_at),
+                        timestamp: msg.created_at,
+                        conversationId: msg.conversation_id,
+                        bookingId: bookingId,
+                        type: msg.message_type,
+                        unread: true,
+                      };
+                      
+                      // Add to notifications
+                      notifications.value = [notification, ...notifications.value];
+                      addedNotifications++;
+                      console.log(`🔔 NAVBAR: ✅ Added session_completed notification from database`);
+                    }
+                  }
+                }
+              });
+            }
+          } catch (msgError) {
+            console.error(`🔔 NAVBAR: Error checking messages for session_completed:`, msgError);
+          }
+        }
+        
+        if (addedNotifications > 0) {
+          console.log(`🔔 NAVBAR: Added ${addedNotifications} session_completed notification(s) from database`);
+        }
         
         console.log(
           `🔔 NAVBAR: ${conversationsWithUnread.length} conversations have unread messages`
-        );
-        console.log(
-          `🔔 NAVBAR: Skipping bulk-loading of unread messages - Socket.IO will handle new notifications`
         );
 
         // Sort notifications by timestamp (most recent first)
@@ -680,12 +809,12 @@ export default {
           notifications.value = notifications.value.slice(0, 20);
         }
 
-        // Save to localStorage if there were any changes (removed read notifications)
-        if (removedCount > 0) {
+        // Save to localStorage if there were any changes (removed read notifications or added new ones)
+        if (removedCount > 0 || addedNotifications > 0) {
           console.log("🔔 NAVBAR: 💾 Saving notifications after sync");
           saveNotificationsToStorage();
           console.log(
-            `🔔 NAVBAR: ✅ Sync complete - ${removedCount} read notification(s) removed`
+            `🔔 NAVBAR: ✅ Sync complete - ${removedCount} read notification(s) removed, ${addedNotifications} session_completed notification(s) added, total now: ${notifications.value.length}`
           );
         }
       } catch (error) {
@@ -728,14 +857,16 @@ export default {
           message.message_type === 'reschedule_request' ||
           message.message_type === 'reschedule_accepted' ||
           message.message_type === 'reschedule_rejected' ||
-          message.message_type === 'booking_cancelled';
+          message.message_type === 'booking_cancelled' ||
+          message.message_type === 'session_completed';
 
         // For booking-related messages (proposal, confirmation, offer), only notify the receiver (not the sender)
         const isBookingMessage =
           message.message_type === 'booking_cancelled' ||
           message.message_type === 'booking_proposal' ||
           message.message_type === 'booking_confirmation' ||
-          message.message_type === 'booking_offer';
+          message.message_type === 'booking_offer' ||
+          message.message_type === 'session_completed';
 
         // For reschedule requests, only notify the RECEIVER (not the requester/sender)
         const isRescheduleMessage = 
@@ -776,8 +907,20 @@ export default {
             console.log("🔔 NAVBAR: Reschedule request - shouldShow:", shouldShow);
           }
         } else if (isSystemMessage) {
-          // Other system messages: notify receiver
-          shouldShow = !isSender;
+          // Other system messages: notify receiver (not sender)
+          // For session_completed, only show to student (not the tutor who marked it)
+          if (message.message_type === 'session_completed') {
+            shouldShow = !isSender;
+            console.log("🔔 NAVBAR: session_completed MESSAGE DETECTED!");
+            console.log("🔔 NAVBAR: sender_id:", message.sender_id, "(type:", typeof message.sender_id, ")");
+            console.log("🔔 NAVBAR: currentUserId:", currentUserId.value, "(type:", typeof currentUserId.value, ")");
+            console.log("🔔 NAVBAR: isSender:", isSender);
+            console.log("🔔 NAVBAR: userType:", userType.value);
+            console.log("🔔 NAVBAR: shouldShow:", shouldShow);
+            console.log("🔔 NAVBAR: message content:", message.content);
+          } else {
+            shouldShow = !isSender;
+          }
         } else {
           // Regular messages: notify if not from yourself and has sender
           shouldShow = !isSender && message.sender;
@@ -785,7 +928,9 @@ export default {
 
         if (shouldShow) {
           // Check if message has already been read by current user
-          const isAlreadyRead = message.read_at && (
+          // BUT: Don't filter out session_completed messages even if read - they're important status updates
+          const isSessionCompleted = message.message_type === 'session_completed';
+          const isAlreadyRead = !isSessionCompleted && message.read_at && (
             message.read_by?.includes(currentUserId.value) || 
             (Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(currentUserId.value)))
           );
@@ -796,6 +941,10 @@ export default {
               message.id
             );
             return; // Don't add notification if message is already read
+          }
+          
+          if (isSessionCompleted) {
+            console.log("🔔 NAVBAR: ✅ session_completed passed all checks, proceeding to create notification");
           }
 
           console.log("🔔 NAVBAR: Message is from another user or system message, creating notification");
@@ -824,6 +973,14 @@ export default {
             messagePreview = "✅ Booking confirmed";
           } else if (message.message_type === "booking_cancelled") {
             messagePreview = "❌ Booking cancelled";
+          } else if (message.message_type === "session_completed") {
+            try {
+              const messageData = JSON.parse(message.content);
+              const tutorName = messageData.tutorName || 'Your tutor';
+              messagePreview = `✅ ${tutorName} marked your session as completed`;
+            } catch (error) {
+              messagePreview = "✅ Session marked as completed";
+            }
           } else if (message.content) {
             messagePreview = message.content.substring(0, 50);
           } else {
@@ -838,14 +995,17 @@ export default {
             title = `New message from ${senderName}`;
           }
 
-          // Extract bookingId from reschedule_request messages for calendar navigation
+          // Extract bookingId from reschedule and session_completed messages for calendar navigation
           let bookingId = null;
-          if (message.message_type === 'reschedule_request' && message.content) {
+          if ((message.message_type === 'reschedule_request' || 
+               message.message_type === 'reschedule_accepted' || 
+               message.message_type === 'reschedule_rejected' ||
+               message.message_type === 'session_completed') && message.content) {
             try {
               const messageData = JSON.parse(message.content);
               bookingId = messageData.bookingId || null;
             } catch (error) {
-              console.error('Failed to parse reschedule_request message content:', error);
+              console.error('Failed to parse message content:', error);
             }
           }
 
@@ -859,6 +1019,8 @@ export default {
             iconClass = "fas fa-calendar-times text-danger";
           } else if (message.message_type === 'booking_cancelled') {
             iconClass = "fas fa-ban text-danger";
+          } else if (message.message_type === 'session_completed') {
+            iconClass = "fas fa-check-double text-success";
           } else if (isSystemMessage) {
             iconClass = "fas fa-bell";
           }
@@ -885,7 +1047,8 @@ export default {
             time: formatTime(message.created_at),
             timestamp: message.created_at,
             conversationId: message.conversation_id,
-            bookingId: bookingId, // Store bookingId for reschedule_request notifications
+            bookingId: bookingId, // Store bookingId for reschedule_request and session_completed notifications
+            type: message.message_type, // Store message type to filter reschedule responses
             unread: true,
           };
 
@@ -894,8 +1057,21 @@ export default {
           console.log("🔔 NAVBAR: New notification to add:", {
             id: notification.id,
             title: notification.title,
-            type: message.message_type
+            type: message.message_type,
+            messageType: message.message_type,
+            bookingId: bookingId
           });
+          
+          if (message.message_type === 'session_completed') {
+            console.log("🔔 NAVBAR: ⭐⭐⭐ SESSION_COMPLETED NOTIFICATION CREATED ⭐⭐⭐");
+            console.log("🔔 NAVBAR: Notification details:", notification);
+            console.log("🔔 NAVBAR: Message details:", {
+              id: message.id,
+              sender_id: message.sender_id,
+              message_type: message.message_type,
+              content: message.content
+            });
+          }
 
           // Add to beginning of notifications array (most recent first)
           // Create a NEW array to ensure Vue reactivity
@@ -952,18 +1128,24 @@ export default {
           data.conversationId
         );
 
-        // Remove all notifications from this conversation
+        // Remove notifications from this conversation
+        // BUT keep reschedule and session_completed notifications visible - they're important status updates
         const beforeCount = notifications.value.length;
         notifications.value = notifications.value.filter(
-          (n) => n.conversationId !== data.conversationId
+          (n) =>
+            n.conversationId !== data.conversationId ||
+            (n.type === "reschedule_request" ||
+              n.type === "reschedule_accepted" ||
+              n.type === "reschedule_rejected" ||
+              n.type === "session_completed")
         );
         const afterCount = notifications.value.length;
         const removedCount = beforeCount - afterCount;
 
-        if (removedCount > 0) {
-          console.log(
-            `🔔 NAVBAR: Auto-cleared ${removedCount} notification(s) from conversation ${data.conversationId}`
-          );
+          if (removedCount > 0) {
+            console.log(
+              `🔔 NAVBAR: Auto-cleared ${removedCount} notification(s) from conversation ${data.conversationId} (kept reschedule notifications)`
+            );
           saveNotificationsToStorage();
         }
       });
@@ -1014,9 +1196,6 @@ export default {
 
       // Animations disabled
 
-      // Wait for auth and messaging to be ready
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       // Set up message notifications if authenticated
       if (authStore.isAuthenticated) {
         console.log("🔔 NAVBAR: Setting up notifications on mount");
@@ -1025,12 +1204,11 @@ export default {
           messagingService.isConnected
         );
 
-        // Try to set up notifications even if not connected yet
+        // Set up message notifications immediately - don't wait
         // The messaging service will be connected by App.vue
         setupMessageNotifications();
 
         // Load unread messages as notifications
-        await new Promise((resolve) => setTimeout(resolve, 1500));
         await loadUnreadMessagesAsNotifications();
 
         // Retry setup after a delay if service isn't connected
@@ -1058,13 +1236,10 @@ export default {
           console.log("🔔 NAVBAR: User logged in, setting up notifications");
           // Load notifications from storage
           loadNotificationsFromStorage();
-          // Wait a bit for messaging service to connect
-          setTimeout(async () => {
-            setupMessageNotifications();
-            // Load unread messages as notifications after a short delay
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            await loadUnreadMessagesAsNotifications();
-          }, 1000);
+          // Set up notifications immediately - don't wait
+          setupMessageNotifications();
+          // Load unread messages as notifications
+          await loadUnreadMessagesAsNotifications();
         } else {
           // Clean up on logout
           if (messageHandler) {

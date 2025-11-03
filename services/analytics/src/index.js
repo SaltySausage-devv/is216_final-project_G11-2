@@ -262,33 +262,126 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
 
     console.log('📊 ANALYTICS: Found messages:', messages?.length || 0);
 
-    // Calculate metrics (only completed/confirmed bookings for main KPIs)
+    // Calculate metrics according to business requirements
+    console.log('📊 STUDENT ANALYTICS: Calculating metrics with business rules...');
+    
+    // Active Bookings: confirmed bookings with future date (start_time > now)
+    // These are bookings from messages or calendar that are confirmed and scheduled for the future
+    const now = new Date();
+    const activeBookings = allBookings
+      ?.filter(b => {
+        if (b.status !== 'confirmed') return false;
+        if (!b.start_time) return false;
+        const startTime = new Date(b.start_time);
+        return startTime > now; // Future date
+      }) || [];
+
+    console.log('📊 Active Bookings (confirmed future):', activeBookings.length);
+
+    // Completed Sessions: bookings marked as present (attendance_status === 'attended')
+    // These are sessions where attendance was marked as 'attended' in the calendar
+    const completedSessions = allBookings
+      ?.filter(b => b.attendance_status === 'attended').length || 0;
+    
+    console.log('📊 Completed Sessions (attendance marked):', completedSessions);
+    
+    // Other metrics
+    const cancelledSessions = allBookings?.filter(b => b.status === 'cancelled').length || 0;
+    const actualPendingSessions = allBookings?.filter(b => b.status === 'pending').length || 0;
+    
+    // For growth metrics: total sessions = all confirmed/completed bookings
     const totalSessions = allBookings
       ?.filter(b => b.status === 'completed' || b.status === 'confirmed').length || 0;
-    const completedSessions = allBookings?.filter(b => b.status === 'completed').length || 0;
-    const cancelledSessions = allBookings?.filter(b => b.status === 'cancelled').length || 0;
-    const pendingSessions = allBookings?.filter(b => b.status === 'pending').length || 0;
+    
+    console.log('📊 Total Sessions (confirmed/completed):', totalSessions);
 
-    const totalHours = allBookings
-      ?.filter(b => b.status === 'completed' || b.status === 'confirmed')
+    // Hours This Month: from completed sessions (attendance_status === 'attended') in current month
+    // Only sessions where attendance was marked as 'attended' AND the session start_time is in current month
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    currentMonthStart.setHours(0, 0, 0, 0);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    currentMonthEnd.setHours(23, 59, 59, 999);
+
+    console.log('📊 Current month range:', {
+      start: currentMonthStart.toISOString(),
+      end: currentMonthEnd.toISOString(),
+      now: now.toISOString()
+    });
+
+    const bookingsWithAttendanceThisMonth = allBookings
+      ?.filter(b => {
+        // Must have attendance marked as 'attended'
+        if (b.attendance_status !== 'attended') {
+          return false;
+        }
+        // Must have start_time to check the month
+        if (!b.start_time) {
+          console.log('📊 Skipping booking (no start_time):', b.id);
+          return false;
+        }
+        // Check if the session START TIME is in the current month (not when attendance was marked)
+        const sessionStart = new Date(b.start_time);
+        const isInCurrentMonth = sessionStart >= currentMonthStart && sessionStart <= currentMonthEnd;
+        
+        if (!isInCurrentMonth) {
+          console.log('📊 Skipping booking (not in current month):', {
+            id: b.id,
+            start_time: b.start_time,
+            sessionStart: sessionStart.toISOString(),
+            currentMonthStart: currentMonthStart.toISOString(),
+            currentMonthEnd: currentMonthEnd.toISOString()
+          });
+        }
+        
+        return isInCurrentMonth;
+      }) || [];
+
+    console.log('📊 Bookings with attendance this month:', {
+      count: bookingsWithAttendanceThisMonth.length,
+      bookings: bookingsWithAttendanceThisMonth.map(b => ({
+        id: b.id,
+        start_time: b.start_time,
+        end_time: b.end_time,
+        attendance_status: b.attendance_status,
+        attendance_marked_at: b.attendance_marked_at
+      }))
+    });
+
+    const totalHours = bookingsWithAttendanceThisMonth
       ?.reduce((sum, b) => {
         if (b.start_time && b.end_time) {
           const start = new Date(b.start_time);
           const end = new Date(b.end_time);
           const hours = (end - start) / (1000 * 60 * 60);
           // Ensure hours is never negative
-          return sum + Math.max(0, hours);
+          const validHours = Math.max(0, hours);
+          console.log('📊 Adding hours for booking:', {
+            id: b.id,
+            start: start.toISOString(),
+            end: end.toISOString(),
+            hours: validHours
+          });
+          return sum + validHours;
         }
+        console.log('📊 Skipping booking (missing start/end time):', b.id);
         return sum;
       }, 0) || 0;
 
-    const totalSpent = allBookings
-      ?.filter(b => b.status === 'completed' || b.status === 'confirmed')
+    console.log('📊 Total Hours This Month (from attended sessions in current month):', totalHours);
+
+    // Total Spent: total amount from all confirmed bookings (all time, not just current month)
+    // Only confirmed bookings count towards total spent (credits used)
+    const confirmedBookings = allBookings?.filter(b => b.status === 'confirmed') || [];
+    console.log('📊 Confirmed Bookings (for total spent):', confirmedBookings.length);
+
+    const totalSpent = confirmedBookings
       ?.reduce((sum, b) => {
         const amount = parseFloat(b.total_amount) || 0;
         // Ensure spending is never negative
         return sum + Math.max(0, amount);
       }, 0) || 0;
+
+    console.log('📊 Total Spent (credits used for confirmed bookings):', totalSpent);
     const tutorsWorkedWith = new Set(
       allBookings
         ?.filter(b => b.status === 'completed' || b.status === 'confirmed')
@@ -383,7 +476,7 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
       totalSessions,
       completedSessions,
       cancelledSessions,
-      pendingSessions,
+      pendingSessions: activeBookings.length, // Active Bookings: confirmed future bookings for dashboard
       totalHours: totalHours.toFixed(1),
       totalSpent: totalSpent.toFixed(2),
       tutorsWorkedWith,

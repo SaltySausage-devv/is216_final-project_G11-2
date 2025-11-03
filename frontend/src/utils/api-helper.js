@@ -35,9 +35,18 @@ export function getApiUrl(path) {
 
   // In production, construct full URL
   // Extract service name from path: /api/{service}/... or /api/{service}?query
+  // Handle case where /api/ might be duplicated: /api/api/{service}/...
   // Split path to separate pathname from query string
   const [pathname, queryString] = path.split('?')
-  const match = pathname.match(/^\/api\/([^\/]+)/)
+  
+  // Remove any duplicate /api/ prefix first
+  let cleanPath = pathname
+  if (cleanPath.startsWith('/api/api/')) {
+    cleanPath = cleanPath.replace('/api/api/', '/api/')
+    console.warn('⚠️ Detected double /api/ prefix, cleaning:', pathname, '→', cleanPath)
+  }
+  
+  const match = cleanPath.match(/^\/api\/([^\/]+)/)
   
   if (!match) {
     console.warn('❌ API path does not match expected format:', path)
@@ -58,7 +67,7 @@ export function getApiUrl(path) {
   // /api/messaging/conversations -> https://messaging-xxx.railway.app/messaging/conversations
   // For calendar service, strip /calendar prefix from paths that start with /calendar/bookings
   // /api/calendar/bookings/123/reschedule -> https://calendar-service.com/bookings/123/reschedule
-  let apiPath = pathname.replace('/api/', '/')
+  let apiPath = cleanPath.replace('/api/', '/')
   
   // Special case: calendar service routes under /bookings don't use /calendar prefix
   if (serviceName === 'calendar' && apiPath.startsWith('/calendar/bookings')) {

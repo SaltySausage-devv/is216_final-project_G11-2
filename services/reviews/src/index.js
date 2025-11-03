@@ -173,6 +173,38 @@ app.post('/reviews', verifyToken, async (req, res) => {
     // Update tutor's average rating
     await updateTutorRating(tutorId);
 
+    // Create notification for tutor about the new review
+    try {
+      const { createClient } = require('@supabase/supabase-js');
+      const notificationsSupabase = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY
+      );
+
+      await notificationsSupabase
+        .from('notifications')
+        .insert({
+          user_id: tutorId,
+          type: 'push',
+          subject: 'New Review Received',
+          message: `You received a ${rating}-star review${comment ? ' with a comment' : ''}`,
+          data: {
+            notificationType: 'review_received',
+            reviewId: review.id,
+            rating: rating,
+            bookingId: bookingId,
+            studentId: currentUserId
+          },
+          status: 'pending',
+          created_at: new Date().toISOString()
+        });
+
+      console.log('✅ Review notification created for tutor:', tutorId);
+    } catch (notificationError) {
+      console.error('⚠️ Failed to create review notification:', notificationError);
+      // Don't fail the review creation if notification fails
+    }
+
     res.status(201).json({
       message: 'Review created successfully',
       review

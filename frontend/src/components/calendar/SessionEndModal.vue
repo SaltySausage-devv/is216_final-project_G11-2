@@ -49,7 +49,7 @@
             v-if="!showReviewForm && !showAbsentForm"
             class="action-selection"
           >
-            <h6 class="mb-3">What would you like to do?</h6>
+            <h6 class="mb-4">What would you like to do?</h6>
             <div class="action-buttons">
               <button
                 type="button"
@@ -254,43 +254,45 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            v-if="!reviewSubmitted && !absentReported"
-            type="button"
-            class="btn btn-secondary"
-            @click="goBack"
-          >
-            <i class="fas fa-arrow-left me-2"></i>
-            Back
-          </button>
-          <button
-            v-if="showReviewForm && !reviewSubmitted"
-            type="button"
-            class="btn btn-warning"
-            @click="submitReview"
-            :disabled="loading || reviewForm.rating === 0"
-          >
-            <span
-              v-if="loading"
-              class="spinner-border spinner-border-sm me-2"
-            ></span>
-            <i class="fas fa-star me-2"></i>
-            Submit Review
-          </button>
-          <button
-            v-if="showAbsentForm && !absentReported"
-            type="button"
-            class="btn btn-outline-warning"
-            @click="submitAbsentReport"
-            :disabled="loading || !proofPhoto"
-          >
-            <span
-              v-if="loading"
-              class="spinner-border spinner-border-sm me-2"
-            ></span>
-            <i class="fas fa-user-times me-2"></i>
-            Report Absence
-          </button>
+          <div v-if="!reviewSubmitted && !absentReported" class="footer-buttons">
+            <button
+              v-if="showReviewForm || showAbsentForm"
+              type="button"
+              class="btn btn-secondary"
+              @click="goBack"
+            >
+              <i class="fas fa-arrow-left me-2"></i>
+              Back
+            </button>
+            <button
+              v-if="showReviewForm"
+              type="button"
+              class="btn btn-warning"
+              @click="submitReview"
+              :disabled="loading || reviewForm.rating === 0"
+            >
+              <span
+                v-if="loading"
+                class="spinner-border spinner-border-sm me-2"
+              ></span>
+              <i v-else class="fas fa-star me-2"></i>
+              Submit Review
+            </button>
+            <button
+              v-if="showAbsentForm"
+              type="button"
+              class="btn btn-outline-warning"
+              @click="submitAbsentReport"
+              :disabled="loading || !proofPhoto"
+            >
+              <span
+                v-if="loading"
+                class="spinner-border spinner-border-sm me-2"
+              ></span>
+              <i v-else class="fas fa-user-times me-2"></i>
+              Report Absence
+            </button>
+          </div>
           <button
             v-if="reviewSubmitted || absentReported"
             type="button"
@@ -655,6 +657,19 @@ export default {
   .modal-footer {
     flex-shrink: 0;
     padding: clamp(0.75rem, 2vw, 1rem);
+    flex-direction: column;
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+  }
+
+  .footer-buttons {
+    width: 100%;
+    flex-direction: column;
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    margin-bottom: 0;
   }
 
   .action-btn {
@@ -731,12 +746,18 @@ export default {
 
   .modal-footer {
     padding: clamp(0.5rem, 2vw, 0.75rem);
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+  }
+
+  .footer-buttons {
+    width: 100%;
+    flex-direction: column;
+    gap: clamp(0.5rem, 1.5vw, 1rem);
   }
 
   .modal-footer .btn {
     width: 100%;
-    margin-bottom: clamp(0.25rem, 1vw, 0.5rem);
     font-size: clamp(0.85rem, 2vw, 0.9rem);
   }
 
@@ -789,6 +810,16 @@ export default {
   background: #3a3a52;
   border-top: 1px solid rgba(255, 107, 53, 0.2);
   border-radius: 0 0 12px 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+}
+
+.footer-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 .form-label {

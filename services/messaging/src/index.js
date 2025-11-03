@@ -315,7 +315,7 @@ const createConversationSchema = Joi.object({
 const sendMessageSchema = Joi.object({
   conversationId: Joi.string().uuid().required(),
   content: Joi.string().max(1000).required(),
-  messageType: Joi.string().valid('text', 'image', 'file', 'document', 'booking_offer', 'booking_proposal', 'booking_confirmation', 'booking_rejection').default('text'),
+  messageType: Joi.string().valid('text', 'image', 'file', 'document', 'booking_offer', 'booking_proposal', 'booking_confirmation', 'booking_rejection', 'reschedule_request', 'reschedule_accepted', 'reschedule_rejected', 'booking_cancelled', 'attendance_marked', 'session_completed', 'attendance_notification').default('text'),
   bookingOfferId: Joi.string().uuid().allow(null).optional()
 });
 
@@ -323,7 +323,8 @@ const createBookingOfferSchema = Joi.object({
   conversationId: Joi.string().uuid().required(),
   isOnline: Joi.boolean().default(false),
   tuteeLocation: Joi.string().allow(null, '').optional(),
-  notes: Joi.string().max(500).allow(null, '').optional()
+  notes: Joi.string().max(500).allow(null, '').optional(),
+  subject: Joi.string().allow(null, '').optional()
 });
 
 const createBookingProposalSchema = Joi.object({
@@ -567,6 +568,8 @@ app.get('/messaging/conversations/:id/messages', verifyToken, async (req, res) =
 
     const offset = (page - 1) * limit;
 
+    console.log(`📨 Fetching messages for conversation: ${id}`);
+
       const { data: messages, error } = await supabase
         .from('messages')
         .select(`
@@ -583,9 +586,11 @@ app.get('/messaging/conversations/:id/messages', verifyToken, async (req, res) =
         .range(offset, offset + limit - 1);
 
     if (error) {
+      console.error('📨 Messages fetch error:', error);
       throw error;
     }
 
+    console.log(`📨 Fetched ${messages?.length || 0} messages`);
     res.json({ messages: messages.reverse() });
   } catch (error) {
     console.error('Messages fetch error:', error);
@@ -934,12 +939,15 @@ app.get('/messaging/conversations/:id/unread-count', verifyToken, async (req, re
 // Create booking offer
 app.post('/messaging/booking-offers', verifyToken, async (req, res) => {
   try {
+    console.log('📝 BOOKING OFFER: Creating booking offer, request body:', req.body);
     const { error, value } = createBookingOfferSchema.validate(req.body);
     if (error) {
+      console.error('❌ BOOKING OFFER: Validation error:', error.details[0].message);
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { conversationId, isOnline, tuteeLocation, notes } = value;
+    const { conversationId, isOnline, tuteeLocation, notes, subject } = value;
+    console.log('📝 BOOKING OFFER: Parsed values:', { conversationId, isOnline, tuteeLocation, notes, subject });
 
     // Verify user is participant in conversation
     const { data: conversation } = await supabase
@@ -951,6 +959,7 @@ app.post('/messaging/booking-offers', verifyToken, async (req, res) => {
     if (!conversation ||
         (conversation.participant1_id !== req.user.userId &&
          conversation.participant2_id !== req.user.userId)) {
+      console.error('❌ BOOKING OFFER: User is not a participant in conversation');
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -958,30 +967,40 @@ app.post('/messaging/booking-offers', verifyToken, async (req, res) => {
     const tutorId = conversation.participant1_id === req.user.userId ?
                    conversation.participant2_id : conversation.participant1_id;
     const tuteeId = req.user.userId;
+    console.log('📝 BOOKING OFFER: Tutor ID:', tutorId, 'Tutee ID:', tuteeId);
 
     // Create booking offer
+    const bookingOfferData = {
+      conversation_id: conversationId,
+      tutee_id: tuteeId,
+      tutor_id: tutorId,
+      is_online: isOnline,
+      tutee_location: tuteeLocation,
+      notes: notes,
+      subject: subject,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+    console.log('📝 BOOKING OFFER: Inserting data:', JSON.stringify(bookingOfferData, null, 2));
+    
     const { data: bookingOffer, error: insertError } = await supabase
       .from('booking_offers')
-      .insert({
-        conversation_id: conversationId,
-        tutee_id: tuteeId,
-        tutor_id: tutorId,
-        is_online: isOnline,
-        tutee_location: tuteeLocation,
-        notes: notes,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      })
+      .insert(bookingOfferData)
       .select()
       .maybeSingle();
 
     if (insertError) {
+      console.error('❌ BOOKING OFFER: Insert error:', insertError);
+      console.error('❌ BOOKING OFFER: Insert error details:', JSON.stringify(insertError, null, 2));
       throw insertError;
     }
+    
+    console.log('✅ BOOKING OFFER: Successfully created booking offer:', bookingOffer.id);
 
     // Create booking offer message
     const messageContent = JSON.stringify({
       bookingOfferId: bookingOffer.id,
+      subject: subject,
       isOnline: isOnline,
       tuteeLocation: tuteeLocation,
       notes: notes
@@ -1291,14 +1310,14 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       console.log(`💰 Booking credit calculation: ${hourlyRate} credits/hour × ${sessionDurationHours} hours = ${finalTotalAmount} credits`);
     }
 
-    // Get tutor's primary subject for the booking
+    // Get tutor's primary subject for the booking (fallback if no subject selected)
     const { data: tutorProfileData } = await supabase
       .from('tutor_profiles')
       .select('subjects')
       .eq('user_id', bookingOffer.tutor_id)
       .single();
     
-    const primarySubject = tutorProfileData?.subjects?.[0] || 'General Tutoring';
+    const primarySubject = bookingOffer.subject || tutorProfileData?.subjects?.[0] || 'General Tutoring';
     const subjectLevel = tutorProfileData?.subjects?.length > 1 ? 'Multi-Subject' : 'Single Subject';
 
     // Create booking record in bookings table
@@ -1307,8 +1326,8 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       .insert({
         tutor_id: bookingOffer.tutor_id,
         student_id: bookingOffer.tutee_id,
-        title: `${primarySubject} Session`, // Dynamic title based on tutor's subject
-        subject: primarySubject, // Use tutor's primary subject
+        title: `${primarySubject} Session`, // Dynamic title based on selected subject
+        subject: primarySubject, // Use selected subject or tutor's primary subject
         level: subjectLevel, // Dynamic level based on tutor's subjects
         start_time: bookingOffer.proposed_time,
         end_time: bookingOffer.proposed_end_time || new Date(new Date(bookingOffer.proposed_time).getTime() + (bookingOffer.duration || 60) * 60 * 1000), // Use proposed_end_time or calculate from duration
@@ -1414,9 +1433,11 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
           }
         }
 
-        // Deduct credits from student
+        // NOTE: Credits are deducted from student but NOT transferred to tutor yet
+        // Credits will be held in student account and transferred to tutor only after session completion
+        // This prevents tutors from receiving payment for sessions that don't actually happen
         const newStudentCredits = Math.max(0, (student.credits || 0) - creditsUsed);
-        console.log(`💸 Deducting ${creditsUsed} credits from student. Old: ${student.credits}, New: ${newStudentCredits}`);
+        console.log(`💸 Reserving ${creditsUsed} credits from student. Old: ${student.credits}, New: ${newStudentCredits}`);
         
         const { error: studentUpdateError } = await supabase
           .from('users')
@@ -1429,40 +1450,10 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
         if (studentUpdateError) {
           console.error('❌ Error updating student credits:', studentUpdateError);
         } else {
-          console.log('✅ Student credits updated successfully');
+          console.log('✅ Student credits reserved successfully');
         }
 
-        // Add credits to tutor
-        const { data: tutor, error: tutorError } = await supabase
-          .from('users')
-          .select('credits')
-          .eq('id', bookingOffer.tutor_id)
-          .maybeSingle();
-
-        if (tutorError) {
-          console.error('❌ BOOKING CONFIRMATION: Error fetching tutor credits:', tutorError);
-        } else if (!tutor) {
-          console.error('❌ BOOKING CONFIRMATION: Tutor not found');
-        } else {
-          const newTutorCredits = (tutor.credits || 0) + creditsUsed;
-          console.log(`💰 Adding ${creditsUsed} credits to tutor. Old: ${tutor.credits}, New: ${newTutorCredits}`);
-          
-          const { error: tutorUpdateError } = await supabase
-            .from('users')
-            .update({ 
-              credits: newTutorCredits,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', bookingOffer.tutor_id);
-            
-          if (tutorUpdateError) {
-            console.error('❌ Error updating tutor credits:', tutorUpdateError);
-          } else {
-            console.log('✅ Tutor credits updated successfully');
-          }
-        }
-
-        console.log(`✅ Credits transferred: ${creditsUsed} from student to tutor`);
+        console.log(`💰 Credits reserved: ${creditsUsed} credits held until session completion`);
       } catch (creditError) {
         console.error('Error processing credit transaction:', creditError);
         // Don't fail the booking confirmation if credit processing fails
@@ -1473,6 +1464,8 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
     const messageContent = JSON.stringify({
       bookingOfferId: bookingOfferId,
       confirmedTime: bookingOffer.proposed_time,
+      confirmedEndTime: bookingOffer.proposed_end_time,
+      duration: bookingOffer.duration,
       location: bookingOffer.final_location,
       isOnline: bookingOffer.is_online,
       bookingId: createdBooking?.id
@@ -1722,7 +1715,9 @@ app.post('/messaging/system-message', verifyToken, async (req, res) => {
     const isSystemMessage = messageType === 'booking_cancelled' || 
                            messageType === 'reschedule_request' || 
                            messageType === 'reschedule_accepted' || 
-                           messageType === 'reschedule_rejected';
+                           messageType === 'reschedule_rejected' ||
+                           messageType === 'session_completed' ||
+                           messageType === 'attendance_notification';
 
     if (!isSystemMessage && 
         (conversation.participant1_id !== req.user.userId && 
@@ -1758,6 +1753,28 @@ app.post('/messaging/system-message', verifyToken, async (req, res) => {
       throw insertError;
     }
 
+    // For system messages (like session_completed), ensure both participants are in the room
+    // and send directly to them if connected
+    if (isSystemMessage) {
+      const participants = [conversation.participant1_id, conversation.participant2_id];
+      console.log(`📢 System message ${messageType}: Ensuring participants are in room and broadcasting`);
+      
+      participants.forEach(participantId => {
+        const socket = activeConnections.get(participantId);
+        if (socket) {
+          // Automatically join them to the conversation room
+          socket.join(`conversation_${conversationId}`);
+          console.log(`📢 Auto-joined user ${participantId} to conversation room: conversation_${conversationId}`);
+          
+          // Send directly to their socket
+          console.log(`📢 Sending ${messageType} directly to user ${participantId}`);
+          socket.emit('new_message', message);
+        } else {
+          console.log(`📢 User ${participantId} not currently connected`);
+        }
+      });
+    }
+    
     // Broadcast message to conversation room via Socket.IO
     console.log(`📢 Broadcasting ${messageType} message to room: conversation_${conversationId}`);
     io.to(`conversation_${conversationId}`).emit('new_message', message);
@@ -1768,6 +1785,8 @@ app.post('/messaging/system-message', verifyToken, async (req, res) => {
                               messageType === 'reschedule_accepted' ? 'Reschedule request accepted' :
                               messageType === 'reschedule_rejected' ? 'Reschedule request declined' : 
                               messageType === 'booking_cancelled' ? 'Booking cancelled' :
+                              messageType === 'session_completed' ? 'Session completed' :
+                              messageType === 'attendance_notification' ? 'Attendance marked' :
                               'New message';
 
     await supabase

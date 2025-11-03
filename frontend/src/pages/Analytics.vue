@@ -1,6 +1,6 @@
 <template>
   <div class="analytics-page">
-    <div class="container py-5">
+    <div class="container pt-4 pt-lg-5 pb-3 pb-lg-4">
       <!-- Header Section -->
       <div class="row mb-5">
         <div class="col-12">

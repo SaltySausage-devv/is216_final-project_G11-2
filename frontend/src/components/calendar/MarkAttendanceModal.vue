@@ -237,7 +237,7 @@ export default {
 
     // Computed properties
     const canSubmit = computed(() => {
-      return attendanceStatus.value; // Temporarily removed proof photo requirement
+      return attendanceStatus.value && proofPhoto.value; // Photo is now required
     });
 
     // Methods
@@ -438,6 +438,7 @@ export default {
         // Close modal after a short delay to show success message
         setTimeout(() => {
           emit("attendance-marked", result);
+          emit("close");
         }, 2000);
       } catch (error) {
         console.error("Error marking attendance:", error);

@@ -1,5 +1,5 @@
 <template>
-  <footer class="cyberpunk-footer text-light py-5 mt-5">
+  <footer class="cyberpunk-footer text-light py-5 mt-3">
     <div class="container">
       <div class="row">
         <div class="col-lg-4 mb-4">
