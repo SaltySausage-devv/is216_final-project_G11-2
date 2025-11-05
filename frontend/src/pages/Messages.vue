@@ -8049,7 +8049,7 @@ i.text-primary {
 /* Reduce whitespace above footer on messages page */
 body:has(.messages-page) footer.cyberpunk-footer {
   margin-top: 0 !important;
-  padding-top: 1.5rem !important;
+  padding-top: 3rem !important;
 }
 
 /* Remove any extra spacing from main element when messages page is active */

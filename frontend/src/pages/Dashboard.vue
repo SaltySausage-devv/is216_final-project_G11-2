@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-page">
-    <div class="container pt-4 pt-lg-5 pb-3 pb-lg-4">
+    <div class="container pt-4 pt-lg-5 pb-0 pb-lg-0">
       <!-- Welcome Section -->
       <motion.div
         :initial="{ opacity: 0, y: 30 }"
@@ -82,9 +82,9 @@
         :initial="{ opacity: 0, y: 30 }"
         :animate="{ opacity: 1, y: 0 }"
         :transition="{ duration: 0.6, delay: 0.2 }"
-        class="row"
+        class="row mb-0"
       >
-        <div class="col-lg-8 mb-4">
+        <div class="col-lg-8 mb-4 mb-lg-0">
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-bottom">
               <h5 class="fw-bold mb-0">
@@ -128,7 +128,7 @@
             :initial="{ opacity: 0, y: 30 }"
             :animate="{ opacity: 1, y: 0 }"
             :transition="{ duration: 0.6, delay: 0.3 }"
-            class="card border-0 shadow-sm mb-4"
+            class="card border-0 shadow-sm mb-0"
           >
             <div class="card-header bg-white border-bottom">
               <h5 class="fw-bold mb-0">
@@ -1717,8 +1717,15 @@ export default {
 <style scoped>
 .dashboard-page {
   background: #1a1a1a !important;
-  min-height: 100vh;
+  min-height: calc(100vh - 250px);
   color: var(--cyber-text, #ffffff);
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.dashboard-page .container {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 /* Cards */
@@ -1944,5 +1951,24 @@ i.text-primary {
 /* Small text */
 small {
   color: var(--cyber-text-muted, #cccccc) !important;
+}
+</style>
+
+<style>
+/* Reduce whitespace above footer on dashboard page */
+body:has(.dashboard-page) footer.cyberpunk-footer {
+  margin-top: 0 !important;
+  padding-top: 3rem !important;
+}
+
+/* Remove any extra spacing from main element when dashboard page is active */
+body:has(.dashboard-page) main {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Ensure dashboard-page container has no bottom spacing */
+.dashboard-page > .container {
+  margin-bottom: 0 !important;
 }
 </style>
