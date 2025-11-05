@@ -1361,7 +1361,7 @@ export default {
     const setupNavbarInteractions = () => {
       // All animations disabled
       
-      // Disable notification dropdown for 900px-1100px screen widths
+      // Disable notification dropdown for 900px-1200px screen widths
       const disableNotificationDropdown = () => {
         const width = window.innerWidth;
         const notificationToggles = document.querySelectorAll(
@@ -1376,7 +1376,7 @@ export default {
             notificationClickHandlers.delete(toggle);
           }
 
-          if (width >= 900 && width <= 1100) {
+          if (width >= 900 && width <= 1200) {
             // Create new handler for this screen width
             const handler = (e) => {
               e.preventDefault();
@@ -2061,8 +2061,8 @@ export default {
   }
 }
 
-/* Disable dropdown for 900px-1100px screen widths */
-@media (min-width: 900px) and (max-width: 1100px) {
+/* Disable dropdown for 900px-1200px screen widths */
+@media (min-width: 900px) and (max-width: 1200px) {
   /* Disable mobile notification dropdown */
   .navbar-notification-container .dropdown-menu {
     display: none !important;
@@ -2076,6 +2076,19 @@ export default {
     display: none !important;
   }
 
+  /* Prevent underline on notification link */
+  .navbar-notification-container .nav-link {
+    text-decoration: none !important;
+  }
+
+  .navbar-notification-container .nav-link:hover {
+    text-decoration: none !important;
+  }
+
+  .navbar-notification-container .nav-link:focus {
+    text-decoration: none !important;
+  }
+
   /* Disable desktop notification dropdown */
   .navbar-nav .nav-item.dropdown .notifications-dropdown {
     display: none !important;
@@ -2083,6 +2096,19 @@ export default {
 
   .navbar-nav .nav-item.dropdown.show .notifications-dropdown {
     display: none !important;
+  }
+
+  /* Prevent underline on desktop notification link */
+  .navbar-nav .nav-item.dropdown .nav-link {
+    text-decoration: none !important;
+  }
+
+  .navbar-nav .nav-item.dropdown .nav-link:hover {
+    text-decoration: none !important;
+  }
+
+  .navbar-nav .nav-item.dropdown .nav-link:focus {
+    text-decoration: none !important;
   }
 }
 
