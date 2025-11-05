@@ -766,8 +766,11 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
       const dayEnd = new Date(date);
       dayEnd.setHours(23, 59, 59, 999);
       
-      const dayEarnings = allConfirmedBookings
+      // Chart earnings: Only from bookings where attendance was marked as 'attended'
+      // This ensures chart data matches the main earnings metric
+      const dayEarnings = attendedBookings
         ?.filter(booking => {
+          if (!booking.start_time) return false;
           const bookingDate = new Date(booking.start_time);
           return bookingDate >= dayStart && bookingDate <= dayEnd;
         })

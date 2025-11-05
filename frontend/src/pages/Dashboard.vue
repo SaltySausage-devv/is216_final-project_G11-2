@@ -360,7 +360,9 @@ export default {
                       message.message_type === "booking_proposal" ||
                       message.message_type === "booking_confirmation" ||
                       message.message_type === "booking_offer" ||
-                      message.message_type === "session_completed";
+                      message.message_type === "session_completed" ||
+                      message.message_type === "credit_deducted" ||
+                      message.message_type === "credit_added";
                     
                     // Include booking_offer, booking_proposal, and booking_confirmation for both sender and receiver
                     // This ensures both parties see confirmations and can match them with their requests/proposals
@@ -675,6 +677,36 @@ export default {
             // For now, set as Unread - will be updated if confirmation is found during merge
             status = "Unread";
             badgeClass = "bg-warning";
+          } else if (messageType === "credit_deducted") {
+            // Credits deducted from student when booking is confirmed
+            try {
+              const messageData = typeof message.content === "string" ? JSON.parse(message.content) : message.content || {};
+              const creditsAmount = messageData.creditsAmount || messageData.credits || 0;
+              icon = "fas fa-minus-circle";
+              title = creditsAmount > 0 ? `Credits deducted: ${creditsAmount} credits` : "Credits deducted";
+              status = "Completed";
+              badgeClass = "bg-success";
+            } catch (e) {
+              icon = "fas fa-minus-circle";
+              title = "Credits deducted";
+              status = "Completed";
+              badgeClass = "bg-success";
+            }
+          } else if (messageType === "credit_added") {
+            // Credits added to tutor when session is completed
+            try {
+              const messageData = typeof message.content === "string" ? JSON.parse(message.content) : message.content || {};
+              const creditsAmount = messageData.creditsAmount || messageData.creditsTransfered || messageData.credits || 0;
+              icon = "fas fa-plus-circle";
+              title = creditsAmount > 0 ? `Credits added: ${creditsAmount} credits` : "Credits added";
+              status = "Completed";
+              badgeClass = "bg-success";
+            } catch (e) {
+              icon = "fas fa-plus-circle";
+              title = "Credits added";
+              status = "Completed";
+              badgeClass = "bg-success";
+            }
           } else if (messageType === "session_completed") {
             icon = "fas fa-check-circle";
             title = userType.value === "tutor" ? "Session completed - credits added" : "Session marked as completed";
@@ -999,6 +1031,36 @@ export default {
           // For now, set as Unread - will be updated if confirmation is found during merge
           status = "Unread";
           badgeClass = "bg-warning";
+        } else if (messageType === "credit_deducted") {
+          // Credits deducted from student when booking is confirmed
+          try {
+            const messageData = typeof messageContent === "string" ? JSON.parse(messageContent) : messageContent || {};
+            const creditsAmount = messageData.creditsAmount || messageData.credits || 0;
+            icon = "fas fa-minus-circle";
+            title = creditsAmount > 0 ? `Credits deducted: ${creditsAmount} credits` : "Credits deducted";
+            status = "Completed";
+            badgeClass = "bg-success";
+          } catch (e) {
+            icon = "fas fa-minus-circle";
+            title = "Credits deducted";
+            status = "Completed";
+            badgeClass = "bg-success";
+          }
+        } else if (messageType === "credit_added") {
+          // Credits added to tutor when session is completed
+          try {
+            const messageData = typeof messageContent === "string" ? JSON.parse(messageContent) : messageContent || {};
+            const creditsAmount = messageData.creditsAmount || messageData.creditsTransfered || messageData.credits || 0;
+            icon = "fas fa-plus-circle";
+            title = creditsAmount > 0 ? `Credits added: ${creditsAmount} credits` : "Credits added";
+            status = "Completed";
+            badgeClass = "bg-success";
+          } catch (e) {
+            icon = "fas fa-plus-circle";
+            title = "Credits added";
+            status = "Completed";
+            badgeClass = "bg-success";
+          }
         } else if (messageType === "session_completed") {
           try {
             const messageData = typeof messageContent === "string" ? JSON.parse(messageContent) : messageContent || {};
@@ -1109,7 +1171,9 @@ export default {
           message.message_type === "booking_proposal" ||
           message.message_type === "booking_confirmation" ||
           message.message_type === "booking_offer" ||
-          message.message_type === "session_completed";
+          message.message_type === "session_completed" ||
+          message.message_type === "credit_deducted" ||
+          message.message_type === "credit_added";
 
         const isSender = String(message.sender_id) === String(userId.value);
 

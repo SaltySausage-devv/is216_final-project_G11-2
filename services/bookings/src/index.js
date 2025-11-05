@@ -1170,6 +1170,31 @@ app.post('/booking-confirmations', verifyToken, async (req, res) => {
       console.error('Failed to create confirmation message:', messageError);
     }
 
+    // Create credit deduction message for student (only if credits were deducted)
+    if (student.user_type === 'student' && totalAmount > 0) {
+      const creditDeductionContent = JSON.stringify({
+        bookingId: finalBooking?.id || null,
+        creditsAmount: totalAmount,
+        bookingOfferId: bookingOfferId
+      });
+
+      const { error: creditMessageError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: bookingOffer.conversation_id,
+          sender_id: currentUserId, // Student is the sender
+          content: creditDeductionContent,
+          message_type: 'credit_deducted',
+          booking_offer_id: bookingOfferId
+        });
+
+      if (creditMessageError) {
+        console.error('Failed to create credit deduction message:', creditMessageError);
+      } else {
+        console.log(`✅ Credit deduction message created: ${totalAmount} credits deducted from student`);
+      }
+    }
+
     res.status(201).json({
       message: 'Booking confirmed successfully',
       bookingOffer: confirmedOffer,
@@ -1483,7 +1508,45 @@ app.post('/bookings/:bookingId/complete', verifyToken, async (req, res) => {
 
           if (sent) {
             console.log(`✅ Completion notification sent successfully via messaging service (broadcasted via Socket.IO)`);
-          } else {
+          }
+
+          // Also create a separate credit addition message for tutor (only if credits were added)
+          if (creditsAmount > 0) {
+            const creditAdditionContent = JSON.stringify({
+              bookingId: booking.id,
+              creditsAmount: creditsAmount,
+              creditsTransfered: creditsAmount
+            });
+
+            try {
+              const creditSent = await sendMessageViaMessagingService(
+                conversationId,
+                creditAdditionContent,
+                'credit_added',
+                authToken
+              );
+
+              if (creditSent) {
+                console.log(`✅ Credit addition message sent: ${creditsAmount} credits added to tutor`);
+              } else {
+                // Fallback: insert directly to database
+                await supabase
+                  .from('messages')
+                  .insert({
+                    conversation_id: conversationId,
+                    sender_id: req.user.userId,
+                    content: creditAdditionContent,
+                    message_type: 'credit_added',
+                    created_at: new Date().toISOString()
+                  });
+                console.log(`✅ Credit addition message inserted directly to database`);
+              }
+            } catch (creditError) {
+              console.error('❌ Failed to send credit addition message:', creditError);
+            }
+          }
+
+          if (!sent) {
             console.error('❌ Messaging service call returned false - message may not have been sent');
             // Still try to insert to database as fallback - student can see it when they load messages
             const { data: directMessage, error: messageError } = await supabase
