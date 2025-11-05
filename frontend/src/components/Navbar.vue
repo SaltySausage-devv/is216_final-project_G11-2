@@ -1375,12 +1375,12 @@ export default {
         lastClickTarget = e.target;
       };
       
-      // Prevent auto-collapse for notification dropdown at 992px-1200px screen widths
+      // Prevent auto-collapse for notification dropdown at 996px-1200px screen widths
       const preventAutoCollapse = () => {
         const width = window.innerWidth;
         
         // Remove existing document click listener if outside range
-        if (trackClickHandler && trackClickActive && (width < 992 || width > 1200)) {
+        if (trackClickHandler && trackClickActive && (width < 996 || width > 1200)) {
           document.removeEventListener('click', trackClickHandler, true);
           trackClickActive = false;
         }
@@ -1401,7 +1401,7 @@ export default {
           }
         });
         
-        if (width >= 992 && width <= 1200) {
+        if (width >= 996 && width <= 1200) {
           // Add document click listener to track clicks (only if not already added)
           if (trackClickHandler && !trackClickActive) {
             document.addEventListener('click', trackClickHandler, true);
@@ -2107,13 +2107,21 @@ export default {
   }
 }
 
-/* Prevent auto-collapse and underline for dropdown at 992px-1200px screen widths */
-@media (min-width: 992px) and (max-width: 1200px) {
+/* Prevent auto-collapse and underline for dropdown at 996px-1200px screen widths */
+@media (min-width: 996px) and (max-width: 1200px) {
   /* Prevent underline on notification link (mobile) - including when dropdown is open */
   .navbar-notification-container .dropdown.show .nav-link,
   .navbar-notification-container .dropdown.show .nav-link *,
   .navbar-notification-container .dropdown.show .nav-link::before,
   .navbar-notification-container .dropdown.show .nav-link::after,
+  .navbar-notification-container .dropdown[aria-expanded="true"] .nav-link,
+  .navbar-notification-container .dropdown[aria-expanded="true"] .nav-link *,
+  .navbar-notification-container .dropdown[aria-expanded="true"] .nav-link::before,
+  .navbar-notification-container .dropdown[aria-expanded="true"] .nav-link::after,
+  .navbar-notification-container .nav-link[aria-expanded="true"],
+  .navbar-notification-container .nav-link[aria-expanded="true"] *,
+  .navbar-notification-container .nav-link[aria-expanded="true"]::before,
+  .navbar-notification-container .nav-link[aria-expanded="true"]::after,
   .navbar-notification-container .nav-link,
   .navbar-notification-container .nav-link *,
   .navbar-notification-container .nav-link::before,
@@ -2195,6 +2203,14 @@ export default {
   .navbar-nav .nav-item.dropdown.show .nav-link *,
   .navbar-nav .nav-item.dropdown.show .nav-link::before,
   .navbar-nav .nav-item.dropdown.show .nav-link::after,
+  .navbar-nav .nav-item.dropdown[aria-expanded="true"] .nav-link,
+  .navbar-nav .nav-item.dropdown[aria-expanded="true"] .nav-link *,
+  .navbar-nav .nav-item.dropdown[aria-expanded="true"] .nav-link::before,
+  .navbar-nav .nav-item.dropdown[aria-expanded="true"] .nav-link::after,
+  .navbar-nav .nav-item.dropdown .nav-link[aria-expanded="true"],
+  .navbar-nav .nav-item.dropdown .nav-link[aria-expanded="true"] *,
+  .navbar-nav .nav-item.dropdown .nav-link[aria-expanded="true"]::before,
+  .navbar-nav .nav-item.dropdown .nav-link[aria-expanded="true"]::after,
   .navbar-nav .nav-item.dropdown .nav-link,
   .navbar-nav .nav-item.dropdown .nav-link *,
   .navbar-nav .nav-item.dropdown .nav-link::before,
@@ -2269,6 +2285,34 @@ export default {
     text-decoration-line: none !important;
     text-decoration-style: none !important;
     text-decoration-color: transparent !important;
+  }
+
+  /* Catch-all: Prevent ANY underline on notification links regardless of state */
+  .navbar-notification-container .nav-link,
+  .navbar-notification-container .nav-link *,
+  .navbar-notification-container .nav-link::before,
+  .navbar-notification-container .nav-link::after,
+  .navbar-notification-container .dropdown.show .nav-link,
+  .navbar-notification-container .dropdown.show .nav-link *,
+  .navbar-notification-container .dropdown.show .nav-link::before,
+  .navbar-notification-container .dropdown.show .nav-link::after,
+  .navbar-nav .nav-item.dropdown .nav-link,
+  .navbar-nav .nav-item.dropdown .nav-link *,
+  .navbar-nav .nav-item.dropdown .nav-link::before,
+  .navbar-nav .nav-item.dropdown .nav-link::after,
+  .navbar-nav .nav-item.dropdown.show .nav-link,
+  .navbar-nav .nav-item.dropdown.show .nav-link *,
+  .navbar-nav .nav-item.dropdown.show .nav-link::before,
+  .navbar-nav .nav-item.dropdown.show .nav-link::after {
+    text-decoration: none !important;
+    text-decoration-line: none !important;
+    text-decoration-style: none !important;
+    text-decoration-color: transparent !important;
+    border-bottom: none !important;
+    border-top: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-width: 0 !important;
   }
 }
 
