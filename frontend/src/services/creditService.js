@@ -163,11 +163,26 @@ export function useCreditService() {
   /**
    * Refresh user data to get latest credit balance
    * This should be called after credit transactions
+   * @param {number} delay - Delay in milliseconds before refreshing (default: 500ms)
    */
-  const refreshCredits = async () => {
+  const refreshCredits = async (delay = 500) => {
     try {
       console.log('🔄 Refreshing credit balance...')
+      
+      // Add a small delay to ensure database update has completed
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+      
+      // Refresh user data
       await authStore.refreshUserData()
+      
+      // Force an additional refresh after a short delay to ensure we get the latest data
+      setTimeout(async () => {
+        await authStore.refreshUserData()
+        console.log('✅ Credit balance refreshed (second pass)')
+      }, 1000)
+      
       console.log('✅ Credit balance refreshed')
     } catch (error) {
       console.error('❌ Error refreshing credits:', error)

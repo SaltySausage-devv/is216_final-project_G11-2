@@ -9,6 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
     const isLoggingOut = ref(false) // Flag to prevent auth listener interference during logout
     let authSubscription = null // Store subscription to prevent duplicates
     let userSubscription = null // Store user data subscription for real-time updates
+    let creditsPollInterval = null // Polling interval for credits updates
 
     const isAuthenticated = computed(() => {
         // Consider authenticated if we have a valid session
@@ -334,6 +335,73 @@ export const useAuthStore = defineStore('auth', () => {
             })
 
         console.log('✅ User subscription setup complete')
+        
+        // Also set up polling as a fallback if real-time doesn't work
+        startCreditsPolling(userId)
+    }
+    
+    const startCreditsPolling = (userId) => {
+        // Clear existing polling interval
+        if (creditsPollInterval) {
+            clearInterval(creditsPollInterval)
+            creditsPollInterval = null
+        }
+        
+        if (!userId) {
+            return
+        }
+        
+        console.log('🔄 Starting credits polling as fallback...')
+        
+        // Poll every 3 seconds for credit updates
+        creditsPollInterval = setInterval(async () => {
+            if (!user.value?.id) {
+                clearInterval(creditsPollInterval)
+                creditsPollInterval = null
+                return
+            }
+            
+            try {
+                // Fetch only credits to minimize data transfer
+                const { data: userCredits, error } = await supabase
+                    .from('users')
+                    .select('credits')
+                    .eq('id', userId)
+                    .single()
+                
+                if (!error && userCredits && user.value) {
+                    const currentCredits = user.value.credits || 0
+                    const newCredits = userCredits.credits || 0
+                    
+                    // Only update if credits actually changed
+                    if (Math.abs(currentCredits - newCredits) > 0.01) {
+                        console.log('💰 Credits changed via polling:', {
+                            oldCredits: currentCredits,
+                            newCredits: newCredits
+                        })
+                        
+                        // Update credits while preserving other user data
+                        user.value = {
+                            ...user.value,
+                            credits: newCredits
+                        }
+                        
+                        // Force reactivity update
+                        user.value = { ...user.value }
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error polling credits:', error)
+            }
+        }, 3000) // Poll every 3 seconds
+    }
+    
+    const stopCreditsPolling = () => {
+        if (creditsPollInterval) {
+            clearInterval(creditsPollInterval)
+            creditsPollInterval = null
+            console.log('🛑 Credits polling stopped')
+        }
     }
 
     const refreshUserData = async () => {
@@ -358,13 +426,40 @@ export const useAuthStore = defineStore('auth', () => {
             }
 
             if (freshUserData) {
-                const oldCredits = user.value.credits
-                user.value = freshUserData
+                const oldCredits = user.value?.credits || 0
+                
+                // If user is a tutor, fetch penalty points from tutor_profiles
+                if (freshUserData.user_type === 'tutor') {
+                    const { data: tutorProfile, error: tutorProfileError } = await supabase
+                        .from('tutor_profiles')
+                        .select('penalty_points')
+                        .eq('user_id', user.value.id)
+                        .single()
+
+                    if (!tutorProfileError && tutorProfile) {
+                        freshUserData.penalty_points = tutorProfile.penalty_points || 0
+                    } else {
+                        freshUserData.penalty_points = 0
+                    }
+                } else {
+                    freshUserData.penalty_points = 0
+                }
+                
+                // Update user data - this should trigger reactivity
+                user.value = { ...freshUserData }
+                
                 console.log('✅ User data refreshed:', {
                     oldCredits,
                     newCredits: user.value.credits,
-                    fullUser: user.value
+                    creditsChanged: oldCredits !== user.value.credits
                 })
+                
+                // Force Vue reactivity by triggering a re-render
+                if (oldCredits !== user.value.credits) {
+                    console.log('💰 Credits changed! Forcing reactivity update')
+                    // Trigger reactivity by updating the ref
+                    user.value = { ...user.value }
+                }
             }
         } catch (error) {
             console.error('❌ Error in refreshUserData:', error)
@@ -387,6 +482,9 @@ export const useAuthStore = defineStore('auth', () => {
             userSubscription.unsubscribe()
             userSubscription = null
         }
+        
+        // Stop credits polling
+        stopCreditsPolling()
 
         try {
             // Sign out from Supabase and wait for it
@@ -514,6 +612,8 @@ export const useAuthStore = defineStore('auth', () => {
                         userSubscription.unsubscribe()
                         userSubscription = null
                     }
+                    // Stop credits polling
+                    stopCreditsPolling()
                 }
             })
 
@@ -655,6 +755,7 @@ export const useAuthStore = defineStore('auth', () => {
             userSubscription.unsubscribe()
             userSubscription = null
         }
+        stopCreditsPolling()
         console.log('🧹 Auth store cleaned up')
     }
 
