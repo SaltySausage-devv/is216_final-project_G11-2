@@ -1375,38 +1375,59 @@ export default {
         lastClickTarget = e.target;
       };
 
-      // Prevent navbar collapse at 996px-1200px
+      // Prevent navbar collapse at 996px-1200px - AGGRESSIVE OVERRIDE
       const preventNavbarCollapse = () => {
         const width = window.innerWidth;
         if (width >= 996 && width <= 1200) {
           const navbarCollapse = document.getElementById("navbarNav");
           if (navbarCollapse) {
-            // Force navbar to stay expanded
+            // AGGRESSIVE: Force navbar to stay expanded with inline styles
             navbarCollapse.classList.add("show");
-            navbarCollapse.style.display = "flex";
-            navbarCollapse.style.overflow = "visible";
-            navbarCollapse.style.maxHeight = "none";
-            navbarCollapse.style.height = "auto";
+            navbarCollapse.classList.remove("collapse", "collapsing");
+            navbarCollapse.style.cssText = "display: flex !important; flex-basis: auto !important; flex-grow: 1 !important; overflow: visible !important; max-height: none !important; height: auto !important; visibility: visible !important; opacity: 1 !important; position: static !important; transform: none !important; transition: none !important;";
             
-            // Prevent Bootstrap collapse from working
-            const navbarToggler = document.querySelector(".navbar-toggler");
-            if (navbarToggler) {
-              navbarToggler.style.display = "none";
+            // Hide all togglers
+            const navbarTogglers = document.querySelectorAll(".navbar-toggler, .cyberpunk-hamburger, button[data-bs-toggle='collapse']");
+            navbarTogglers.forEach(toggler => {
+              toggler.style.cssText = "display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;";
               // Disable toggle functionality
-              navbarToggler.addEventListener('click', (e) => {
+              toggler.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-              });
+                e.stopImmediatePropagation();
+                return false;
+              }, true);
+            });
+
+            // Hide mobile nav items
+            const mobileNavItems = document.querySelector(".mobile-nav-items");
+            if (mobileNavItems) {
+              mobileNavItems.style.cssText = "display: none !important;";
             }
 
-            // Remove collapsing class if it exists
-            navbarCollapse.classList.remove("collapsing");
+            // Force navbar to be visible
+            const navbar = document.querySelector(".navbar");
+            if (navbar) {
+              navbar.style.cssText = "overflow: visible !important; max-height: none !important; height: auto !important;";
+            }
+
+            // Prevent Bootstrap collapse instances from working
+            if (window.bootstrap && window.bootstrap.Collapse) {
+              const collapseInstances = bootstrap.Collapse.getInstance(navbarCollapse);
+              if (collapseInstances) {
+                collapseInstances.dispose();
+              }
+            }
           }
         } else {
           // Restore normal behavior outside range
-          const navbarToggler = document.querySelector(".navbar-toggler");
-          if (navbarToggler) {
-            navbarToggler.style.display = "";
+          const navbarTogglers = document.querySelectorAll(".navbar-toggler, .cyberpunk-hamburger");
+          navbarTogglers.forEach(toggler => {
+            toggler.style.cssText = "";
+          });
+          const mobileNavItems = document.querySelector(".mobile-nav-items");
+          if (mobileNavItems) {
+            mobileNavItems.style.cssText = "";
           }
         }
       };
@@ -1486,6 +1507,47 @@ export default {
       setTimeout(() => {
         preventNavbarCollapse();
         preventAutoCollapse();
+        
+        // Set up MutationObserver to catch any Bootstrap changes
+        const navbarCollapse = document.getElementById("navbarNav");
+        if (navbarCollapse && window.innerWidth >= 996 && window.innerWidth <= 1200) {
+          const observer = new MutationObserver((mutations) => {
+            const width = window.innerWidth;
+            if (width >= 996 && width <= 1200) {
+              preventNavbarCollapse();
+              // Force styles immediately
+              navbarCollapse.classList.add("show");
+              navbarCollapse.classList.remove("collapse", "collapsing");
+              navbarCollapse.style.cssText = "display: flex !important; flex-basis: auto !important; flex-grow: 1 !important; overflow: visible !important; max-height: none !important; height: auto !important; visibility: visible !important; opacity: 1 !important; position: static !important; transform: none !important; transition: none !important;";
+            }
+          });
+          
+          observer.observe(navbarCollapse, {
+            attributes: true,
+            attributeFilter: ['class', 'style'],
+            childList: false,
+            subtree: false
+          });
+          
+          // Also observe navbar itself
+          const navbar = document.querySelector(".navbar");
+          if (navbar) {
+            observer.observe(navbar, {
+              attributes: true,
+              attributeFilter: ['class', 'style'],
+              childList: false,
+              subtree: false
+            });
+          }
+        }
+        
+        // Run periodically to catch any changes
+        setInterval(() => {
+          const width = window.innerWidth;
+          if (width >= 996 && width <= 1200) {
+            preventNavbarCollapse();
+          }
+        }, 100);
       }, 100);
       
       // Store resize handler reference
@@ -2150,41 +2212,65 @@ export default {
 
 /* Prevent navbar collapse and scrollable behavior at 996px-1200px screen widths */
 @media (min-width: 996px) and (max-width: 1200px) {
-  /* Force navbar to stay expanded - prevent collapse */
-  .navbar-collapse {
+  /* Force navbar to stay expanded - prevent collapse - COMPLETE OVERRIDE */
+  .navbar-collapse,
+  .navbar-collapse.collapse,
+  .navbar-collapse.collapsing,
+  .navbar-collapse.show,
+  #navbarNav,
+  #navbarNav.collapse,
+  #navbarNav.collapsing,
+  #navbarNav.show {
     display: flex !important;
     flex-basis: auto !important;
     flex-grow: 1 !important;
     overflow: visible !important;
     max-height: none !important;
     height: auto !important;
-  }
-
-  .navbar-collapse.collapse {
-    display: flex !important;
-  }
-
-  .navbar-collapse.collapsing {
-    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: static !important;
+    transform: none !important;
     transition: none !important;
   }
 
-  /* Hide navbar toggler */
-  .navbar-toggler {
+  /* Hide navbar toggler completely */
+  .navbar-toggler,
+  .cyberpunk-hamburger,
+  button[data-bs-toggle="collapse"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Hide mobile nav items container */
+  .mobile-nav-items {
     display: none !important;
   }
 
   /* Prevent navbar from being scrollable */
-  .navbar {
+  .navbar,
+  nav.navbar {
     overflow: visible !important;
     max-height: none !important;
+    height: auto !important;
   }
 
   /* Ensure all nav items are visible */
-  .navbar-nav {
+  .navbar-nav,
+  .navbar-nav.me-auto {
     display: flex !important;
     flex-direction: row !important;
     overflow: visible !important;
+    max-height: none !important;
+    flex-wrap: nowrap !important;
+  }
+
+  /* Force desktop items to show */
+  .d-none.d-lg-block,
+  .d-lg-block {
+    display: block !important;
   }
 
   /* Prevent auto-collapse and underline for dropdown */
