@@ -830,7 +830,7 @@ export default {
           // Match by bookingId if available, otherwise match by timestamp proximity
           existingActivityMap.forEach((activity, key) => {
             const isRescheduleRequest = 
-              (activity.title && (activity.title.includes("Reschedule booking request") || activity.title.includes("Reschedule booking"))) ||
+              (activity.title && (activity.title.includes("Reschedule booking request") || activity.title.includes("Reschedule booking") || activity.title.includes("Reschedule booking received") || activity.title.includes("Reschedule booking request sent"))) ||
               activity.message_type === "reschedule_request";
             
             if (isRescheduleRequest && activity.status === "Unread") {
@@ -1080,7 +1080,75 @@ export default {
         // For regular messages, only update if not from self
         // Allow messages even if sender object is missing (fallback for Socket.IO messages)
         const isBookingOfferOrProposal = message.message_type === "booking_offer" || message.message_type === "booking_proposal";
+        const isRescheduleResponse = message.message_type === "reschedule_accepted" || message.message_type === "reschedule_rejected";
         const shouldShow = isBookingOfferOrProposal || isSystemMessage || (!isSender && (message.sender || message.message_type === 'text' || message.content || message.message_type === null || message.message_type === undefined));
+        
+        // Always process reschedule responses to mark related requests as Completed
+        // This needs to run even if the message itself doesn't create an activity
+        if (isRescheduleResponse) {
+          console.log("📊 DASHBOARD: Processing reschedule response to mark related request as Completed");
+          console.log("📊 DASHBOARD: Response message type:", message.message_type);
+          console.log("📊 DASHBOARD: Response message content:", message.content);
+          
+          // Extract bookingId from the response message
+          let responseBookingId = null;
+          try {
+            const messageData = typeof message.content === "string" ? JSON.parse(message.content) : message.content || {};
+            responseBookingId = messageData.bookingId || null;
+            console.log("📊 DASHBOARD: Extracted bookingId from response:", responseBookingId);
+          } catch (e) {
+            console.warn("📊 DASHBOARD: Error parsing response message content:", e);
+          }
+          
+          console.log("📊 DASHBOARD: Checking", recentActivity.value.length, "activities for matching reschedule requests");
+          
+          recentActivity.value.forEach((activity, index) => {
+            const isRescheduleRequest = 
+              activity.message_type === "reschedule_request" ||
+              (activity.title && (activity.title.includes("Reschedule booking request") || activity.title.includes("Reschedule booking") || activity.title.includes("Reschedule booking received") || activity.title.includes("Reschedule booking request sent")));
+            
+            if (isRescheduleRequest) {
+              console.log("📊 DASHBOARD: Found reschedule request activity:", activity.title, "status:", activity.status, "booking_id:", activity.booking_id);
+              
+              if (activity.status === "Unread") {
+                // Check if this reschedule_request is related to the response
+                // Match by bookingId if available, otherwise by timestamp proximity
+                let isRelated = false;
+                
+                if (activity.booking_id && responseBookingId) {
+                  isRelated = String(activity.booking_id) === String(responseBookingId);
+                  console.log("📊 DASHBOARD: Matching by bookingId:", activity.booking_id, "===", responseBookingId, "→", isRelated);
+                } else {
+                  // Fallback: check if response is within 24 hours after the request
+                  const responseTimestamp = message.created_at || new Date().toISOString();
+                  isRelated = Math.abs(new Date(responseTimestamp) - new Date(activity.timestamp)) < 24 * 60 * 60 * 1000 &&
+                             new Date(responseTimestamp) > new Date(activity.timestamp);
+                  console.log("📊 DASHBOARD: Matching by timestamp proximity:", isRelated, "response:", responseTimestamp, "request:", activity.timestamp);
+                }
+                
+                if (isRelated) {
+                  console.log("📊 DASHBOARD: ✅ Marking related reschedule_request as Completed:", activity.title);
+                  activity.status = "Completed";
+                  activity.badgeClass = "bg-success";
+                  recentActivity.value[index] = activity;
+                } else {
+                  console.log("📊 DASHBOARD: ❌ Not related - booking_id mismatch or timestamp too far");
+                }
+              } else {
+                console.log("📊 DASHBOARD: Activity already Completed, skipping");
+              }
+            }
+          });
+          
+          // Re-sort after updates
+          recentActivity.value.sort((a, b) => {
+            const timeA = new Date(a.timestamp || 0);
+            const timeB = new Date(b.timestamp || 0);
+            return timeB - timeA;
+          });
+          
+          console.log("📊 DASHBOARD: ✅ Finished checking reschedule requests");
+        }
         
         if (shouldShow) {
           console.log("📊 DASHBOARD: Message qualifies for activity update");
@@ -1175,55 +1243,6 @@ export default {
                   
                   if (isRelated) {
                     console.log("📊 DASHBOARD: Marking related booking_offer/proposal as Completed:", activity.title);
-                    activity.status = "Completed";
-                    activity.badgeClass = "bg-success";
-                    recentActivity.value[index] = activity;
-                  }
-                }
-              });
-              
-              // Re-sort after updates
-              recentActivity.value.sort((a, b) => {
-                const timeA = new Date(a.timestamp || 0);
-                const timeB = new Date(b.timestamp || 0);
-                return timeB - timeA;
-              });
-            }
-            
-            // After adding/updating activity, check if this is a reschedule_accepted or reschedule_rejected
-            // If so, mark related reschedule_request as "Completed"
-            if (message.message_type === "reschedule_accepted" || message.message_type === "reschedule_rejected") {
-              console.log("📊 DASHBOARD: Reschedule responded, checking for related reschedule_request to mark as Completed");
-              
-              // Extract bookingId from the response message
-              let responseBookingId = null;
-              try {
-                const messageData = typeof message.content === "string" ? JSON.parse(message.content) : message.content || {};
-                responseBookingId = messageData.bookingId || null;
-              } catch (e) {
-                // Ignore parsing errors
-              }
-              
-              recentActivity.value.forEach((activity, index) => {
-                const isRescheduleRequest = 
-                  activity.message_type === "reschedule_request" ||
-                  (activity.title && (activity.title.includes("Reschedule booking request") || activity.title.includes("Reschedule booking")));
-                
-                if (isRescheduleRequest && activity.status === "Unread") {
-                  // Check if this reschedule_request is related to the response
-                  // Match by bookingId if available, otherwise by timestamp proximity
-                  let isRelated = false;
-                  
-                  if (activity.booking_id && responseBookingId) {
-                    isRelated = String(activity.booking_id) === String(responseBookingId);
-                  } else {
-                    // Fallback: check if response is within 24 hours after the request
-                    isRelated = Math.abs(new Date(activityItem.timestamp) - new Date(activity.timestamp)) < 24 * 60 * 60 * 1000 &&
-                               new Date(activityItem.timestamp) > new Date(activity.timestamp);
-                  }
-                  
-                  if (isRelated) {
-                    console.log("📊 DASHBOARD: Marking related reschedule_request as Completed:", activity.title);
                     activity.status = "Completed";
                     activity.badgeClass = "bg-success";
                     recentActivity.value[index] = activity;
