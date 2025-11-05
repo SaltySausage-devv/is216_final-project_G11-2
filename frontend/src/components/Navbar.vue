@@ -568,10 +568,10 @@ export default {
         return `${roundedSecs} second${roundedSecs !== 1 ? 's' : ''} ago`;
       }
       
-      // For less than 1 hour: show minutes with 2 decimal places
+      // For less than 1 hour: show minutes without decimal places
       if (diffHours < 1) {
-        const roundedMins = Math.round(diffMins * 100) / 100; // Round to 2dp
-        return `${roundedMins.toFixed(2)} min ago`;
+        const roundedMins = Math.round(diffMins); // Round to whole minutes
+        return `${roundedMins} min${roundedMins !== 1 ? 's' : ''} ago`;
       }
       
       // For less than 24 hours: show hours and minutes
