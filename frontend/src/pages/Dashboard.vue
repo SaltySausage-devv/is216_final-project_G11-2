@@ -312,28 +312,79 @@ export default {
         // Combine both sources, prioritizing API data but using localStorage as fallback
         const notifications = apiNotifications.length > 0 ? apiNotifications : localNotifications;
 
-        if (notifications && notifications.length > 0) {
+        // Fetch reviews for the user to show in recent activity
+        let reviews = [];
+        try {
+          if (userType.value === "tutor") {
+            // Note: Don't include /api prefix since axios instance already has baseURL: '/api'
+            const reviewsResponse = await api.get(`/reviews/tutor/${userId.value}`);
+            if (reviewsResponse.data && reviewsResponse.data.reviews) {
+              reviews = reviewsResponse.data.reviews.slice(0, 5); // Get recent 5 reviews
+            }
+          }
+        } catch (reviewError) {
+          console.log("⚠️ Could not fetch reviews for activity:", reviewError.message);
+        }
 
-          // Also fetch reviews for the user to show in recent activity
-          let reviews = [];
-          try {
-            if (userType.value === "tutor") {
-              // Note: Don't include /api prefix since axios instance already has baseURL: '/api'
-              const reviewsResponse = await api.get(`/reviews/tutor/${userId.value}`);
-              if (reviewsResponse.data && reviewsResponse.data.reviews) {
-                reviews = reviewsResponse.data.reviews.slice(0, 5); // Get recent 5 reviews
+        // Fetch recent messages from conversations to include in activity
+        // This ensures regular text messages persist on page refresh
+        // IMPORTANT: This is separate from notifications - messages are stored in conversations, not notifications
+        let recentMessages = [];
+        try {
+          console.log("📬 Fetching conversations to get recent messages for Recent Activity...");
+          const conversationsResponse = await messagingService.getConversations(1, 20);
+          
+          if (conversationsResponse && conversationsResponse.conversations) {
+            const conversations = conversationsResponse.conversations;
+            console.log("📬 Found conversations:", conversations.length);
+            
+            // For each conversation, fetch the last message
+            for (const conversation of conversations) {
+              try {
+                // Get the most recent message from this conversation
+                const messagesResponse = await messagingService.getMessages(conversation.id, 1, 1);
+                
+                if (messagesResponse && messagesResponse.messages && messagesResponse.messages.length > 0) {
+                  const lastMessage = messagesResponse.messages[0];
+                  
+                  // Only include if message is from another user or is a system message
+                  const isSender = String(lastMessage.sender_id) === String(userId.value);
+                  const isSystemMessage =
+                    lastMessage.message_type === "reschedule_request" ||
+                    lastMessage.message_type === "reschedule_accepted" ||
+                    lastMessage.message_type === "reschedule_rejected" ||
+                    lastMessage.message_type === "booking_cancelled" ||
+                    lastMessage.message_type === "booking_proposal" ||
+                    lastMessage.message_type === "booking_confirmation" ||
+                    lastMessage.message_type === "booking_offer" ||
+                    lastMessage.message_type === "session_completed";
+                  
+                  if (isSystemMessage || !isSender) {
+                    recentMessages.push(lastMessage);
+                  }
+                }
+              } catch (msgError) {
+                console.warn("⚠️ Could not fetch messages for conversation:", conversation.id, msgError.message);
+                // Continue with next conversation
               }
             }
-          } catch (reviewError) {
-            console.log("⚠️ Could not fetch reviews for activity:", reviewError.message);
+            
+            console.log("📬 Extracted recent messages from conversations:", recentMessages.length);
           }
-
-          // Also fetch recent messages to include in activity
-          // We'll get this from the messages/conversations endpoint
-          
-          // Format notifications and reviews into activities
-          const activities = [];
-
+        } catch (conversationError) {
+          console.warn("⚠️ Could not fetch conversations/messages for activity:", conversationError.message);
+        }
+        
+        // Format notifications, reviews, and messages into activities
+        // Process all three sources: notifications, reviews, and messages
+        // IMPORTANT: Recent Activity is separate from notifications - it combines:
+        // 1. Notifications (system messages, booking events)
+        // 2. Messages (regular chat messages from conversations)
+        // 3. Reviews (for tutors)
+        const activities = [];
+        
+        // Process notifications (if they exist)
+        if (notifications && notifications.length > 0) {
           // Process notifications (messages, booking confirmations, booking requests)
           notifications.forEach((notification) => {
             // Use created_at (from API/database) first, then timestamp (from localStorage)
@@ -473,7 +524,7 @@ export default {
             });
           });
 
-          // Process reviews (for tutors who received reviews)
+          // Process reviews (for tutors who received reviews) - inside notifications block
           if (userType.value === "tutor" && reviews.length > 0) {
             reviews.forEach((review) => {
               // Use timestamp field (from localStorage) or created_at (from API)
@@ -489,8 +540,108 @@ export default {
               });
             });
           }
+        } // End of notifications processing block
+        
+        // ALWAYS process messages and reviews (even if notifications are empty)
+        // This ensures messages persist on page refresh - they're separate from notifications
+        // Process reviews (check for duplicates)
+        if (userType.value === "tutor" && reviews.length > 0) {
+          reviews.forEach((review) => {
+            const reviewTimestamp = review.timestamp || review.created_at;
+            
+            // Check if already added from notifications
+            const existingReview = activities.find(a => 
+              a.title === `Received ${review.rating}-star review` && 
+              a.timestamp === reviewTimestamp
+            );
+            
+            if (!existingReview) {
+              activities.push({
+                icon: "fas fa-star",
+                title: `Received ${review.rating}-star review`,
+                time: formatTimeAgo(reviewTimestamp),
+                status: "Completed",
+                badgeClass: "bg-success",
+                timestamp: reviewTimestamp,
+              });
+            }
+          });
+        }
 
-          // Merge with existing real-time activities to preserve them
+        // Process recent messages from conversations
+        // Convert messages to activities - this is separate from notifications
+        // Regular text messages are stored in conversations, not notifications
+        recentMessages.forEach((message) => {
+          // Use the same createActivityFromMessage helper that's used in real-time handler
+          // But we need to make it accessible here - we'll create activities manually with same logic
+          const messageType = message.message_type || 'text';
+          const messageTimestamp = message.created_at || new Date().toISOString();
+          
+          let icon = "fas fa-envelope";
+          let title = `New message${userType.value === "student" ? " from tutor" : " from student"}`;
+          let status = "Unread";
+          let badgeClass = "bg-warning";
+          
+          // Use same logic as createActivityFromMessage
+          if (messageType === "booking_confirmation") {
+            icon = "fas fa-calendar-check";
+            title = "New booking confirmed";
+            status = "Confirmed";
+            badgeClass = "bg-success";
+          } else if (messageType === "booking_cancelled") {
+            icon = "fas fa-calendar-times";
+            title = "Booking cancelled";
+            status = "Cancelled";
+            badgeClass = "bg-danger";
+          } else if (messageType === "booking_offer" || messageType === "booking_proposal") {
+            icon = "fas fa-calendar-plus";
+            title = messageType === "booking_proposal" ? "Booking proposal received" : "Booking request sent";
+            status = "Unread";
+            badgeClass = "bg-warning";
+          } else if (messageType === "session_completed") {
+            icon = "fas fa-check-circle";
+            title = userType.value === "tutor" ? "Session completed - credits added" : "Session marked as completed";
+            status = "Completed";
+            badgeClass = "bg-success";
+          } else if (messageType === "reschedule_request" || messageType === "reschedule_accepted" || messageType === "reschedule_rejected") {
+            icon = "fas fa-calendar-alt";
+            if (messageType === "reschedule_accepted") {
+              title = "Reschedule request accepted";
+              status = "Confirmed";
+              badgeClass = "bg-success";
+            } else if (messageType === "reschedule_rejected") {
+              title = "Reschedule request rejected";
+              status = "Cancelled";
+              badgeClass = "bg-danger";
+            } else {
+              title = "Reschedule booking request";
+              status = "Unread";
+              badgeClass = "bg-warning";
+            }
+          } else {
+            // Regular text message
+            if (message.sender) {
+              const senderName = `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim();
+              title = senderName ? `New message from ${senderName}` : `New message${userType.value === "student" ? " from tutor" : " from student"}`;
+            }
+            icon = "fas fa-envelope";
+            const isRead = message.read_at || (message.read_by && Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(userId.value)));
+            status = isRead ? "Completed" : "Unread";
+            badgeClass = isRead ? "bg-success" : "bg-warning";
+          }
+          
+          activities.push({
+            icon: icon,
+            title: title,
+            time: formatTimeAgo(messageTimestamp),
+            status: status,
+            badgeClass: badgeClass,
+            timestamp: messageTimestamp,
+            id: message.id || `msg_${Date.now()}_${Math.random()}`,
+          });
+        });
+
+        // Merge with existing real-time activities to preserve them
           // Create a map of existing activities by ID and timestamp+title for deduplication
           const existingActivityMap = new Map();
           recentActivity.value.forEach((activity) => {
@@ -498,7 +649,7 @@ export default {
             existingActivityMap.set(key, activity);
           });
 
-          // Add new activities from notifications if they don't already exist
+          // Add new activities from notifications, reviews, and messages if they don't already exist
           activities.forEach((activity) => {
             const key = activity.id || `${activity.timestamp}_${activity.title}`;
             if (!existingActivityMap.has(key)) {
@@ -517,17 +668,9 @@ export default {
           // Show all activities (container will scroll if more than 5)
           recentActivity.value = mergedActivities;
 
-          console.log("✅ Recent activity loaded:", recentActivity.value.length, "items");
-          console.log("✅ Preserved real-time activities during merge");
-        } else {
-          // Don't clear existing activities if there are no notifications
-          // This preserves real-time updates that were added directly
-          if (recentActivity.value.length === 0) {
-            recentActivity.value = [];
-          } else {
-            console.log("📊 DASHBOARD: No notifications found, but preserving existing activities:", recentActivity.value.length);
-          }
-        }
+        console.log("✅ Recent activity loaded:", recentActivity.value.length, "items");
+        console.log("✅ Sources: notifications:", (notifications || []).length, "reviews:", reviews.length, "messages:", recentMessages.length);
+        console.log("✅ Preserved real-time activities during merge");
       } catch (error) {
         console.error("❌ Error loading recent activity from notifications:", error);
         // Don't clear existing activities on error - preserve real-time updates
