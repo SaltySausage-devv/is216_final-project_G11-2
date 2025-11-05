@@ -338,30 +338,35 @@ export default {
             const conversations = conversationsResponse.conversations;
             console.log("📬 Found conversations:", conversations.length);
             
-            // For each conversation, fetch the last message
+            // For each conversation, fetch recent messages (not just the last one)
+            // This ensures multiple messages from the same conversation show up
             for (const conversation of conversations) {
               try {
-                // Get the most recent message from this conversation
-                const messagesResponse = await messagingService.getMessages(conversation.id, 1, 1);
+                // Get recent messages from this conversation (fetch last 10 messages)
+                // This allows multiple messages from the same conversation to appear
+                const messagesResponse = await messagingService.getMessages(conversation.id, 1, 10);
                 
                 if (messagesResponse && messagesResponse.messages && messagesResponse.messages.length > 0) {
-                  const lastMessage = messagesResponse.messages[0];
-                  
-                  // Only include if message is from another user or is a system message
-                  const isSender = String(lastMessage.sender_id) === String(userId.value);
-                  const isSystemMessage =
-                    lastMessage.message_type === "reschedule_request" ||
-                    lastMessage.message_type === "reschedule_accepted" ||
-                    lastMessage.message_type === "reschedule_rejected" ||
-                    lastMessage.message_type === "booking_cancelled" ||
-                    lastMessage.message_type === "booking_proposal" ||
-                    lastMessage.message_type === "booking_confirmation" ||
-                    lastMessage.message_type === "booking_offer" ||
-                    lastMessage.message_type === "session_completed";
-                  
-                  if (isSystemMessage || !isSender) {
-                    recentMessages.push(lastMessage);
-                  }
+                  // Process all messages, not just the first one
+                  messagesResponse.messages.forEach((message) => {
+                    // Only include if message is from another user or is a system message
+                    const isSender = String(message.sender_id) === String(userId.value);
+                    const isSystemMessage =
+                      message.message_type === "reschedule_request" ||
+                      message.message_type === "reschedule_accepted" ||
+                      message.message_type === "reschedule_rejected" ||
+                      message.message_type === "booking_cancelled" ||
+                      message.message_type === "booking_proposal" ||
+                      message.message_type === "booking_confirmation" ||
+                      message.message_type === "booking_offer" ||
+                      message.message_type === "session_completed";
+                    
+                    // Include all messages (read and unread) - don't filter by read status
+                    // Read messages will show as "Completed" but still appear in Recent Activity
+                    if (isSystemMessage || !isSender) {
+                      recentMessages.push(message);
+                    }
+                  });
                 }
               } catch (msgError) {
                 console.warn("⚠️ Could not fetch messages for conversation:", conversation.id, msgError.message);
@@ -637,36 +642,53 @@ export default {
             status: status,
             badgeClass: badgeClass,
             timestamp: messageTimestamp,
-            id: message.id || `msg_${Date.now()}_${Math.random()}`,
+            // Use message ID as primary identifier - this ensures proper deduplication
+            // and allows read messages to update their status instead of disappearing
+            id: message.id || `msg_${messageTimestamp}_${Math.random()}`,
           });
         });
 
         // Merge with existing real-time activities to preserve them
-          // Create a map of existing activities by ID and timestamp+title for deduplication
-          const existingActivityMap = new Map();
-          recentActivity.value.forEach((activity) => {
-            const key = activity.id || `${activity.timestamp}_${activity.title}`;
-            existingActivityMap.set(key, activity);
-          });
+        // Create a map of existing activities by ID for deduplication
+        // Use message ID as primary key for messages, timestamp+title for others
+        const existingActivityMap = new Map();
+        recentActivity.value.forEach((activity) => {
+          // Use message ID if available (more reliable), otherwise use timestamp+title
+          const key = activity.id || `${activity.timestamp}_${activity.title}`;
+          existingActivityMap.set(key, activity);
+        });
 
-          // Add new activities from notifications, reviews, and messages if they don't already exist
-          activities.forEach((activity) => {
-            const key = activity.id || `${activity.timestamp}_${activity.title}`;
-            if (!existingActivityMap.has(key)) {
+        // Add new activities from notifications, reviews, and messages if they don't already exist
+        activities.forEach((activity) => {
+          // Use message ID if available (more reliable), otherwise use timestamp+title
+          const key = activity.id || `${activity.timestamp}_${activity.title}`;
+          if (!existingActivityMap.has(key)) {
+            existingActivityMap.set(key, activity);
+          } else {
+            // If activity exists, update it (in case read status changed)
+            // This ensures read messages don't disappear - they just update to "Completed"
+            const existingActivity = existingActivityMap.get(key);
+            // Update status if the new one has a different status (e.g., unread -> read)
+            if (activity.status !== existingActivity.status) {
               existingActivityMap.set(key, activity);
             }
-          });
+          }
+        });
 
-          // Convert map back to array and sort by timestamp
-          const mergedActivities = Array.from(existingActivityMap.values());
-          mergedActivities.sort((a, b) => {
-            const timeA = new Date(a.timestamp || 0);
-            const timeB = new Date(b.timestamp || 0);
-            return timeB - timeA;
-          });
+        // Convert map back to array and sort by timestamp
+        const mergedActivities = Array.from(existingActivityMap.values());
+        mergedActivities.sort((a, b) => {
+          const timeA = new Date(a.timestamp || 0);
+          const timeB = new Date(b.timestamp || 0);
+          return timeB - timeA;
+        });
 
-          // Show all activities (container will scroll if more than 5)
-          recentActivity.value = mergedActivities;
+        // Limit to reasonable number of items (keep last 30 to show more activities)
+        // This ensures we don't show too many, but enough to see recent history
+        const limitedActivities = mergedActivities.slice(0, 30);
+
+        // Show all activities (container will scroll if more than 5)
+        recentActivity.value = limitedActivities;
 
         console.log("✅ Recent activity loaded:", recentActivity.value.length, "items");
         console.log("✅ Sources: notifications:", (notifications || []).length, "reviews:", reviews.length, "messages:", recentMessages.length);
@@ -834,8 +856,16 @@ export default {
           console.log("📊 DASHBOARD: Created activity item:", activityItem);
           
           // Check if this activity already exists (prevent duplicates)
+          // Use message ID as primary identifier for proper deduplication
           const existingIndex = recentActivity.value.findIndex(
-            (a) => a.id === activityItem.id || (a.timestamp === activityItem.timestamp && a.title === activityItem.title)
+            (a) => {
+              // If both have message IDs, match by ID (most reliable)
+              if (activityItem.id && a.id && activityItem.id === a.id) {
+                return true;
+              }
+              // Fallback to timestamp+title for non-message activities
+              return a.timestamp === activityItem.timestamp && a.title === activityItem.title;
+            }
           );
           
           if (existingIndex === -1) {
@@ -850,16 +880,33 @@ export default {
               return timeB - timeA;
             });
             
-            // Limit to reasonable number of items (keep last 20)
-            if (recentActivity.value.length > 20) {
-              recentActivity.value = recentActivity.value.slice(0, 20);
+            // Limit to reasonable number of items (keep last 30 to show more activities)
+            // Increased from 20 to 30 to accommodate multiple messages and read messages
+            if (recentActivity.value.length > 30) {
+              recentActivity.value = recentActivity.value.slice(0, 30);
             }
             
             console.log("📊 DASHBOARD: ✅ Activity updated in real-time, new count:", recentActivity.value.length);
             console.log("📊 DASHBOARD: Activity title:", activityItem.title);
             console.log("📊 DASHBOARD: Activity status:", activityItem.status);
           } else {
-            console.log("📊 DASHBOARD: Activity already exists, skipping duplicate");
+            // Activity already exists - update it if status changed (e.g., unread -> read)
+            // This ensures read messages update their status instead of disappearing
+            const existingActivity = recentActivity.value[existingIndex];
+            if (existingActivity.status !== activityItem.status) {
+              console.log("📊 DASHBOARD: Updating existing activity status:", existingActivity.status, "->", activityItem.status);
+              // Update the existing activity
+              recentActivity.value[existingIndex] = activityItem;
+              // Re-sort to maintain correct order
+              recentActivity.value.sort((a, b) => {
+                const timeA = new Date(a.timestamp || 0);
+                const timeB = new Date(b.timestamp || 0);
+                return timeB - timeA;
+              });
+              console.log("📊 DASHBOARD: ✅ Activity status updated in real-time");
+            } else {
+              console.log("📊 DASHBOARD: Activity already exists with same status, skipping duplicate");
+            }
           }
         } else {
           console.log("📊 DASHBOARD: Skipping activity update (message from self or no sender)");
