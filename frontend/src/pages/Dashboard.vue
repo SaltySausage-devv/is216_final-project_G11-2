@@ -524,6 +524,97 @@ export default {
         dashboardMessageHandler = null;
       }
 
+      // Helper function to create activity item from message
+      const createActivityFromMessage = (message) => {
+        const messageType = message.message_type || 'text';
+        const messageContent = message.content || '';
+        const messageTimestamp = message.created_at || new Date().toISOString();
+        
+        let icon = "fas fa-envelope";
+        let title = `New message${userType.value === "student" ? " from tutor" : " from student"}`;
+        let status = "Unread";
+        let badgeClass = "bg-warning";
+        
+        // Determine activity type based on message_type
+        if (messageType === "booking_confirmation") {
+          icon = "fas fa-calendar-check";
+          title = "New booking confirmed";
+          status = "Confirmed";
+          badgeClass = "bg-success";
+        } else if (messageType === "booking_cancelled") {
+          icon = "fas fa-calendar-times";
+          title = "Booking cancelled";
+          status = "Cancelled";
+          badgeClass = "bg-danger";
+        } else if (messageType === "booking_offer" || messageType === "booking_proposal") {
+          icon = "fas fa-calendar-plus";
+          title = messageType === "booking_proposal" ? "Booking proposal received" : "Booking request sent";
+          status = "Unread";
+          badgeClass = "bg-warning";
+        } else if (messageType === "session_completed") {
+          try {
+            const messageData = typeof messageContent === "string" ? JSON.parse(messageContent) : messageContent || {};
+            const creditsAmount = messageData.creditsAmount || messageData.credits || 0;
+            
+            if (userType.value === "tutor" && creditsAmount > 0) {
+              icon = "fas fa-dollar-sign";
+              title = `Session completed - ${creditsAmount} credits added`;
+              status = "Completed";
+              badgeClass = "bg-success";
+            } else if (userType.value === "student") {
+              icon = "fas fa-check-circle";
+              title = "Session marked as completed";
+              status = "Completed";
+              badgeClass = "bg-success";
+            } else {
+              icon = "fas fa-check-circle";
+              title = "Session completed";
+              status = "Completed";
+              badgeClass = "bg-success";
+            }
+          } catch (e) {
+            icon = "fas fa-check-circle";
+            title = userType.value === "tutor" ? "Session completed - credits added" : "Session marked as completed";
+            status = "Completed";
+            badgeClass = "bg-success";
+          }
+        } else if (messageType === "reschedule_request" || messageType === "reschedule_accepted" || messageType === "reschedule_rejected") {
+          icon = "fas fa-calendar-alt";
+          if (messageType === "reschedule_accepted") {
+            title = "Reschedule request accepted";
+            status = "Confirmed";
+            badgeClass = "bg-success";
+          } else if (messageType === "reschedule_rejected") {
+            title = "Reschedule request rejected";
+            status = "Cancelled";
+            badgeClass = "bg-danger";
+          } else {
+            title = "Reschedule booking request";
+            status = "Unread";
+            badgeClass = "bg-warning";
+          }
+        } else if (messageType === "text" || !messageType) {
+          // Regular text message
+          if (message.sender) {
+            const senderName = `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim();
+            title = senderName ? `New message from ${senderName}` : `New message${userType.value === "student" ? " from tutor" : " from student"}`;
+          }
+          icon = "fas fa-envelope";
+          status = message.read_at ? "Completed" : "Unread";
+          badgeClass = message.read_at ? "bg-success" : "bg-warning";
+        }
+        
+        return {
+          icon: icon,
+          title: title,
+          time: formatTimeAgo(messageTimestamp),
+          status: status,
+          badgeClass: badgeClass,
+          timestamp: messageTimestamp,
+          id: message.id || `msg_${Date.now()}`, // Use message ID or generate one
+        };
+      };
+
       // Create new handler for dashboard activity updates
       dashboardMessageHandler = (message) => {
         console.log("📊 DASHBOARD: ✨ Received new message for activity update:", message);
@@ -547,13 +638,44 @@ export default {
 
         // For system messages, update activity for receiver
         // For regular messages, only update if not from self (allow even if sender object is missing)
-        if (isSystemMessage || (!isSender && (message.sender || message.message_type === 'text'))) {
-          console.log("📊 DASHBOARD: Message qualifies for activity update, reloading activity");
-          // Reload activity to get latest data (this will include the new message/notification)
-          // Use a small delay to ensure the notification is saved to localStorage first
+        if (isSystemMessage || (!isSender && (message.sender || message.message_type === 'text' || message.content))) {
+          console.log("📊 DASHBOARD: Message qualifies for activity update");
+          
+          // Create activity item directly from the message for immediate real-time update
+          const activityItem = createActivityFromMessage(message);
+          
+          // Check if this activity already exists (prevent duplicates)
+          const existingIndex = recentActivity.value.findIndex(
+            (a) => a.id === activityItem.id || (a.timestamp === activityItem.timestamp && a.title === activityItem.title)
+          );
+          
+          if (existingIndex === -1) {
+            console.log("📊 DASHBOARD: Adding new activity item directly:", activityItem);
+            // Add to beginning of array (most recent first)
+            recentActivity.value = [activityItem, ...recentActivity.value];
+            
+            // Sort by timestamp to ensure correct order
+            recentActivity.value.sort((a, b) => {
+              const timeA = new Date(a.timestamp || 0);
+              const timeB = new Date(b.timestamp || 0);
+              return timeB - timeA;
+            });
+            
+            // Limit to reasonable number of items (keep last 20)
+            if (recentActivity.value.length > 20) {
+              recentActivity.value = recentActivity.value.slice(0, 20);
+            }
+            
+            console.log("📊 DASHBOARD: ✅ Activity updated in real-time, new count:", recentActivity.value.length);
+          } else {
+            console.log("📊 DASHBOARD: Activity already exists, skipping duplicate");
+          }
+          
+          // Also reload from localStorage/API to ensure we have all activities (with a delay)
+          // This ensures we don't miss any activities that might have been added via other means
           setTimeout(() => {
             loadRecentActivity();
-          }, 100);
+          }, 500);
         } else {
           console.log("📊 DASHBOARD: Skipping activity update (message from self or no sender)");
         }
