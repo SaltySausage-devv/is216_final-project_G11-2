@@ -1,6 +1,6 @@
 <template>
   <div class="messages-page">
-    <div class="container-fluid pt-2 pt-lg-3 pb-0 pb-lg-0 px-3 px-lg-5 d-flex flex-column align-items-center justify-content-center">
+    <div class="container-fluid pt-0 pt-lg-3 pb-0 pb-lg-0 px-3 px-lg-5 d-flex flex-column align-items-center justify-content-center">
       <div class="row g-2 g-lg-3 messages-row w-100">
         <!-- Conversations Sidebar -->
         <div
@@ -6806,6 +6806,35 @@ i.text-primary {
   .chat-col.show-on-mobile {
     padding: 0.5rem;
   }
+
+  /* Center messages container vertically on mobile */
+  .messages-page {
+    min-height: calc(100vh - 100px) !important;
+    max-height: calc(100vh - 100px) !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .messages-page .container-fluid {
+    justify-content: center !important;
+    align-items: center !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Reduce footer spacing on mobile */
+  body:has(.messages-page) footer.cyberpunk-footer {
+    margin-top: -0.5rem !important;
+    padding-top: 1rem !important;
+  }
+
+  body:has(.messages-page) main {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
 }
 
 @media (max-width: 576px) {
@@ -6828,6 +6857,35 @@ i.text-primary {
 
   .back-btn-mobile {
     font-size: 1.1rem;
+  }
+
+  /* Center messages container vertically on small mobile */
+  .messages-page {
+    min-height: calc(100vh - 80px) !important;
+    max-height: calc(100vh - 80px) !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .messages-page .container-fluid {
+    justify-content: center !important;
+    align-items: center !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Reduce footer spacing on small mobile */
+  body:has(.messages-page) footer.cyberpunk-footer {
+    margin-top: -1rem !important;
+    padding-top: 0.75rem !important;
+  }
+
+  body:has(.messages-page) main {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
   }
 }
 
@@ -8065,5 +8123,24 @@ body:has(.messages-page) main {
 
 .messages-page > .container-fluid > .row {
   margin-bottom: 0 !important;
+}
+
+/* Mobile-specific: ensure no extra spacing */
+@media (max-width: 768px) {
+  .messages-page > .container-fluid > .row {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .conversations-col,
+  .chat-col {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .conversations-col .card,
+  .chat-col .card {
+    margin-bottom: 0 !important;
+  }
 }
 </style>

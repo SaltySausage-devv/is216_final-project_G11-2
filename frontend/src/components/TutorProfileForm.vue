@@ -172,10 +172,10 @@
               </div>
             </div>
 
-            <!-- University & Year Row - 70% / 30% split -->
+            <!-- University & Year Row - Separate elements -->
             <div class="row">
-              <!-- University - 70% width -->
-              <div class="col-md-8 mb-2 mb-md-0">
+              <!-- University -->
+              <div class="col-md-7 mb-2 mb-md-0">
                 <label class="form-label text-muted small">Institution</label>
                 <input
                   type="text"
@@ -186,29 +186,31 @@
                 />
               </div>
 
-              <!-- Year & Delete - 30% width -->
-              <div class="col-md-4">
+              <!-- Year -->
+              <div class="col-md-3 mb-2 mb-md-0">
                 <label class="form-label text-muted small">Year</label>
-                <div class="input-group">
-                  <input
-                    type="number"
-                    v-model.number="qual.year"
-                    class="form-control"
-                    :disabled="!editMode"
-                    placeholder="Year"
-                    min="1950"
-                    :max="new Date().getFullYear()"
-                  />
-                  <button
-                    v-if="editMode"
-                    @click="removeQualification(index)"
-                    class="btn btn-cyber-delete"
-                    type="button"
-                    title="Remove qualification"
-                  >
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
+                <input
+                  type="number"
+                  v-model.number="qual.year"
+                  class="form-control"
+                  :disabled="!editMode"
+                  placeholder="Year"
+                  min="1950"
+                  :max="new Date().getFullYear()"
+                />
+              </div>
+
+              <!-- Delete Button - Separate element -->
+              <div class="col-md-2 d-flex align-items-end mb-2 mb-md-0">
+                <button
+                  v-if="editMode"
+                  @click="removeQualification(index)"
+                  class="btn btn-cyber-delete w-100"
+                  type="button"
+                  title="Remove qualification"
+                >
+                  <i class="fas fa-trash"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -627,13 +629,23 @@ export default {
 
         if (response.data.profile) {
           const profile = response.data.profile
+          // If languages only contains English and profile is mostly empty, it's likely the DB default
+          // Clear it so user can select their own languages
+          let languages = profile.languages || []
+          if (languages.length === 1 && languages[0] === 'English' && 
+              (!profile.bio || profile.bio.trim() === '') && 
+              (!profile.headline || profile.headline.trim() === '') &&
+              (!profile.subjects || profile.subjects.length === 0)) {
+            languages = [] // Clear default English if profile appears to be newly created
+          }
+          
           Object.assign(tutorProfile, {
             headline: profile.headline || '',
             bio: profile.bio || '',
             teachingPhilosophy: profile.teaching_philosophy || '',
             subjects: profile.subjects || [],
             levels: profile.levels || [],
-            languages: profile.languages || [],
+            languages: languages,
             experienceYears: profile.experience_years || 0,
             qualifications: profile.qualifications || [],
             previousExperience: profile.previous_experience || '',
@@ -940,9 +952,9 @@ export default {
 .btn-cyber-delete {
   background: transparent !important;
   border: 2px solid rgba(255, 140, 66, 0.5) !important;
-  border-left: none !important;
   color: var(--cyber-orange, #ff8c42) !important;
   transition: all 0.3s ease;
+  padding: 0.5rem 0.75rem;
 }
 
 .btn-cyber-delete:hover {

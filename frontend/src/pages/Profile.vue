@@ -37,7 +37,7 @@
                     </span>
                     <span class="profile-badge date-badge">
                       <i class="fas fa-calendar-check"></i>
-                      Oct 15, 2025
+                      {{ formatDate(user?.createdAt) }}
                     </span>
                   </div>
                 </div>

@@ -290,7 +290,7 @@ app.post('/profiles/tutor', verifyToken, async (req, res) => {
       teaching_philosophy: value.teachingPhilosophy,
       subjects: value.subjects,
       levels: value.levels,
-      languages: value.languages,
+      languages: (value.languages && Array.isArray(value.languages) && value.languages.length > 0) ? value.languages : [], // Explicitly set to empty array if not provided to avoid DB default
       qualifications: value.qualifications,
       certifications: value.certifications,
       experience_years: value.experienceYears,
