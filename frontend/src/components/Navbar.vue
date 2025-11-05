@@ -394,6 +394,34 @@ export default {
       }
     );
 
+    // Helper function to get correct icon based on notification type
+    const getIconForNotificationType = (notification) => {
+      const messageType = notification.type || notification.message_type;
+      
+      if (messageType === 'booking_offer' || messageType === 'booking_request') {
+        return "fas fa-calendar-alt";
+      } else if (messageType === 'booking_proposal') {
+        return "fas fa-calendar-alt";
+      } else if (messageType === 'booking_confirmation') {
+        return "fas fa-calendar-check text-success";
+      } else if (messageType === 'booking_cancelled') {
+        return "fas fa-calendar-times text-danger";
+      } else if (messageType === 'reschedule_request') {
+        return "fas fa-calendar-alt text-warning";
+      } else if (messageType === 'reschedule_accepted') {
+        return "fas fa-calendar-check text-success";
+      } else if (messageType === 'reschedule_rejected') {
+        return "fas fa-calendar-times text-danger";
+      } else if (messageType === 'session_completed') {
+        return "fas fa-check-double text-success";
+      } else if (messageType === 'image') {
+        return "fas fa-image";
+      } else {
+        // Default: calendar icon for regular messages
+        return "fas fa-calendar-alt";
+      }
+    };
+
     // Load notifications from localStorage on init
     const loadNotificationsFromStorage = () => {
       try {
@@ -422,6 +450,8 @@ export default {
                   n.timestamp = timestamp;
                 }
               }
+              // Update icon based on notification type (fixes old mail icons)
+              n.icon = getIconForNotificationType(n);
               return n;
             });
           
