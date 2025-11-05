@@ -231,8 +231,11 @@
                 <span v-else-if="isPastDateTime" class="text-danger ms-2" style="font-weight: 700;">
                   ✗ Cannot be in the past
                 </span>
-                <span v-else class="text-danger ms-2" style="font-weight: 700;">
+                <span v-else-if="newStartTime && newEndTime && newStartTime >= newEndTime" class="text-danger ms-2" style="font-weight: 700;">
                   ✗ End time must be after start time
+                </span>
+                <span v-else class="text-danger ms-2" style="font-weight: 700;">
+                  ✗ Invalid time range
                 </span>
               </div>
               <div v-if="newLocation" class="mt-2">
