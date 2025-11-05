@@ -543,7 +543,7 @@ export default {
       showAllNotifications.value = !showAllNotifications.value;
     };
 
-    // Calculates: current time - timestamp, rounds to 2 decimal places
+    // Calculates: current time - timestamp, formats with proper units
     const formatTime = (timestamp) => {
       if (!timestamp) return "Just now";
 
@@ -562,10 +562,10 @@ export default {
       // Show "Just now" for less than 5 seconds
       if (diffSecs < 5) return "Just now";
       
-      // For less than 1 minute: show seconds with 2 decimal places
+      // For less than 1 minute: show seconds without decimal places
       if (diffMins < 1) {
-        const roundedSecs = Math.round(diffSecs * 100) / 100; // Round to 2dp
-        return `${roundedSecs.toFixed(2)}s ago`;
+        const roundedSecs = Math.round(diffSecs);
+        return `${roundedSecs} second${roundedSecs !== 1 ? 's' : ''} ago`;
       }
       
       // For less than 1 hour: show minutes with 2 decimal places
@@ -574,10 +574,16 @@ export default {
         return `${roundedMins.toFixed(2)} min ago`;
       }
       
-      // For less than 24 hours: show hours with 2 decimal places
+      // For less than 24 hours: show hours and minutes
       if (diffDays < 1) {
-        const roundedHours = Math.round(diffHours * 100) / 100; // Round to 2dp
-        return `${roundedHours.toFixed(2)}h ago`;
+        const hours = Math.floor(diffHours);
+        const minutes = Math.round((diffHours - hours) * 60);
+        
+        if (minutes === 0) {
+          return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+        } else {
+          return `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+        }
       }
       
       // For yesterday: show "Yesterday"
