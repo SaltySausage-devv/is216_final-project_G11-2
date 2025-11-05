@@ -1252,6 +1252,8 @@ export default {
       loadNotificationsFromStorage();
 
       // Animations disabled
+      // Set up navbar interactions (including disabling dropdown for 900px-1100px)
+      setupNavbarInteractions();
 
       // Set up message notifications if authenticated
       if (authStore.isAuthenticated) {
@@ -1340,12 +1342,72 @@ export default {
       if (handlerCheckInterval) {
         clearInterval(handlerCheckInterval);
       }
+      // Clean up notification dropdown handlers
+      if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler);
+      }
+      notificationClickHandlers.forEach((handler, toggle) => {
+        toggle.removeEventListener('click', handler);
+      });
+      notificationClickHandlers.clear();
       // Note: messages_read handler is anonymous, so it stays registered
       // This is okay as it's a global handler for notification clearing
     });
 
+    // Store event listener references to prevent duplicates
+    let notificationClickHandlers = new Map();
+    let resizeHandler = null;
+
     const setupNavbarInteractions = () => {
       // All animations disabled
+      
+      // Disable notification dropdown for 900px-1100px screen widths
+      const disableNotificationDropdown = () => {
+        const width = window.innerWidth;
+        const notificationToggles = document.querySelectorAll(
+          '.navbar-notification-container [data-bs-toggle="dropdown"], .navbar-nav .nav-item.dropdown [data-bs-toggle="dropdown"]'
+        );
+        
+        notificationToggles.forEach((toggle) => {
+          // Remove existing handler if it exists
+          if (notificationClickHandlers.has(toggle)) {
+            const existingHandler = notificationClickHandlers.get(toggle);
+            toggle.removeEventListener('click', existingHandler);
+            notificationClickHandlers.delete(toggle);
+          }
+
+          if (width >= 900 && width <= 1100) {
+            // Create new handler for this screen width
+            const handler = (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Remove 'show' class if it was added
+              const dropdown = toggle.closest('.dropdown');
+              if (dropdown) {
+                dropdown.classList.remove('show');
+                const menu = dropdown.querySelector('.dropdown-menu');
+                if (menu) {
+                  menu.classList.remove('show');
+                }
+              }
+            };
+            
+            // Store handler reference and attach it
+            notificationClickHandlers.set(toggle, handler);
+            toggle.addEventListener('click', handler);
+          }
+        });
+      };
+
+      // Call on mount and when window is resized
+      // Use setTimeout to ensure DOM is ready
+      setTimeout(() => {
+        disableNotificationDropdown();
+      }, 100);
+      
+      // Store resize handler reference
+      resizeHandler = disableNotificationDropdown;
+      window.addEventListener('resize', resizeHandler);
     };
 
     return {
@@ -1999,8 +2061,33 @@ export default {
   }
 }
 
+/* Disable dropdown for 900px-1100px screen widths */
+@media (min-width: 900px) and (max-width: 1100px) {
+  /* Disable mobile notification dropdown */
+  .navbar-notification-container .dropdown-menu {
+    display: none !important;
+  }
+
+  .navbar-notification-container .dropdown.show .dropdown-menu {
+    display: none !important;
+  }
+
+  .navbar-notification-container .dropdown.show::before {
+    display: none !important;
+  }
+
+  /* Disable desktop notification dropdown */
+  .navbar-nav .nav-item.dropdown .notifications-dropdown {
+    display: none !important;
+  }
+
+  .navbar-nav .nav-item.dropdown.show .notifications-dropdown {
+    display: none !important;
+  }
+}
+
 /* Responsive adjustments for notifications - Full screen overlay on mobile */
-@media (max-width: 991px) {
+@media (max-width: 899px) {
   .navbar-notification-container .notifications-dropdown {
     position: fixed !important;
     top: 60px !important;
