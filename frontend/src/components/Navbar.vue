@@ -1375,12 +1375,12 @@ export default {
         lastClickTarget = e.target;
       };
       
-      // Prevent auto-collapse for notification dropdown at 900px-1200px screen widths
+      // Prevent auto-collapse for notification dropdown at 996px-1200px screen widths
       const preventAutoCollapse = () => {
         const width = window.innerWidth;
         
         // Remove existing document click listener if outside range
-        if (trackClickHandler && trackClickActive && (width < 900 || width > 1200)) {
+        if (trackClickHandler && trackClickActive && (width < 996 || width > 1200)) {
           document.removeEventListener('click', trackClickHandler, true);
           trackClickActive = false;
         }
@@ -1401,7 +1401,7 @@ export default {
           }
         });
         
-        if (width >= 900 && width <= 1200) {
+        if (width >= 996 && width <= 1200) {
           // Add document click listener to track clicks (only if not already added)
           if (trackClickHandler && !trackClickActive) {
             document.addEventListener('click', trackClickHandler, true);
@@ -2107,32 +2107,58 @@ export default {
   }
 }
 
-/* Prevent auto-collapse for dropdown at 900px-1200px screen widths */
-@media (min-width: 900px) and (max-width: 1200px) {
-  /* Prevent underline on notification link */
+/* Prevent auto-collapse and underline for dropdown at 996px-1200px screen widths */
+@media (min-width: 996px) and (max-width: 1200px) {
+  /* Prevent underline on notification link (mobile) */
   .navbar-notification-container .nav-link {
     text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
   }
 
   .navbar-notification-container .nav-link:hover {
     text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
   }
 
   .navbar-notification-container .nav-link:focus {
     text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+  }
+
+  .navbar-notification-container .nav-link.active,
+  .navbar-notification-container .nav-link.router-link-active {
+    text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
   }
 
   /* Prevent underline on desktop notification link */
   .navbar-nav .nav-item.dropdown .nav-link {
     text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
   }
 
   .navbar-nav .nav-item.dropdown .nav-link:hover {
     text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
   }
 
   .navbar-nav .nav-item.dropdown .nav-link:focus {
     text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+  }
+
+  .navbar-nav .nav-item.dropdown .nav-link.active,
+  .navbar-nav .nav-item.dropdown .nav-link.router-link-active {
+    text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
   }
 }
 
