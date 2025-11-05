@@ -72,7 +72,7 @@
 
                 <!-- Remember Me and Forgot Password with Animation -->
                 <div ref="rememberField" class="mb-4">
-                  <div class="d-flex justify-content-between align-items-center">
+                  <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 gap-sm-0">
                     <div class="cyberpunk-checkbox-group">
                       <input
                         type="checkbox"
@@ -1174,6 +1174,10 @@ body, html {
     border-radius: 15px;
   }
   
+  .cyberpunk-login-card .card-body {
+    padding: 2rem !important;
+  }
+  
   .cyberpunk-welcome-text {
     font-size: 2rem;
   }
@@ -1189,6 +1193,22 @@ body, html {
   
   .cyberpunk-logo-icon i {
     font-size: 2rem;
+  }
+}
+
+/* SM breakpoint specific adjustments */
+@media (min-width: 576px) and (max-width: 767px) {
+  .cyberpunk-login-card .card-body {
+    padding: 2.5rem !important;
+  }
+  
+  .cyberpunk-checkbox-group {
+    margin-bottom: 0;
+  }
+  
+  .cyberpunk-link {
+    white-space: nowrap;
+    margin-left: 1rem;
   }
 }
 

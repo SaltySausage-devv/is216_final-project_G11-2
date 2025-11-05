@@ -55,7 +55,25 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    // If there's a saved position (e.g., back button), restore it
+    if (savedPosition) {
+      return savedPosition
+    }
+    // If navigating to a hash anchor, scroll to it
+    if (to.hash) {
+      return { el: to.hash }
+    }
+    // Otherwise, scroll to top - return a promise to ensure DOM is ready
+    return new Promise((resolve) => {
+      // Use nextTick to ensure the new route component is rendered
+      setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
+        resolve({ top: 0, left: 0 })
+      }, 50)
+    })
+  }
 })
 
 const pinia = createPinia()
