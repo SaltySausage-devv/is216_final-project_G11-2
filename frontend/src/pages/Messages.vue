@@ -1,7 +1,7 @@
 <template>
   <div class="messages-page">
-    <div class="container-fluid pt-4 pt-lg-5 pb-2 pb-lg-2 px-3 px-lg-5">
-      <div class="row g-3 g-lg-4 messages-row">
+    <div class="container-fluid pt-2 pt-lg-3 pb-0 pb-lg-0 px-3 px-lg-5 d-flex flex-column align-items-center justify-content-center">
+      <div class="row g-2 g-lg-3 messages-row w-100">
         <!-- Conversations Sidebar -->
         <div
           class="col-12 col-lg-4 conversations-col"
@@ -5959,12 +5959,26 @@ export default {
 /* Cyberpunk Messages Page */
 .messages-page {
   background: #1a1a1a !important;
-  height: 50%;
-  min-height: 50%;
+  min-height: calc(100vh - 200px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
   overflow-y: auto;
   color: var(--cyber-text, #ffffff);
-  padding-bottom: 10px;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
+
+.messages-page .container-fluid {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
 
 /* Override Bootstrap primary color to match theme */
 .messages-page .text-primary {
@@ -6058,8 +6072,10 @@ h6 {
 
 /* Layout improvements */
 .messages-row {
-  min-height: calc(100vh - 200px);
   align-items: stretch !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  max-width: 100%;
 }
 
 .conversations-col,
@@ -6067,13 +6083,16 @@ h6 {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .conversations-col .card,
 .chat-col .card {
-  height: calc(100vh - 170px);
-  max-height: calc(100vh - 170px);
+  height: auto;
+  max-height: calc(100vh - 250px);
   margin-top: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 /* LG breakpoint specific adjustments (992px - 1199px) */
@@ -8025,5 +8044,26 @@ i.text-primary {
 
 .custom-autocomplete-dropdown::-webkit-scrollbar-thumb:hover {
   background: #5a5a5a;
+}
+
+/* Reduce whitespace above footer on messages page */
+body:has(.messages-page) footer.cyberpunk-footer {
+  margin-top: 0 !important;
+  padding-top: 1.5rem !important;
+}
+
+/* Remove any extra spacing from main element when messages page is active */
+body:has(.messages-page) main {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Ensure messages-page container has no bottom spacing */
+.messages-page > .container-fluid {
+  margin-bottom: 0 !important;
+}
+
+.messages-page > .container-fluid > .row {
+  margin-bottom: 0 !important;
 }
 </style>
