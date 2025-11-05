@@ -430,7 +430,7 @@ export default {
                 icon = "fas fa-minus-circle";
                 title = credits ? `Credits deducted: ${credits} credits` : "Credits deducted";
                 status = "Completed";
-                badgeClass = "bg-info";
+                badgeClass = "bg-success"; // Changed to green for consistency with other "Completed" statuses
               } else if (message.includes("added") || message.includes("transferred")) {
                 icon = "fas fa-plus-circle";
                 title = credits ? `Credits added: ${credits} credits` : "Credits added";
@@ -440,7 +440,7 @@ export default {
                 icon = "fas fa-dollar-sign";
                 title = "Credit transaction";
                 status = "Completed";
-                badgeClass = "bg-info";
+                badgeClass = "bg-success"; // Changed to green for consistency with other "Completed" statuses
               }
             } else if (message.includes("message") || message.includes("Message") || notification.type === "push") {
               icon = "fas fa-envelope";
