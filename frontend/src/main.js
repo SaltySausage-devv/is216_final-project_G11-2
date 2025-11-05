@@ -65,6 +65,10 @@ const router = createRouter({
     if (to.hash) {
       return { el: to.hash }
     }
+    // For /messages route, prevent scrolling on refresh/navigation
+    if (to.path === '/messages' || to.path.startsWith('/chat/')) {
+      return { top: 0, left: 0 }
+    }
     // Otherwise, scroll to top - return a promise to ensure DOM is ready
     return new Promise((resolve) => {
       // Use nextTick to ensure the new route component is rendered

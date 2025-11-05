@@ -1321,7 +1321,10 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       .single();
     
     const primarySubject = bookingOffer.subject || tutorProfileData?.subjects?.[0] || 'General Tutoring';
-    const subjectLevel = tutorProfileData?.subjects?.length > 1 ? 'Multi-Subject' : 'Single Subject';
+    // Validate level - reject invalid values like "Multi-Subject" or "Single Subject"
+    const validLevels = ['Primary', 'Secondary', 'JC', 'IB', 'Poly', 'University'];
+    const rawLevel = bookingOffer.level || 'Secondary';
+    const bookingLevel = validLevels.includes(rawLevel) ? rawLevel : 'Secondary'; // Default to Secondary if invalid
 
     // Create booking record in bookings table
     const { data: booking, error: bookingError } = await supabase
@@ -1331,7 +1334,7 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
         student_id: bookingOffer.tutee_id,
         title: `${primarySubject} Session`, // Dynamic title based on selected subject
         subject: primarySubject, // Use selected subject or tutor's primary subject
-        level: subjectLevel, // Dynamic level based on tutor's subjects
+        level: bookingLevel, // Use level from booking offer
         start_time: bookingOffer.proposed_time,
         end_time: bookingOffer.proposed_end_time || new Date(new Date(bookingOffer.proposed_time).getTime() + (bookingOffer.duration || 60) * 60 * 1000), // Use proposed_end_time or calculate from duration
         location: bookingOffer.final_location,
@@ -1471,7 +1474,9 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       duration: bookingOffer.duration,
       location: bookingOffer.final_location,
       isOnline: bookingOffer.is_online,
-      bookingId: createdBooking?.id
+      bookingId: createdBooking?.id,
+      subject: primarySubject,
+      level: bookingLevel
     });
 
     const { data: message, error: messageError } = await supabase
@@ -1641,6 +1646,37 @@ app.post('/messaging/booking-rejections', verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Booking rejection error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get booking offer by ID
+app.get('/messaging/booking-offers/:id', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data: bookingOffer, error } = await supabase
+      .from('booking_offers')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!bookingOffer) {
+      return res.status(404).json({ error: 'Booking offer not found' });
+    }
+
+    // Verify user has access to this booking offer
+    if (bookingOffer.tutee_id !== req.user.userId && bookingOffer.tutor_id !== req.user.userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json({ bookingOffer });
+  } catch (error) {
+    console.error('Booking offer fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

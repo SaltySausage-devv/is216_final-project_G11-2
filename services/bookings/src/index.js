@@ -1095,7 +1095,10 @@ app.post('/booking-confirmations', verifyToken, async (req, res) => {
     const primarySubject = tutorSubjects?.subjects?.[0] || 'General Tutoring';
     // Use subject and level from booking offer, fallback to tutor's primary subject if not provided
     const bookingSubject = bookingOffer.subject || primarySubject;
-    const bookingLevel = bookingOffer.level || 'Secondary'; // Default to Secondary if not provided
+    // Validate level - reject invalid values like "Multi-Subject" or "Single Subject"
+    const validLevels = ['Primary', 'Secondary', 'JC', 'IB', 'Poly', 'University'];
+    const rawLevel = bookingOffer.level || 'Secondary';
+    const bookingLevel = validLevels.includes(rawLevel) ? rawLevel : 'Secondary'; // Default to Secondary if invalid
 
     // Create a final booking record from the confirmed offer
     const { data: finalBooking, error: bookingError } = await supabase

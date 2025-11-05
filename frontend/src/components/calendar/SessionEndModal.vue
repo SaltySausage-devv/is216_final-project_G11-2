@@ -40,7 +40,9 @@
               <p class="mb-2">
                 <strong>Subject:</strong> {{ booking.subject }}
               </p>
-              <p class="mb-2"><strong>Level:</strong> {{ booking.level }}</p>
+              <p class="mb-2" v-if="booking.level">
+                <strong>Level:</strong> {{ booking.level }}
+              </p>
             </div>
           </div>
 

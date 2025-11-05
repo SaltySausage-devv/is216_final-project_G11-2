@@ -5093,6 +5093,11 @@ export default {
     };
 
     onMounted(async () => {
+      // Prevent page scroll on refresh - scroll to top immediately
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+
       // Clear any persisted notifications from previous page loads
       clearAllNotifications();
 
@@ -5101,6 +5106,13 @@ export default {
 
       // Wait a moment for auth to be ready
       await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      // Ensure page stays at top after content loads
+      nextTick(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      });
 
       // CRITICAL FIX: Load conversations FIRST, then setup messaging
       console.log("🔄 Loading conversations first...");
@@ -5448,7 +5460,7 @@ export default {
       return now > endTime;
     };
 
-    const showSessionEndModal = (message) => {
+    const showSessionEndModal = async (message) => {
       const bookingData = getBookingData(message);
       if (!bookingData || !bookingData.bookingId) {
         return;
@@ -5483,16 +5495,63 @@ export default {
         return;
       }
 
+      // Fetch booking from database to get full details including level
+      let bookingDetails = null;
+      let bookingOfferDetails = null;
+      try {
+        const response = await fetch(`/api/bookings/${bookingData.bookingId}`, {
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          bookingDetails = data.booking;
+          console.log("📋 Fetched booking details:", bookingDetails);
+        }
+      } catch (error) {
+        console.error("Error fetching booking details:", error);
+      }
+
+      // Always fetch booking offer directly from database to get the correct level (source of truth)
+      const bookingOfferId = bookingData.bookingOfferId || message.booking_offer_id;
+      if (bookingOfferId) {
+        try {
+          const offerResponse = await fetch(`/api/messaging/booking-offers/${bookingOfferId}`, {
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          
+          if (offerResponse.ok) {
+            const offerData = await offerResponse.json();
+            bookingOfferDetails = offerData.bookingOffer;
+            console.log("📋 Fetched booking offer from database:", bookingOfferDetails);
+          }
+        } catch (offerError) {
+          console.error("Error fetching booking offer from database:", offerError);
+        }
+      }
+
+      // Validate level - filter out invalid values like "Multi-Subject" or "Single Subject"
+      // Check booking_offer first (source of truth), then booking, then message data
+      const validLevels = ['Primary', 'Secondary', 'JC', 'IB', 'Poly', 'University'];
+      const rawLevel = bookingOfferDetails?.level || bookingDetails?.level || bookingData.level;
+      const validatedLevel = rawLevel && validLevels.includes(rawLevel) ? rawLevel : null;
+
       // Create a booking object for the modal
       selectedBookingForSessionEnd.value = {
         id: bookingData.bookingId,
-        start_time: bookingData.confirmedTime,
-        end_time: new Date(
-          new Date(bookingData.confirmedTime).getTime() +
+        start_time: bookingData.confirmedTime || bookingDetails?.start_time,
+        end_time: bookingData.confirmedEndTime || bookingDetails?.end_time || new Date(
+          new Date(bookingData.confirmedTime || bookingDetails?.start_time).getTime() +
             (bookingData.duration || 60) * 60000
         ).toISOString(),
-        subject: bookingData.subject || "Tutoring Session",
-        level: bookingData.level || "N/A",
+        subject: bookingDetails?.subject || bookingData.subject || "Tutoring Session",
+        level: validatedLevel,
         tutor: {
           first_name:
             selectedConversation.value?.participant?.name?.split(" ")[0] ||
@@ -5507,7 +5566,7 @@ export default {
       sessionEndModal.value = true;
     };
 
-    const showSessionEndModalForCompleted = (message) => {
+    const showSessionEndModalForCompleted = async (message) => {
       const completionData = getBookingCompletionData(message);
       if (!completionData || !completionData.bookingId) {
         return;
@@ -5524,13 +5583,61 @@ export default {
         return;
       }
 
+      // Fetch booking from database to get full details including level
+      let bookingDetails = null;
+      let bookingOfferDetails = null;
+      try {
+        const response = await fetch(`/api/bookings/${completionData.bookingId}`, {
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          bookingDetails = data.booking;
+          console.log("📋 Fetched booking details for completed session:", bookingDetails);
+        }
+      } catch (error) {
+        console.error("Error fetching booking details:", error);
+      }
+
+      // Always fetch booking offer directly from database to get the correct level (source of truth)
+      // Try to get booking offer ID from completion data or message
+      const bookingOfferId = completionData.bookingOfferId || message.booking_offer_id;
+      if (bookingOfferId) {
+        try {
+          const offerResponse = await fetch(`/api/messaging/booking-offers/${bookingOfferId}`, {
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+              "Content-Type": "application/json",
+            },
+          });
+          
+          if (offerResponse.ok) {
+            const offerData = await offerResponse.json();
+            bookingOfferDetails = offerData.bookingOffer;
+            console.log("📋 Fetched booking offer from database:", bookingOfferDetails);
+          }
+        } catch (offerError) {
+          console.error("Error fetching booking offer from database:", offerError);
+        }
+      }
+
+      // Validate level - filter out invalid values like "Multi-Subject" or "Single Subject"
+      // Check booking_offer first (source of truth), then booking, then completion data
+      const validLevels = ['Primary', 'Secondary', 'JC', 'IB', 'Poly', 'University'];
+      const rawLevel = bookingOfferDetails?.level || bookingDetails?.level || completionData.level;
+      const validatedLevel = rawLevel && validLevels.includes(rawLevel) ? rawLevel : null;
+
       // Create a booking object for the modal using session completion data
       selectedBookingForSessionEnd.value = {
         id: completionData.bookingId,
-        start_time: completionData.startTime,
-        end_time: completionData.endTime,
-        subject: completionData.subject || "Tutoring Session",
-        level: "N/A", // Session completed doesn't provide level
+        start_time: completionData.startTime || bookingDetails?.start_time,
+        end_time: completionData.endTime || bookingDetails?.end_time,
+        subject: bookingDetails?.subject || completionData.subject || "Tutoring Session",
+        level: validatedLevel,
         tutor: {
           first_name:
             selectedConversation.value?.participant?.name?.split(" ")[0] ||
