@@ -1375,59 +1375,82 @@ export default {
         lastClickTarget = e.target;
       };
 
-      // Prevent navbar collapse at 996px-1200px - AGGRESSIVE OVERRIDE
+      // Prevent navbar collapse at 996px-1200px - OPTIMIZED
+      let isNavbarForced = false;
+      let toggleHandler = null;
+      
       const preventNavbarCollapse = () => {
         const width = window.innerWidth;
         if (width >= 996 && width <= 1200) {
-          const navbarCollapse = document.getElementById("navbarNav");
-          if (navbarCollapse) {
-            // AGGRESSIVE: Force navbar to stay expanded with inline styles
-            navbarCollapse.classList.add("show");
-            navbarCollapse.classList.remove("collapse", "collapsing");
-            navbarCollapse.style.cssText = "display: flex !important; flex-basis: auto !important; flex-grow: 1 !important; overflow: visible !important; max-height: none !important; height: auto !important; visibility: visible !important; opacity: 1 !important; position: static !important; transform: none !important; transition: none !important;";
-            
-            // Hide all togglers
-            const navbarTogglers = document.querySelectorAll(".navbar-toggler, .cyberpunk-hamburger, button[data-bs-toggle='collapse']");
-            navbarTogglers.forEach(toggler => {
-              toggler.style.cssText = "display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;";
-              // Disable toggle functionality
-              toggler.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                return false;
-              }, true);
-            });
+          if (!isNavbarForced) {
+            const navbarCollapse = document.getElementById("navbarNav");
+            if (navbarCollapse) {
+              // Force navbar to stay expanded with inline styles
+              navbarCollapse.classList.add("show");
+              navbarCollapse.classList.remove("collapse", "collapsing");
+              navbarCollapse.style.cssText = "display: flex !important; flex-basis: auto !important; flex-grow: 1 !important; overflow: visible !important; max-height: none !important; height: auto !important; visibility: visible !important; opacity: 1 !important; position: static !important; transform: none !important; transition: none !important;";
+              
+              // Hide all togglers (only once)
+              const navbarTogglers = document.querySelectorAll(".navbar-toggler, .cyberpunk-hamburger, button[data-bs-toggle='collapse']");
+              navbarTogglers.forEach(toggler => {
+                toggler.style.cssText = "display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;";
+              });
 
-            // Hide mobile nav items
-            const mobileNavItems = document.querySelector(".mobile-nav-items");
-            if (mobileNavItems) {
-              mobileNavItems.style.cssText = "display: none !important;";
-            }
-
-            // Force navbar to be visible
-            const navbar = document.querySelector(".navbar");
-            if (navbar) {
-              navbar.style.cssText = "overflow: visible !important; max-height: none !important; height: auto !important;";
-            }
-
-            // Prevent Bootstrap collapse instances from working
-            if (window.bootstrap && window.bootstrap.Collapse) {
-              const collapseInstances = bootstrap.Collapse.getInstance(navbarCollapse);
-              if (collapseInstances) {
-                collapseInstances.dispose();
+              // Create single handler for all togglers
+              if (!toggleHandler) {
+                toggleHandler = (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  return false;
+                };
+                
+                // Add handler once to document to catch all clicks
+                document.addEventListener('click', (e) => {
+                  if (e.target.closest('.navbar-toggler, .cyberpunk-hamburger, button[data-bs-toggle="collapse"]')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    return false;
+                  }
+                }, true);
               }
+
+              // Hide mobile nav items (only once)
+              const mobileNavItems = document.querySelector(".mobile-nav-items");
+              if (mobileNavItems) {
+                mobileNavItems.style.cssText = "display: none !important;";
+              }
+
+              // Force navbar to be visible (only once)
+              const navbar = document.querySelector(".navbar");
+              if (navbar) {
+                navbar.style.cssText = "overflow: visible !important; max-height: none !important; height: auto !important;";
+              }
+
+              // Prevent Bootstrap collapse instances from working (only once)
+              if (window.bootstrap && window.bootstrap.Collapse) {
+                const collapseInstances = bootstrap.Collapse.getInstance(navbarCollapse);
+                if (collapseInstances) {
+                  collapseInstances.dispose();
+                }
+              }
+              
+              isNavbarForced = true;
             }
           }
         } else {
           // Restore normal behavior outside range
-          const navbarTogglers = document.querySelectorAll(".navbar-toggler, .cyberpunk-hamburger");
-          navbarTogglers.forEach(toggler => {
-            toggler.style.cssText = "";
-          });
-          const mobileNavItems = document.querySelector(".mobile-nav-items");
-          if (mobileNavItems) {
-            mobileNavItems.style.cssText = "";
+          if (isNavbarForced) {
+            const navbarTogglers = document.querySelectorAll(".navbar-toggler, .cyberpunk-hamburger");
+            navbarTogglers.forEach(toggler => {
+              toggler.style.cssText = "";
+            });
+            const mobileNavItems = document.querySelector(".mobile-nav-items");
+            if (mobileNavItems) {
+              mobileNavItems.style.cssText = "";
+            }
+            isNavbarForced = false;
           }
         }
       };
@@ -1508,46 +1531,36 @@ export default {
         preventNavbarCollapse();
         preventAutoCollapse();
         
-        // Set up MutationObserver to catch any Bootstrap changes
+        // Set up MutationObserver to catch any Bootstrap changes (only if needed)
         const navbarCollapse = document.getElementById("navbarNav");
         if (navbarCollapse && window.innerWidth >= 996 && window.innerWidth <= 1200) {
+          let observerTimeout = null;
           const observer = new MutationObserver((mutations) => {
-            const width = window.innerWidth;
-            if (width >= 996 && width <= 1200) {
-              preventNavbarCollapse();
-              // Force styles immediately
-              navbarCollapse.classList.add("show");
-              navbarCollapse.classList.remove("collapse", "collapsing");
-              navbarCollapse.style.cssText = "display: flex !important; flex-basis: auto !important; flex-grow: 1 !important; overflow: visible !important; max-height: none !important; height: auto !important; visibility: visible !important; opacity: 1 !important; position: static !important; transform: none !important; transition: none !important;";
+            // Debounce to avoid performance issues
+            if (observerTimeout) {
+              clearTimeout(observerTimeout);
             }
+            observerTimeout = setTimeout(() => {
+              const width = window.innerWidth;
+              if (width >= 996 && width <= 1200) {
+                // Only force if navbar collapse class was changed
+                const hasCollapseClass = navbarCollapse.classList.contains('collapse') || navbarCollapse.classList.contains('collapsing');
+                if (hasCollapseClass) {
+                  navbarCollapse.classList.add("show");
+                  navbarCollapse.classList.remove("collapse", "collapsing");
+                  navbarCollapse.style.cssText = "display: flex !important; flex-basis: auto !important; flex-grow: 1 !important; overflow: visible !important; max-height: none !important; height: auto !important; visibility: visible !important; opacity: 1 !important; position: static !important; transform: none !important; transition: none !important;";
+                }
+              }
+            }, 50);
           });
           
           observer.observe(navbarCollapse, {
             attributes: true,
-            attributeFilter: ['class', 'style'],
+            attributeFilter: ['class'],
             childList: false,
             subtree: false
           });
-          
-          // Also observe navbar itself
-          const navbar = document.querySelector(".navbar");
-          if (navbar) {
-            observer.observe(navbar, {
-              attributes: true,
-              attributeFilter: ['class', 'style'],
-              childList: false,
-              subtree: false
-            });
-          }
         }
-        
-        // Run periodically to catch any changes
-        setInterval(() => {
-          const width = window.innerWidth;
-          if (width >= 996 && width <= 1200) {
-            preventNavbarCollapse();
-          }
-        }, 100);
       }, 100);
       
       // Store resize handler reference
