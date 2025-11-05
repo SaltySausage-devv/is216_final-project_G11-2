@@ -5926,8 +5926,8 @@ h6 {
   }
 
   .conversations-col .card-header .btn {
-    padding: 0.5rem 1.25rem;
-    font-size: 0.9rem;
+    padding: 0.375rem 0.875rem;
+    font-size: 0.8rem;
     white-space: nowrap;
     flex-shrink: 0;
     min-width: fit-content;
@@ -5935,6 +5935,58 @@ h6 {
 
   .conversations-col .card-header .btn i.fa-plus {
     margin-right: 0.5rem !important;
+  }
+
+  /* Fix column widths and layout at LG breakpoint */
+  .conversations-col {
+    flex: 0 0 33.333333% !important;
+    max-width: 33.333333% !important;
+  }
+
+  .chat-col {
+    flex: 0 0 66.666667% !important;
+    max-width: 66.666667% !important;
+  }
+
+  /* Adjust card heights for LG breakpoint */
+  .conversations-col .card,
+  .chat-col .card {
+    height: calc(100vh - 180px) !important;
+    max-height: calc(100vh - 180px) !important;
+    min-height: 500px !important;
+  }
+
+  .chat-card {
+    height: calc(100vh - 180px) !important;
+    max-height: calc(100vh - 180px) !important;
+    min-height: 500px !important;
+  }
+
+  .conversations-list {
+    max-height: calc(100vh - 280px) !important;
+    overflow-y: auto;
+  }
+
+  .messages-container {
+    max-height: calc(100vh - 250px) !important;
+    overflow-y: auto;
+  }
+
+  /* Ensure proper spacing */
+  .messages-row {
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+  }
+
+  .messages-row > [class*="col-"] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  /* Fix container padding at LG */
+  .container-fluid {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
   }
 }
 
