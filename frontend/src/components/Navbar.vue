@@ -1588,13 +1588,13 @@ export default {
 
   .navbar-collapse {
     position: fixed;
-    top: 60px;
+    top: 60px !important; 
     left: 0;
     right: 0;
     width: 100%;
     background: rgba(26, 26, 26, 0.98);
     border: none;
-    border-top: 2px solid var(--cyber-orange);
+    border-top: 1px solid var(--cyber-orange);
     border-radius: 0;
     margin: 0;
     padding: 1rem 1.5rem;
@@ -1696,6 +1696,10 @@ export default {
 
   .display-4 {
     font-size: 1.8rem;
+  }
+
+  .navbar-collapse{
+    top: 55px !important; 
   }
 }
 

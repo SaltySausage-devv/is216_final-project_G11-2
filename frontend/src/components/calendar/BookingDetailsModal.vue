@@ -765,7 +765,7 @@ export default {
   border-radius: 20px;
   color: #ffffff;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0,0,0,0.1);
-  overflow: hidden;
+  overflow: scroll;
 }
 
 .modal-header {

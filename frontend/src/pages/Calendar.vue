@@ -125,6 +125,7 @@ export default {
       dayMaxEvents: false, // Don't limit events globally - use dayMaxEventRows per view instead
       weekends: true,
       events: bookings.value,
+      eventOverlap: false,
       eventContent: renderEventContent,
   eventClick: handleEventClick,
   dateClick: handleDateClick,
@@ -623,7 +624,7 @@ h1 {
   transition: all 0.2s ease;
   border: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  min-height: 20px;
+  height: auto;
 }
 
 /* Custom event content styling */
@@ -669,15 +670,14 @@ h1 {
 }
 
 /* Ensure events have proper height in time grid */
-:deep(.fc-timegrid-slot-lane .fc-event) {
-  min-height: 35px;
+:deep(.fc-timegrid-slot){
+  min-height: 3.5em;
 }
 
 /* Month view event text handling */
 :deep(.fc-daygrid-event .fc-event-content-custom) {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: ellipsis !important;
 }
 
 :deep(.fc-daygrid-day-number) {
@@ -845,4 +845,65 @@ h1 {
     font-size: 1.5rem;
   }
 }
+
+
+
+:deep(.fc-event .fc-event-title),
+:deep(.fc-event .fc-event-time),
+:deep(.fc-event .fc-event-title-container) {
+  overflow: auto;
+  scrollbar-width: none;
+
+}
+:deep(.fc-event .fc-event-title)::-webkit-scrollbar,
+:deep(.fc-event .fc-event-time)::-webkit-scrollbar,
+:deep(.fc-event .fc-event-title-container)::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox 
+.example {
+  -ms-overflow-style: none;  /* IE and Edge 
+  scrollbar-width: none;   Firefox 
+}
+*/
+
+ 
+@media (max-width: 992px) {
+  :deep(.fc) {
+    font-size: 0.95rem;
+  }
+  :deep(.fc .fc-daygrid-event),
+  :deep(.fc .fc-timegrid-event) {
+    font-size: 0.85rem;
+    overflow:hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  :deep(.fc) {
+    font-size: 0.9rem;
+  }
+  :deep(.fc .fc-daygrid-event),
+  :deep(.fc .fc-timegrid-event) {
+    font-size: 0.8em !important;
+  }
+  :deep(.fc-col-header-cell-cushion) {
+    white-space: normal !important;
+    line-height: 1.1;
+  }
+}
+
+@media (max-width: 576px) {
+  :deep(.fc) {
+    font-size: 0.85rem;
+  }
+  :deep(.fc .fc-event-title) {
+    font-size: 0.75em !important;
+  }
+  :deep(.fc-event-time){
+    display: none;
+  }
+}
+  
 </style>

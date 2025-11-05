@@ -5787,8 +5787,11 @@ export default {
 /* Cyberpunk Messages Page */
 .messages-page {
   background: #1a1a1a !important;
-  min-height: 100vh;
+  height: 50%;
+  min-height: 50%;
+  overflow-y: auto;
   color: var(--cyber-text, #ffffff);
+  padding-bottom: 20px;
 }
 
 /* Override Bootstrap primary color to match theme */
@@ -6442,7 +6445,7 @@ i.text-primary {
     display: flex !important;
     z-index: 1 !important;
     position: relative !important;
-    height: calc(100vh - 150px);
+    height: 50%;
   }
 
   .row.messages-row .conversations-col .card {
