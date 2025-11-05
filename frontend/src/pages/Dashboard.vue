@@ -448,8 +448,8 @@ export default {
             } else if (notificationMessageType === "booking_cancelled" || message.includes("Booking cancelled") || message.includes("booking cancelled") || data.notificationType === "booking_cancelled") {
               icon = "fas fa-calendar-times";
               title = "Booking cancelled";
-              status = "Cancelled";
-              badgeClass = "bg-danger";
+              status = "Completed";
+              badgeClass = "bg-success";
             } else if (notificationMessageType === "booking_offer" || notificationMessageType === "booking_proposal" || message.includes("Booking request") || message.includes("booking request") || message.includes("Booking offer") || message.includes("Booking proposal") || data.notificationType === "booking_offer" || data.notificationType === "booking_request" || data.notificationType === "booking_proposal") {
               icon = "fas fa-calendar-plus";
               
@@ -639,8 +639,8 @@ export default {
           } else if (messageType === "booking_cancelled") {
             icon = "fas fa-calendar-times";
             title = "Booking cancelled";
-            status = "Cancelled";
-            badgeClass = "bg-danger";
+            status = "Completed";
+            badgeClass = "bg-success";
           } else if (messageType === "booking_offer" || messageType === "booking_proposal") {
             icon = "fas fa-calendar-plus";
             
@@ -862,8 +862,8 @@ export default {
         } else if (messageType === "booking_cancelled") {
           icon = "fas fa-calendar-times";
           title = "Booking cancelled";
-          status = "Cancelled";
-          badgeClass = "bg-danger";
+          status = "Completed";
+          badgeClass = "bg-success";
         } else if (messageType === "booking_offer" || messageType === "booking_proposal") {
           icon = "fas fa-calendar-plus";
           
