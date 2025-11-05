@@ -1257,13 +1257,34 @@ export default {
                 return timeB - timeA;
               });
             }
+            
+            // If this is a session_completed message, refresh dashboard metrics in real-time
+            // This ensures Active Bookings, Completed Sessions, Hours This Month, and Total Spent update immediately
+            if (message.message_type === "session_completed") {
+              console.log("📊 DASHBOARD: Session completed, refreshing dashboard metrics in real-time...");
+              // Refresh dashboard metrics to reflect the new completed session
+              // This will update Active Bookings (decrease), Completed Sessions (increase),
+              // Hours This Month (increase), and Total Spent (increase)
+              loadDashboardData().catch(err => {
+                console.error("📊 DASHBOARD: Failed to refresh dashboard metrics:", err);
+              });
+            }
         } else {
-          console.log("📊 DASHBOARD: Skipping activity update (message from self or no sender)");
-          console.log("📊 DASHBOARD: isSystemMessage:", isSystemMessage);
-          console.log("📊 DASHBOARD: isSender:", isSender);
-          console.log("📊 DASHBOARD: hasSender:", !!message.sender);
-          console.log("📊 DASHBOARD: message_type:", message.message_type);
-          console.log("📊 DASHBOARD: hasContent:", !!message.content);
+          // Even if the message doesn't create an activity, we should still refresh metrics
+          // if it's a session_completed message (for real-time updates)
+          if (message.message_type === "session_completed") {
+            console.log("📊 DASHBOARD: Session completed (no activity created), refreshing dashboard metrics...");
+            loadDashboardData().catch(err => {
+              console.error("📊 DASHBOARD: Failed to refresh dashboard metrics:", err);
+            });
+          } else {
+            console.log("📊 DASHBOARD: Skipping activity update (message from self or no sender)");
+            console.log("📊 DASHBOARD: isSystemMessage:", isSystemMessage);
+            console.log("📊 DASHBOARD: isSender:", isSender);
+            console.log("📊 DASHBOARD: hasSender:", !!message.sender);
+            console.log("📊 DASHBOARD: message_type:", message.message_type);
+            console.log("📊 DASHBOARD: hasContent:", !!message.content);
+          }
         }
       };
 

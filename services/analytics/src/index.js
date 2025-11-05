@@ -266,17 +266,20 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
     console.log('📊 STUDENT ANALYTICS: Calculating metrics with business rules...');
     
     // Active Bookings: confirmed bookings with future date (start_time > now)
-    // These are bookings from messages or calendar that are confirmed and scheduled for the future
+    // AND attendance has NOT been marked (attendance_status !== 'attended')
+    // These are bookings that are live and waiting for attendance to be marked
     const now = new Date();
     const activeBookings = allBookings
       ?.filter(b => {
         if (b.status !== 'confirmed') return false;
         if (!b.start_time) return false;
+        // Exclude bookings where attendance has already been marked (these are completed)
+        if (b.attendance_status === 'attended') return false;
         const startTime = new Date(b.start_time);
         return startTime > now; // Future date
       }) || [];
 
-    console.log('📊 Active Bookings (confirmed future):', activeBookings.length);
+    console.log('📊 Active Bookings (confirmed future, attendance not marked):', activeBookings.length);
 
     // Completed Sessions: bookings marked as present (attendance_status === 'attended')
     // These are sessions where attendance was marked as 'attended' in the calendar
@@ -369,19 +372,20 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
 
     console.log('📊 Total Hours This Month (from attended sessions in current month):', totalHours);
 
-    // Total Spent: total amount from all confirmed bookings (all time, not just current month)
-    // Only confirmed bookings count towards total spent (credits used)
-    const confirmedBookings = allBookings?.filter(b => b.status === 'confirmed') || [];
-    console.log('📊 Confirmed Bookings (for total spent):', confirmedBookings.length);
+    // Total Spent: total amount from bookings where attendance was marked as 'attended'
+    // Credits are only deducted when attendance is marked as completed
+    // Only bookings with attendance_status === 'attended' count towards total spent
+    const attendedBookings = allBookings?.filter(b => b.attendance_status === 'attended') || [];
+    console.log('📊 Attended Bookings (for total spent - credits deducted):', attendedBookings.length);
 
-    const totalSpent = confirmedBookings
+    const totalSpent = attendedBookings
       ?.reduce((sum, b) => {
         const amount = parseFloat(b.total_amount) || 0;
         // Ensure spending is never negative
         return sum + Math.max(0, amount);
       }, 0) || 0;
 
-    console.log('📊 Total Spent (credits used for confirmed bookings):', totalSpent);
+    console.log('📊 Total Spent (credits deducted from attended sessions):', totalSpent);
     const tutorsWorkedWith = new Set(
       allBookings
         ?.filter(b => b.status === 'completed' || b.status === 'confirmed')
