@@ -1531,11 +1531,85 @@ export default {
         }
       };
 
+      // Prevent navbar from scrolling when dropdowns open at 996px-1200px
+      const preventNavbarScrollOnDropdown = () => {
+        const width = window.innerWidth;
+        if (width >= 996 && width <= 1200) {
+          const navbar = document.querySelector('.navbar, nav.navbar');
+          const navbarCollapse = document.getElementById("navbarNav");
+          const navbarContainer = document.querySelector('.navbar .container, nav.navbar .container');
+          
+          // Ensure navbar and its containers don't scroll
+          if (navbar) {
+            navbar.style.overflow = 'visible';
+            navbar.style.maxHeight = 'none';
+            navbar.style.height = 'auto';
+          }
+          
+          if (navbarCollapse) {
+            navbarCollapse.style.overflow = 'visible';
+            navbarCollapse.style.maxHeight = 'none';
+            navbarCollapse.style.height = 'auto';
+          }
+          
+          if (navbarContainer) {
+            navbarContainer.style.overflow = 'visible';
+            navbarContainer.style.maxHeight = 'none';
+            navbarContainer.style.height = 'auto';
+          }
+        }
+      };
+
+      // Watch for dropdown show events to prevent scrolling
+      const setupDropdownScrollPrevention = () => {
+        const width = window.innerWidth;
+        if (width >= 996 && width <= 1200) {
+          // Find all dropdowns in navbar
+          const dropdowns = document.querySelectorAll('.navbar .dropdown, nav.navbar .dropdown');
+          
+          dropdowns.forEach(dropdown => {
+            // Listen for Bootstrap show event
+            dropdown.addEventListener('show.bs.dropdown', preventNavbarScrollOnDropdown);
+            dropdown.addEventListener('shown.bs.dropdown', preventNavbarScrollOnDropdown);
+          });
+          
+          // Also use MutationObserver to watch for dropdown show class
+          const navbar = document.querySelector('.navbar, nav.navbar');
+          if (navbar) {
+            const dropdownObserver = new MutationObserver((mutations) => {
+              // Only react if class changes on dropdown elements
+              const hasDropdownClassChange = mutations.some(mutation => 
+                mutation.type === 'attributes' && 
+                mutation.attributeName === 'class' &&
+                (mutation.target.classList.contains('dropdown') || 
+                 mutation.target.closest('.dropdown'))
+              );
+              
+              if (hasDropdownClassChange && window.innerWidth >= 996 && window.innerWidth <= 1200) {
+                const openDropdowns = navbar.querySelectorAll('.dropdown.show');
+                if (openDropdowns.length > 0) {
+                  preventNavbarScrollOnDropdown();
+                }
+              }
+            });
+            
+            dropdownObserver.observe(navbar, {
+              attributes: true,
+              attributeFilter: ['class'],
+              childList: false,
+              subtree: true
+            });
+          }
+        }
+      };
+
       // Call on mount and when window is resized
       // Use setTimeout to ensure DOM is ready
       setTimeout(() => {
         preventNavbarCollapse();
         preventAutoCollapse();
+        preventNavbarScrollOnDropdown();
+        setupDropdownScrollPrevention();
         
         // Set up MutationObserver to catch any Bootstrap changes (only if needed)
         const navbarCollapse = document.getElementById("navbarNav");
@@ -1556,6 +1630,8 @@ export default {
                   navbarCollapse.classList.remove("collapse", "collapsing");
                   navbarCollapse.style.cssText = "display: flex !important; flex-basis: auto !important; flex-grow: 1 !important; overflow: visible !important; max-height: none !important; height: auto !important; visibility: visible !important; opacity: 1 !important; position: static !important; transform: none !important; transition: none !important;";
                 }
+                // Also prevent scrolling when dropdowns are open
+                preventNavbarScrollOnDropdown();
               }
             }, 50);
           });
@@ -1573,6 +1649,8 @@ export default {
       const combinedHandler = () => {
         preventNavbarCollapse();
         preventAutoCollapse();
+        preventNavbarScrollOnDropdown();
+        setupDropdownScrollPrevention();
       };
       resizeHandler = combinedHandler;
       window.addEventListener('resize', resizeHandler);
@@ -2253,6 +2331,20 @@ export default {
     transition: none !important;
   }
 
+  /* Prevent navbar-collapse from scrolling when dropdowns are open */
+  .navbar-collapse:has(.dropdown.show),
+  .navbar-collapse:has(.dropdown[aria-expanded="true"]),
+  #navbarNav:has(.dropdown.show),
+  #navbarNav:has(.dropdown[aria-expanded="true"]),
+  .navbar-collapse .dropdown.show,
+  .navbar-collapse .dropdown[aria-expanded="true"],
+  #navbarNav .dropdown.show,
+  #navbarNav .dropdown[aria-expanded="true"] {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
   /* Hide navbar toggler completely */
   .navbar-toggler,
   .cyberpunk-hamburger,
@@ -2276,6 +2368,32 @@ export default {
     height: auto !important;
   }
 
+  /* Prevent navbar container from scrolling when dropdowns are open */
+  .navbar .container,
+  .navbar > .container,
+  nav.navbar .container,
+  nav.navbar > .container {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Prevent navbar from scrolling when any dropdown is open */
+  .navbar:has(.dropdown.show),
+  .navbar:has(.dropdown[aria-expanded="true"]),
+  nav.navbar:has(.dropdown.show),
+  nav.navbar:has(.dropdown[aria-expanded="true"]) {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  /* Alternative selector for browsers that don't support :has() */
+  .navbar .dropdown.show ~ *,
+  .navbar-collapse:has(.dropdown.show) {
+    overflow: visible !important;
+  }
+
   /* Ensure all nav items are visible */
   .navbar-nav,
   .navbar-nav.me-auto {
@@ -2284,6 +2402,29 @@ export default {
     overflow: visible !important;
     max-height: none !important;
     flex-wrap: nowrap !important;
+  }
+
+  /* Prevent navbar-nav from scrolling when dropdowns are open */
+  .navbar-nav:has(.dropdown.show),
+  .navbar-nav:has(.dropdown[aria-expanded="true"]),
+  .navbar-nav .dropdown.show,
+  .navbar-nav .dropdown[aria-expanded="true"] {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Ensure dropdown menus don't cause navbar to scroll */
+  .dropdown-menu,
+  .dropdown-menu.show,
+  .dropdown.show .dropdown-menu {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Prevent body or html from scrolling when navbar dropdowns are open */
+  body:has(.navbar .dropdown.show),
+  html:has(.navbar .dropdown.show) {
+    overflow-x: hidden !important;
   }
 
   /* Force desktop items to show */
