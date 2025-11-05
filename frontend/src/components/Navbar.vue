@@ -2492,6 +2492,19 @@ export default {
     outline: none !important;
     border-width: 0 !important;
   }
+
+  /* Prevent scrollable inner area in notifications dropdown within this range */
+  .notifications-body {
+    max-height: none !important;
+    overflow-y: visible !important;
+    overflow-x: visible !important;
+  }
+
+  /* Ensure notifications dropdown itself doesn't create scrollable area */
+  .notifications-dropdown {
+    overflow: visible !important;
+    max-height: none !important;
+  }
 }
 
 /* Responsive adjustments for notifications - Full screen overlay on mobile */
