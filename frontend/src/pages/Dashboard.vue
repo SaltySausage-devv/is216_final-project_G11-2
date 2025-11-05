@@ -490,24 +490,53 @@ export default {
             });
           }
 
-          // Sort by timestamp (most recent first) and limit to 5
-          activities.sort((a, b) => {
+          // Merge with existing real-time activities to preserve them
+          // Create a map of existing activities by ID and timestamp+title for deduplication
+          const existingActivityMap = new Map();
+          recentActivity.value.forEach((activity) => {
+            const key = activity.id || `${activity.timestamp}_${activity.title}`;
+            existingActivityMap.set(key, activity);
+          });
+
+          // Add new activities from notifications if they don't already exist
+          activities.forEach((activity) => {
+            const key = activity.id || `${activity.timestamp}_${activity.title}`;
+            if (!existingActivityMap.has(key)) {
+              existingActivityMap.set(key, activity);
+            }
+          });
+
+          // Convert map back to array and sort by timestamp
+          const mergedActivities = Array.from(existingActivityMap.values());
+          mergedActivities.sort((a, b) => {
             const timeA = new Date(a.timestamp || 0);
             const timeB = new Date(b.timestamp || 0);
             return timeB - timeA;
           });
 
           // Show all activities (container will scroll if more than 5)
-          recentActivity.value = activities;
+          recentActivity.value = mergedActivities;
 
           console.log("✅ Recent activity loaded:", recentActivity.value.length, "items");
+          console.log("✅ Preserved real-time activities during merge");
         } else {
-          recentActivity.value = [];
+          // Don't clear existing activities if there are no notifications
+          // This preserves real-time updates that were added directly
+          if (recentActivity.value.length === 0) {
+            recentActivity.value = [];
+          } else {
+            console.log("📊 DASHBOARD: No notifications found, but preserving existing activities:", recentActivity.value.length);
+          }
         }
       } catch (error) {
         console.error("❌ Error loading recent activity from notifications:", error);
-        // Fallback to empty array
-        recentActivity.value = [];
+        // Don't clear existing activities on error - preserve real-time updates
+        // Only clear if there are no existing activities
+        if (recentActivity.value.length === 0) {
+          recentActivity.value = [];
+        } else {
+          console.log("📊 DASHBOARD: Error loading activities, but preserving existing real-time updates:", recentActivity.value.length);
+        }
       }
     };
 
@@ -526,6 +555,7 @@ export default {
 
       // Helper function to create activity item from message
       const createActivityFromMessage = (message) => {
+        // Handle null/undefined message_type - treat as text message
         const messageType = message.message_type || 'text';
         const messageContent = message.content || '';
         const messageTimestamp = message.created_at || new Date().toISOString();
@@ -593,15 +623,20 @@ export default {
             status = "Unread";
             badgeClass = "bg-warning";
           }
-        } else if (messageType === "text" || !messageType) {
-          // Regular text message
+        } else {
+          // Regular text message (or any unrecognized type - default to text message)
           if (message.sender) {
             const senderName = `${message.sender.first_name || ''} ${message.sender.last_name || ''}`.trim();
             title = senderName ? `New message from ${senderName}` : `New message${userType.value === "student" ? " from tutor" : " from student"}`;
+          } else {
+            // No sender object, use generic message
+            title = `New message${userType.value === "student" ? " from tutor" : " from student"}`;
           }
           icon = "fas fa-envelope";
-          status = message.read_at ? "Completed" : "Unread";
-          badgeClass = message.read_at ? "bg-success" : "bg-warning";
+          // Check if message is read (use read_at or read_by array)
+          const isRead = message.read_at || (message.read_by && message.read_by.includes && Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(userId.value)));
+          status = isRead ? "Completed" : "Unread";
+          badgeClass = isRead ? "bg-success" : "bg-warning";
         }
         
         return {
@@ -637,12 +672,23 @@ export default {
         const isSender = String(message.sender_id) === String(userId.value);
 
         // For system messages, update activity for receiver
-        // For regular messages, only update if not from self (allow even if sender object is missing)
-        if (isSystemMessage || (!isSender && (message.sender || message.message_type === 'text' || message.content))) {
+        // For regular messages, only update if not from self
+        // Allow messages even if sender object is missing (fallback for Socket.IO messages)
+        const shouldShow = isSystemMessage || (!isSender && (message.sender || message.message_type === 'text' || message.content || message.message_type === null || message.message_type === undefined));
+        
+        if (shouldShow) {
           console.log("📊 DASHBOARD: Message qualifies for activity update");
+          console.log("📊 DASHBOARD: Message details:", {
+            id: message.id,
+            type: message.message_type,
+            sender_id: message.sender_id,
+            hasSender: !!message.sender,
+            hasContent: !!message.content
+          });
           
           // Create activity item directly from the message for immediate real-time update
           const activityItem = createActivityFromMessage(message);
+          console.log("📊 DASHBOARD: Created activity item:", activityItem);
           
           // Check if this activity already exists (prevent duplicates)
           const existingIndex = recentActivity.value.findIndex(
@@ -667,17 +713,18 @@ export default {
             }
             
             console.log("📊 DASHBOARD: ✅ Activity updated in real-time, new count:", recentActivity.value.length);
+            console.log("📊 DASHBOARD: Activity title:", activityItem.title);
+            console.log("📊 DASHBOARD: Activity status:", activityItem.status);
           } else {
             console.log("📊 DASHBOARD: Activity already exists, skipping duplicate");
           }
-          
-          // Also reload from localStorage/API to ensure we have all activities (with a delay)
-          // This ensures we don't miss any activities that might have been added via other means
-          setTimeout(() => {
-            loadRecentActivity();
-          }, 500);
         } else {
           console.log("📊 DASHBOARD: Skipping activity update (message from self or no sender)");
+          console.log("📊 DASHBOARD: isSystemMessage:", isSystemMessage);
+          console.log("📊 DASHBOARD: isSender:", isSender);
+          console.log("📊 DASHBOARD: hasSender:", !!message.sender);
+          console.log("📊 DASHBOARD: message_type:", message.message_type);
+          console.log("📊 DASHBOARD: hasContent:", !!message.content);
         }
       };
 
