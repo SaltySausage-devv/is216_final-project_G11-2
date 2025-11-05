@@ -433,8 +433,8 @@ export default {
             
             let icon = "fas fa-bell";
             let title = notification.subject || notification.message || "Notification";
-            let status = "New";
-            let badgeClass = "bg-success"; // Changed from bg-info (blue) to bg-success (green)
+            let status = "Unread";
+            let badgeClass = "bg-warning"; // Yellow badge for unread items
 
             // Check notification message/content for type
             // First check for message_type from notification data (for system messages)
@@ -443,7 +443,7 @@ export default {
             if (notificationMessageType === "booking_confirmation" || message.includes("Booking confirmed") || message.includes("booking confirmed") || data.notificationType === "booking_confirmation") {
               icon = "fas fa-calendar-check";
               title = "New booking confirmed";
-              status = "Confirmed";
+              status = "Completed";
               badgeClass = "bg-success";
             } else if (notificationMessageType === "booking_cancelled" || message.includes("Booking cancelled") || message.includes("booking cancelled") || data.notificationType === "booking_cancelled") {
               icon = "fas fa-calendar-times";
@@ -634,7 +634,7 @@ export default {
           if (messageType === "booking_confirmation") {
             icon = "fas fa-calendar-check";
             title = "New booking confirmed";
-            status = "Confirmed";
+            status = "Completed";
             badgeClass = "bg-success";
           } else if (messageType === "booking_cancelled") {
             icon = "fas fa-calendar-times";
@@ -681,12 +681,12 @@ export default {
             icon = "fas fa-calendar-alt";
             if (messageType === "reschedule_accepted") {
               title = "Reschedule request accepted";
-              status = "Confirmed";
+              status = "Completed";
               badgeClass = "bg-success";
             } else if (messageType === "reschedule_rejected") {
               title = "Reschedule request rejected";
-              status = "Cancelled";
-              badgeClass = "bg-danger";
+              status = "Completed";
+              badgeClass = "bg-success";
             } else {
               title = "Reschedule booking request";
               status = "Unread";
@@ -857,7 +857,7 @@ export default {
         if (messageType === "booking_confirmation") {
           icon = "fas fa-calendar-check";
           title = "New booking confirmed";
-          status = "Confirmed";
+          status = "Completed";
           badgeClass = "bg-success";
         } else if (messageType === "booking_cancelled") {
           icon = "fas fa-calendar-times";
@@ -926,12 +926,12 @@ export default {
           icon = "fas fa-calendar-alt";
           if (messageType === "reschedule_accepted") {
             title = "Reschedule request accepted";
-            status = "Confirmed";
+            status = "Completed";
             badgeClass = "bg-success";
           } else if (messageType === "reschedule_rejected") {
             title = "Reschedule request rejected";
-            status = "Cancelled";
-            badgeClass = "bg-danger";
+            status = "Completed";
+            badgeClass = "bg-success";
           } else {
             title = "Reschedule booking request";
             status = "Unread";
