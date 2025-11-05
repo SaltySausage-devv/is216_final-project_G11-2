@@ -97,11 +97,11 @@
                 <i class="fas fa-inbox text-muted fs-1 mb-3"></i>
                 <p class="text-muted">No recent activity</p>
               </div>
-              <div v-else>
+              <div v-else class="recent-activity-list">
                 <div
                   v-for="(activity, index) in recentActivity"
                   :key="index"
-                  class="d-flex align-items-center p-3 border-bottom"
+                  class="d-flex align-items-center p-3 border-bottom activity-item"
                 >
                   <div
                     class="activity-icon bg-light rounded-circle d-flex align-items-center justify-content-center me-3"
@@ -496,8 +496,8 @@ export default {
             return timeB - timeA;
           });
 
-          // Limit to first 5 items
-          recentActivity.value = activities.slice(0, 5);
+          // Show all activities (container will scroll if more than 5)
+          recentActivity.value = activities;
 
           console.log("✅ Recent activity loaded:", recentActivity.value.length, "items");
         } else {
@@ -895,6 +895,39 @@ export default {
 
 .card-body {
   color: var(--cyber-text, #ffffff) !important;
+}
+
+/* Recent Activity List - Scrollable */
+.recent-activity-list {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.recent-activity-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.recent-activity-list::-webkit-scrollbar-track {
+  background: rgba(74, 74, 74, 0.3);
+  border-radius: 4px;
+}
+
+.recent-activity-list::-webkit-scrollbar-thumb {
+  background: var(--cyber-orange, #ff8c42);
+  border-radius: 4px;
+}
+
+.recent-activity-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 140, 66, 0.8);
+}
+
+.activity-item {
+  transition: all 0.3s ease;
+}
+
+.activity-item:hover {
+  background: rgba(255, 140, 66, 0.05) !important;
 }
 
 /* Headings */
