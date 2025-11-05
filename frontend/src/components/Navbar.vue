@@ -2026,20 +2026,20 @@ export default {
   }
 }
 
-/* Near-desktop screens (900px to 991px) */
-@media (min-width: 900px) and (max-width: 991px) {
+/* Near-desktop screens (900px to 1000px) - same as 850px-899px */
+@media (min-width: 900px) and (max-width: 1000px) {
   .mobile-nav-items {
-    gap: 0.8rem;
-    padding-right: 0.8rem;
+    gap: 0.7rem;
+    padding-right: 0.7rem;
   }
 
   .navbar .container {
-    padding-left: 1.2rem;
-    padding-right: 1.2rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
   .navbar-brand {
-    margin-right: 1.5rem;
+    margin-right: 1rem;
   }
 }
 
