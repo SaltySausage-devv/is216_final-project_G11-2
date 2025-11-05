@@ -1374,6 +1374,42 @@ export default {
       trackClickHandler = (e) => {
         lastClickTarget = e.target;
       };
+
+      // Prevent navbar collapse at 996px-1200px
+      const preventNavbarCollapse = () => {
+        const width = window.innerWidth;
+        if (width >= 996 && width <= 1200) {
+          const navbarCollapse = document.getElementById("navbarNav");
+          if (navbarCollapse) {
+            // Force navbar to stay expanded
+            navbarCollapse.classList.add("show");
+            navbarCollapse.style.display = "flex";
+            navbarCollapse.style.overflow = "visible";
+            navbarCollapse.style.maxHeight = "none";
+            navbarCollapse.style.height = "auto";
+            
+            // Prevent Bootstrap collapse from working
+            const navbarToggler = document.querySelector(".navbar-toggler");
+            if (navbarToggler) {
+              navbarToggler.style.display = "none";
+              // Disable toggle functionality
+              navbarToggler.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              });
+            }
+
+            // Remove collapsing class if it exists
+            navbarCollapse.classList.remove("collapsing");
+          }
+        } else {
+          // Restore normal behavior outside range
+          const navbarToggler = document.querySelector(".navbar-toggler");
+          if (navbarToggler) {
+            navbarToggler.style.display = "";
+          }
+        }
+      };
       
       // Prevent auto-collapse for notification dropdown at 996px-1200px screen widths
       const preventAutoCollapse = () => {
@@ -1448,11 +1484,16 @@ export default {
       // Call on mount and when window is resized
       // Use setTimeout to ensure DOM is ready
       setTimeout(() => {
+        preventNavbarCollapse();
         preventAutoCollapse();
       }, 100);
       
       // Store resize handler reference
-      resizeHandler = preventAutoCollapse;
+      const combinedHandler = () => {
+        preventNavbarCollapse();
+        preventAutoCollapse();
+      };
+      resizeHandler = combinedHandler;
       window.addEventListener('resize', resizeHandler);
     };
 
@@ -2107,8 +2148,46 @@ export default {
   }
 }
 
-/* Prevent auto-collapse and underline for dropdown at 996px-1200px screen widths */
+/* Prevent navbar collapse and scrollable behavior at 996px-1200px screen widths */
 @media (min-width: 996px) and (max-width: 1200px) {
+  /* Force navbar to stay expanded - prevent collapse */
+  .navbar-collapse {
+    display: flex !important;
+    flex-basis: auto !important;
+    flex-grow: 1 !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+
+  .navbar-collapse.collapse {
+    display: flex !important;
+  }
+
+  .navbar-collapse.collapsing {
+    display: flex !important;
+    transition: none !important;
+  }
+
+  /* Hide navbar toggler */
+  .navbar-toggler {
+    display: none !important;
+  }
+
+  /* Prevent navbar from being scrollable */
+  .navbar {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Ensure all nav items are visible */
+  .navbar-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow: visible !important;
+  }
+
+  /* Prevent auto-collapse and underline for dropdown */
   /* Prevent underline on notification link (mobile) - including when dropdown is open */
   .navbar-notification-container .dropdown.show .nav-link,
   .navbar-notification-container .dropdown.show .nav-link *,
