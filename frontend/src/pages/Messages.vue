@@ -2550,16 +2550,30 @@ export default {
     });
 
     const filteredParticipants = computed(() => {
-      if (!participantSearchQuery.value) return availableParticipants.value;
-      return availableParticipants.value.filter(
-        (participant) =>
-          `${participant.first_name} ${participant.last_name}`
-            .toLowerCase()
-            .includes(participantSearchQuery.value.toLowerCase()) ||
-          participant.email
-            .toLowerCase()
-            .includes(participantSearchQuery.value.toLowerCase())
+      // Get IDs of participants who already have conversations
+      const existingParticipantIds = new Set(
+        conversations.value.map((conv) => conv.participant?.id).filter(Boolean)
       );
+
+      // Filter out participants who already have conversations
+      let filtered = availableParticipants.value.filter(
+        (participant) => !existingParticipantIds.has(participant.id)
+      );
+
+      // If there's a search query, further filter by name/email
+      if (participantSearchQuery.value) {
+        filtered = filtered.filter(
+          (participant) =>
+            `${participant.first_name} ${participant.last_name}`
+              .toLowerCase()
+              .includes(participantSearchQuery.value.toLowerCase()) ||
+            participant.email
+              .toLowerCase()
+              .includes(participantSearchQuery.value.toLowerCase())
+        );
+      }
+
+      return filtered;
     });
 
     // Check if current user can book sessions (student/parent talking to tutor)

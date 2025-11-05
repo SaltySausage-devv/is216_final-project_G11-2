@@ -42,8 +42,13 @@
                   type="time"
                   v-model="newStartTime"
                   class="form-control"
+                  :min="newDate === today ? minTimeForToday : undefined"
                   required
                 />
+                <small v-if="isPastDateTime" class="text-danger d-block mt-1">
+                  <i class="fas fa-exclamation-triangle me-1"></i>
+                  Cannot select a past date/time
+                </small>
               </div>
               <div class="col-md-6">
                 <label class="form-label">End Time</label>
@@ -53,6 +58,10 @@
                   class="form-control"
                   required
                 />
+                <small v-if="!meetsMinimumDuration && newStartTime && newEndTime" class="text-danger d-block mt-1">
+                  <i class="fas fa-exclamation-triangle me-1"></i>
+                  Minimum duration is 15 minutes
+                </small>
               </div>
             </div>
 
@@ -207,27 +216,34 @@
             <!-- Summary -->
             <div
               v-if="newDate && newStartTime && newEndTime"
-              class="alert alert-success"
+              class="booking-summary"
+              :class="{ 'booking-summary-valid': isValidForm, 'booking-summary-invalid': !isValidForm }"
             >
-              <strong>New Booking Details:</strong><br />
-              <div class="mb-2">
-                <strong>Time:</strong> {{ formatDate(newDate) }} from
-                {{ newStartTime }} to {{ newEndTime }}
-                <span v-if="isValidTimeRange" class="text-success ms-2">
+              <strong style="color: #ff6b35; font-size: 1rem;">New Booking Details:</strong><br />
+              <div class="mb-2 mt-2">
+                <strong style="color: #ffffff;">Time:</strong> 
+                <span style="color: rgba(255, 255, 255, 0.9);">
+                  {{ formatDate(newDate) }} from {{ newStartTime }} to {{ newEndTime }}
+                </span>
+                <span v-if="isValidTimeRange && !isPastDateTime && meetsMinimumDuration" class="text-success ms-2" style="font-weight: 700;">
                   ✓ Valid time range
                 </span>
-                <span v-else class="text-danger ms-2">
+                <span v-else-if="isPastDateTime" class="text-danger ms-2" style="font-weight: 700;">
+                  ✗ Cannot be in the past
+                </span>
+                <span v-else class="text-danger ms-2" style="font-weight: 700;">
                   ✗ End time must be after start time
                 </span>
               </div>
-              <div v-if="newLocation">
-                <strong>Location:</strong> {{ newLocation }}
+              <div v-if="newLocation" class="mt-2">
+                <strong style="color: #ffffff;">Location:</strong> 
+                <span style="color: rgba(255, 255, 255, 0.9);">{{ newLocation }}</span>
               </div>
-              <div v-else>
-                <strong>Location:</strong>
-                <span class="text-muted">{{
-                  booking.location || "Current location will be kept"
-                }}</span>
+              <div v-else class="mt-2">
+                <strong style="color: #ffffff;">Location:</strong>
+                <span style="color: rgba(255, 255, 255, 0.6);">
+                  {{ booking.location || "Current location will be kept" }}
+                </span>
               </div>
             </div>
           </form>
@@ -306,11 +322,43 @@ export default {
       return new Date().toISOString().split("T")[0];
     });
 
+    // Get minimum time for today (current time + 15 minutes buffer)
+    const minTimeForToday = computed(() => {
+      const now = new Date();
+      const bufferMinutes = 15;
+      const minTime = new Date(now.getTime() + bufferMinutes * 60000);
+      const hours = String(minTime.getHours()).padStart(2, '0');
+      const minutes = String(minTime.getMinutes()).padStart(2, '0');
+      return `${hours}:${minutes}`;
+    });
+
+    // Check if selected date/time is in the past
+    const isPastDateTime = computed(() => {
+      if (!newDate.value || !newStartTime.value) return false;
+      
+      const selectedDate = new Date(`${newDate.value}T${newStartTime.value}`);
+      const now = new Date();
+      
+      return selectedDate <= now;
+    });
+
+    // Check if duration meets minimum 15 minutes
+    const meetsMinimumDuration = computed(() => {
+      if (!newStartTime.value || !newEndTime.value) return false;
+      
+      const start = new Date(`2000-01-01T${newStartTime.value}`);
+      const end = new Date(`2000-01-01T${newEndTime.value}`);
+      const durationMinutes = (end - start) / (1000 * 60);
+      
+      return durationMinutes >= 15;
+    });
+
     const isValidTimeRange = computed(() => {
       return (
         newStartTime.value &&
         newEndTime.value &&
-        newStartTime.value < newEndTime.value
+        newStartTime.value < newEndTime.value &&
+        meetsMinimumDuration.value
       );
     });
 
@@ -320,7 +368,9 @@ export default {
         newStartTime.value &&
         newEndTime.value &&
         reason.value &&
-        isValidTimeRange.value
+        isValidTimeRange.value &&
+        !isPastDateTime.value &&
+        meetsMinimumDuration.value
       );
     });
 
@@ -637,8 +687,23 @@ export default {
       try {
         loading.value = true;
 
+        // Validate past date/time
+        if (isPastDateTime.value) {
+          showToast("Cannot select a past date/time. Please choose a future date and time.", "error");
+          loading.value = false;
+          return;
+        }
+
+        // Validate minimum duration
+        if (!meetsMinimumDuration.value) {
+          showToast("Session duration must be at least 15 minutes.", "error");
+          loading.value = false;
+          return;
+        }
+
         if (!isValidForm.value) {
           showToast("Please fill in all required fields", "error");
+          loading.value = false;
           return;
         }
 
@@ -743,6 +808,9 @@ export default {
       creditChangeIcon,
       creditChangeText,
       today,
+      minTimeForToday,
+      isPastDateTime,
+      meetsMinimumDuration,
       isValidTimeRange,
       isValidForm,
       formatDate,
@@ -898,6 +966,35 @@ export default {
   );
   color: #ffffff;
   border-left: 4px solid #3b82f6;
+}
+
+.booking-summary {
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 2px solid rgba(255, 107, 53, 0.3);
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(10px);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.booking-summary-valid {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.1) 0%,
+    rgba(5, 150, 105, 0.1) 100%
+  );
+}
+
+.booking-summary-invalid {
+  border-color: rgba(220, 53, 69, 0.5);
+  background: linear-gradient(
+    135deg,
+    rgba(220, 53, 69, 0.1) 0%,
+    rgba(185, 28, 28, 0.1) 100%
+  );
 }
 
 .text-success {
