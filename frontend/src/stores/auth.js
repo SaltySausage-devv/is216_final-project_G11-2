@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { supabase } from '../lib/supabase'
-import api from '../services/api'
 
 export const useAuthStore = defineStore('auth', () => {
     const user = ref(null)
@@ -639,63 +638,44 @@ export const useAuthStore = defineStore('auth', () => {
                 throw new Error('No user logged in')
             }
 
-            // Prepare update payload with camelCase keys for API
-            const updatePayload = {
-                firstName: profileData.firstName,
-                lastName: profileData.lastName
-            }
-
-            // Only include phone if it's provided
-            if (profileData.phone !== undefined && profileData.phone !== null && profileData.phone.trim() !== '') {
-                updatePayload.phone = profileData.phone
-            }
-
-            // Include optional fields only if they have values (for students, these are optional)
-            // Empty strings are treated as "don't update" to preserve existing values
-            if (profileData.dateOfBirth !== undefined && profileData.dateOfBirth !== null && profileData.dateOfBirth !== '') {
-                updatePayload.dateOfBirth = profileData.dateOfBirth
-            }
-            if (profileData.address !== undefined && profileData.address !== null && profileData.address.trim() !== '') {
-                updatePayload.address = profileData.address
-            }
-            if (profileData.bio !== undefined && profileData.bio !== null && profileData.bio.trim() !== '') {
-                updatePayload.bio = profileData.bio
+            // Normalize empty strings to null for optional fields
+            const updateData = {
+                first_name: profileData.firstName,
+                last_name: profileData.lastName,
+                phone: profileData.phone === '' ? null : profileData.phone,
+                date_of_birth: (profileData.dateOfBirth === '' || !profileData.dateOfBirth) ? null : profileData.dateOfBirth,
+                address: profileData.address === '' ? null : profileData.address,
+                bio: profileData.bio === '' ? null : profileData.bio,
+                updated_at: new Date().toISOString()
             }
 
             // Remove undefined fields
-            Object.keys(updatePayload).forEach(key => {
-                if (updatePayload[key] === undefined) {
-                    delete updatePayload[key]
+            Object.keys(updateData).forEach(key => {
+                if (updateData[key] === undefined) {
+                    delete updateData[key]
                 }
             })
 
-            console.log('📤 Sending update to API:', updatePayload)
+            console.log('📤 Sending update:', updateData)
 
-            // Use the users service API endpoint instead of direct Supabase
-            const result = await api.put('/users/profile', updatePayload)
-            console.log('✅ Profile updated successfully:', result.data)
+            const { data, error } = await supabase
+                .from('users')
+                .update(updateData)
+                .eq('id', user.value.id)
+                .select()
+                .single()
 
-            // Update local user state with the returned user data
-            if (result.data?.user) {
-                const updatedUser = result.data.user
-                // Map snake_case to camelCase for local state
-                user.value = {
-                    ...user.value,
-                    id: updatedUser.id,
-                    email: updatedUser.email,
-                    firstName: updatedUser.first_name,
-                    lastName: updatedUser.last_name,
-                    userType: updatedUser.user_type,
-                    phone: updatedUser.phone,
-                    dateOfBirth: updatedUser.date_of_birth,
-                    address: updatedUser.address,
-                    bio: updatedUser.bio,
-                    credits: updatedUser.credits,
-                    phoneVerified: updatedUser.phone_verified
-                }
+            if (error) {
+                console.error('❌ Profile update error:', error)
+                throw error
             }
 
-            return { success: true, user: result.data?.user }
+            console.log('✅ Profile updated successfully:', data)
+
+            // Update local user state
+            user.value = data
+
+            return { success: true, user: data }
         } catch (error) {
             console.error('❌ Profile update error:', error)
             return {

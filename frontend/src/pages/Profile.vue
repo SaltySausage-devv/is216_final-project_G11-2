@@ -379,7 +379,7 @@ export default {
           loadProfile()
 
           // Show success message
-          showSuccess('Success', 'Profile updated successfully!')
+          showSuccess('Success', 'Profile saved successfully!')
         } else {
           console.error('❌ Profile save failed:', result.error)
           // Show error message

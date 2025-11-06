@@ -108,10 +108,10 @@ The following test accounts are available for testing. All accounts use the pass
 - **Andrew Tan** - `andrewtan@smu.edu.sg` - Chemistry & Biology tutor ($20/hr)
 
 ### Students
-- **Daryl Ng** - `daryl@smu.edu.sg`
-- **Deshaun Wang** - `deshaun@smu.edu.sg`
-- **Lim Wei Yau** - `weiyau@smu.edu.sg`
-- **Wayne Lim** - `wayne@smu.edu.sg`
+- **Daryl Lim** - `daryl@smu.edu.sg`
+- **Deshaun Wong** - `deshaun@smu.edu.sg`
+- **Weiyau Lee** - `weiyau@smu.edu.sg`
+- **Wayne Ng** - `wayne@smu.edu.sg`
 
 All test accounts have:
 - 250 credits (tokens)

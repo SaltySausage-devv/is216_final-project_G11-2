@@ -68,10 +68,10 @@ const verifyToken = (req, res, next) => {
 const updateProfileSchema = Joi.object({
   firstName: Joi.string().optional(),
   lastName: Joi.string().optional(),
-  phone: Joi.string().optional(),
-  dateOfBirth: Joi.date().optional(),
-  address: Joi.string().optional(),
-  bio: Joi.string().max(500).optional()
+  phone: Joi.string().allow(null, '').optional(),
+  dateOfBirth: Joi.any().optional(), // Allow any value, we'll handle conversion in update logic
+  address: Joi.string().allow(null, '').max(1000).optional(),
+  bio: Joi.string().allow(null, '').max(500).optional()
 });
 
 // Routes
@@ -99,29 +99,69 @@ app.get('/users/profile', verifyToken, async (req, res) => {
 
 app.put('/users/profile', verifyToken, async (req, res) => {
   try {
-    const { error, value } = updateProfileSchema.validate(req.body);
+    // Normalize empty strings to null before validation
+    const normalizedBody = { ...req.body };
+    if (normalizedBody.dateOfBirth === '') normalizedBody.dateOfBirth = null;
+    if (normalizedBody.address === '') normalizedBody.address = null;
+    if (normalizedBody.bio === '') normalizedBody.bio = null;
+    if (normalizedBody.phone === '') normalizedBody.phone = null;
+
+    const { error, value } = updateProfileSchema.validate(normalizedBody);
     if (error) {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    // Build update object, only including optional fields if they have values
+    // Build update object, converting empty strings to null for optional fields
     const updateData = {
-      first_name: value.firstName,
-      last_name: value.lastName,
-      phone: value.phone,
       updated_at: new Date().toISOString()
-    }
+    };
 
-    // Include optional fields only if they have values (these are optional for students)
-    // Empty strings are treated as "don't update" to preserve existing values
-    if (value.dateOfBirth !== undefined && value.dateOfBirth !== null && value.dateOfBirth !== '') {
-      updateData.date_of_birth = value.dateOfBirth
+    // Only include fields that are provided
+    if (value.firstName !== undefined) {
+      updateData.first_name = value.firstName;
     }
-    if (value.address !== undefined && value.address !== null && value.address.trim() !== '') {
-      updateData.address = value.address
+    if (value.lastName !== undefined) {
+      updateData.last_name = value.lastName;
     }
-    if (value.bio !== undefined && value.bio !== null && value.bio.trim() !== '') {
-      updateData.bio = value.bio
+    if (value.phone !== undefined) {
+      updateData.phone = value.phone === '' ? null : value.phone;
+    }
+    if (value.dateOfBirth !== undefined) {
+      // Convert empty string, null, or invalid dates to null
+      const dobValue = value.dateOfBirth;
+      // Check if it's empty, null, or whitespace-only string
+      const isEmpty = !dobValue || 
+                      dobValue === '' || 
+                      dobValue === null || 
+                      (typeof dobValue === 'string' && dobValue.trim() === '');
+      
+      if (isEmpty) {
+        updateData.date_of_birth = null;
+      } else {
+        // If it's a valid date string or Date object, use it
+        try {
+          const dateValue = new Date(dobValue);
+          if (isNaN(dateValue.getTime())) {
+            updateData.date_of_birth = null;
+          } else {
+            // Format as YYYY-MM-DD for PostgreSQL
+            const year = dateValue.getFullYear();
+            const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+            const day = String(dateValue.getDate()).padStart(2, '0');
+            updateData.date_of_birth = `${year}-${month}-${day}`;
+          }
+        } catch (e) {
+          // If date parsing fails, set to null
+          console.warn('Invalid date format for dateOfBirth:', dobValue, e);
+          updateData.date_of_birth = null;
+        }
+      }
+    }
+    if (value.address !== undefined) {
+      updateData.address = value.address === '' ? null : value.address;
+    }
+    if (value.bio !== undefined) {
+      updateData.bio = value.bio === '' ? null : value.bio;
     }
 
     const { data: user, error: updateError } = await supabase

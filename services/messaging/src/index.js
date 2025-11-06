@@ -51,9 +51,9 @@ const supabase = createClient(
 let supabaseAdmin = null;
 if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
   supabaseAdmin = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
   console.log('✅ Supabase admin client initialized');
 } else {
   console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not found - admin operations will fail');
