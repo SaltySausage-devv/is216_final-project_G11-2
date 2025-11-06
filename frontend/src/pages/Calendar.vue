@@ -24,6 +24,7 @@
       v-if="selectedBooking"
       :booking="selectedBooking"
       :show-reschedule-request="showRescheduleRequestModal"
+      :refresh-booking-modal="refreshBookingModal"
       @close="handleBookingModalClose"
       @updated="handleBookingUpdated"
     />
@@ -32,6 +33,7 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import messagingService from "../services/messaging";
 import { useAuthStore } from "../stores/auth";
 import { useRoute } from "vue-router";
 import FullCalendar from "@fullcalendar/vue3";
@@ -372,73 +374,52 @@ export default {
       if (updateData && selectedBooking.value) {
         // Update attendance_status if provided
         if (updateData.attendance_status) {
-          // Create a new object reference to ensure Vue reactivity
-          selectedBooking.value = {
-            ...selectedBooking.value,
-            attendance_status: updateData.attendance_status,
-            ...(updateData.session_notes && { session_notes: updateData.session_notes }),
-          };
-          console.log("✅ Updated selectedBooking with attendance_status:", updateData.attendance_status);
+          const bookingId = selectedBooking.value?.id;
           
-          // Also update the corresponding booking in the bookings array immediately
-          // This ensures the calendar events are updated too
-          const bookingIndex = bookings.value.findIndex(
-            (booking) => booking.id === selectedBooking.value.id
-          );
-          if (bookingIndex !== -1) {
-            const booking = bookings.value[bookingIndex];
-            if (booking.extendedProps) {
-              // Update extendedProps reactively
-              booking.extendedProps.attendance_status = updateData.attendance_status;
-              if (updateData.session_notes) {
-                booking.extendedProps.session_notes = updateData.session_notes;
-              }
-              console.log("✅ Updated booking in bookings array");
-            }
+          // Close modal first, then refresh and reopen
+          selectedBooking.value = null;
+          
+          // Refresh calendar data to get latest booking info
+          await fetchCalendarData();
+          
+          // Find the refreshed booking and reopen modal
+          const refreshedBooking = bookings.value.find((b) => b.id === bookingId);
+          if (refreshedBooking && refreshedBooking.extendedProps) {
+            // Reopen modal with refreshed data including attendance status
+            selectedBooking.value = {
+              ...refreshedBooking.extendedProps,
+              attendance_status: updateData.attendance_status,
+              ...(updateData.session_notes && { session_notes: updateData.session_notes }),
+              ...(updateData.attendance_marked_at && { attendance_marked_at: updateData.attendance_marked_at }),
+            };
+            console.log("✅ Reopened booking modal with attendance status");
           }
           
-          // Don't show toast for attendance marking - it's handled in the modal
-          // Refresh calendar data in background without blocking
-          fetchCalendarData().catch(err => console.error("Error refreshing calendar:", err));
           return; // Early return for attendance - no need for extra toast
         }
         
         // Update status if booking is completed
         if (updateData.status === "completed") {
-          selectedBooking.value = {
-            ...selectedBooking.value,
-            status: "completed",
-            ...updateData,
-          };
-          console.log("✅ Updated selectedBooking with completed status");
+          const bookingId = selectedBooking.value?.id;
           
-          // Also update the corresponding booking in the bookings array immediately
-          const bookingIndex = bookings.value.findIndex(
-            (booking) => booking.id === selectedBooking.value.id
-          );
-          if (bookingIndex !== -1) {
-            const booking = bookings.value[bookingIndex];
-            if (booking.extendedProps) {
-              booking.extendedProps.status = "completed";
-              Object.assign(booking.extendedProps, updateData);
-            }
+          // Close modal first, then refresh and reopen
+          selectedBooking.value = null;
+          
+          // Refresh calendar data to get latest booking info
+          await fetchCalendarData();
+          
+          // Find the refreshed booking and reopen modal
+          const refreshedBooking = bookings.value.find((b) => b.id === bookingId);
+          if (refreshedBooking && refreshedBooking.extendedProps) {
+            // Reopen modal with refreshed data
+            selectedBooking.value = {
+              ...refreshedBooking.extendedProps,
+              status: "completed", // Ensure completed status
+            };
+            console.log("✅ Reopened booking modal with completed status");
           }
           
-          // Don't show success toast for completion - already shown in modal
-          // Refresh calendar data in background
-          fetchCalendarData().then(() => {
-            // Update the selectedBooking with fresh data if it exists
-            if (selectedBooking.value) {
-              const updatedEvent = bookings.value.find(
-                (booking) => booking.id === selectedBooking.value.id
-              );
-              if (updatedEvent && updatedEvent.extendedProps) {
-                // Update with the fresh booking data from extendedProps
-                selectedBooking.value = updatedEvent.extendedProps;
-              }
-            }
-          });
-          return; // Early return for completion - no need for extra toast
+          return; // Early return for completion
         }
       }
 
@@ -491,11 +472,81 @@ export default {
       }
     }, { immediate: false });
 
-    function handleBookingModalClose() {
+    async function handleBookingModalClose() {
       selectedBooking.value = null;
       showRescheduleRequestModal.value = false;
+      // Refresh calendar data to reflect any changes (e.g., cancelled bookings)
+      await fetchCalendarData();
     }
 
+    // Refresh a specific booking from the backend
+    const refreshBooking = async (bookingId) => {
+      if (!bookingId) return null;
+      
+      try {
+        // Find the booking in the current bookings array
+        const bookingIndex = bookings.value.findIndex(
+          (b) => b.id === bookingId
+        );
+        
+        if (bookingIndex !== -1) {
+          // Fetch fresh data from the calendar API
+          await fetchCalendarData();
+          
+          // Find the updated booking in the refreshed array
+          const updatedBooking = bookings.value.find((b) => b.id === bookingId);
+          if (updatedBooking && updatedBooking.extendedProps) {
+            return updatedBooking.extendedProps;
+          }
+        }
+      } catch (error) {
+        console.error("Error refreshing booking:", error);
+      }
+      return null;
+    };
+
+    // Manual refresh function for booking modal
+    // This will be called when attendance/completion modals close
+    // This ensures both tutor and student modals get updated
+    const refreshBookingModal = async () => {
+      if (!selectedBooking.value || !selectedBooking.value.id) return;
+      
+      console.log("📅 Manually refreshing booking modal...");
+      
+      try {
+        // First refresh the calendar data to get latest booking info
+        await fetchCalendarData();
+        
+        // Then find and update the selected booking
+        const refreshed = await refreshBooking(selectedBooking.value.id);
+        if (refreshed && selectedBooking.value) {
+          // Preserve completed status if it's already completed (local change is more recent)
+          const currentStatus = selectedBooking.value.status;
+          const wasCompleted = currentStatus === "completed";
+          
+          // Merge refreshed data - this will update attendance_status from backend
+          // Create a new object reference to ensure reactivity
+          selectedBooking.value = {
+            ...selectedBooking.value,
+            ...refreshed,
+            // Preserve completed status if it was already completed (local state takes precedence)
+            ...(wasCompleted && { status: "completed" })
+          };
+          
+          console.log("✅ Booking modal refreshed manually - updated with:", {
+            attendance_status: selectedBooking.value.attendance_status,
+            status: selectedBooking.value.status
+          });
+        }
+      } catch (error) {
+        console.error("Error refreshing booking modal:", error);
+      }
+    };
+
+    // Listen for booking update events (attendance marked, completed)
+    // This is triggered when tutor marks attendance or completes booking
+    let bookingUpdateHandler = null;
+    
     // Lifecycle
     onMounted(async () => {
       await fetchCalendarData();
@@ -507,14 +558,56 @@ export default {
       
       // Handle query params after data loads
       await handleQueryParams();
+      
+      // Set up listener for booking update events
+      // Ensure messaging service is connected first
+      if (authStore.token && messagingService) {
+        try {
+          await messagingService.connect(authStore.token);
+        } catch (error) {
+          console.error("Error connecting messaging service:", error);
+        }
+      }
+      
+      if (messagingService) {
+        bookingUpdateHandler = (data) => {
+          console.log("📢 Calendar: Received booking update event:", data);
+          
+          // Only refresh if the modal is open and this is the booking we're viewing
+          if (selectedBooking.value && selectedBooking.value.id === data.bookingId) {
+            console.log("📅 Booking update event received for current modal, refreshing...");
+            // Refresh the modal immediately to show updated attendance/completion status
+            refreshBookingModal().catch(err => {
+              console.error("Error refreshing booking modal from event:", err);
+            });
+          } else {
+            // If modal is not open, refresh the calendar data anyway to update the event list
+            console.log("📅 Booking update event received but modal not open, refreshing calendar data...");
+            fetchCalendarData().catch(err => {
+              console.error("Error refreshing calendar data from event:", err);
+            });
+          }
+        };
+        
+        messagingService.on("booking_updated", bookingUpdateHandler);
+        console.log("✅ Calendar: Registered booking_updated event listener");
+      }
     });
-
+    
     onUnmounted(() => {
+      // Clean up event listener
+      if (bookingUpdateHandler && messagingService) {
+        messagingService.off("booking_updated", bookingUpdateHandler);
+        bookingUpdateHandler = null;
+        console.log("✅ Calendar: Removed booking_updated event listener");
+      }
+      
       // Clean up resize listener
       if (typeof window !== 'undefined') {
         window.removeEventListener('resize', updateWindowWidth);
       }
     });
+
 
     return {
       loading,
@@ -531,6 +624,7 @@ export default {
       handleEventDidMount,
       handleBookingUpdated,
       handleBookingModalClose,
+      refreshBookingModal,
     };
   },
 };

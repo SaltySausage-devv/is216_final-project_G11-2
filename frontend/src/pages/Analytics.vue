@@ -51,10 +51,6 @@
                 </div>
                 <h3 class="kpi-value">{{ kpi.value }}</h3>
                 <p class="kpi-label">{{ kpi.label }}</p>
-                <div v-if="kpi.change" class="kpi-change" :class="kpi.changeType">
-                  <i :class="kpi.changeType === 'positive' ? 'fas fa-arrow-up' : 'fas fa-arrow-down'"></i>
-                  {{ kpi.change }}%
-                </div>
               </div>
             </div>
           </div>

@@ -10,7 +10,8 @@
           <button
             type="button"
             class="btn-close"
-            @click="$emit('close')"
+            @click="emit('close')"
+            aria-label="Close"
           ></button>
         </div>
         <div class="modal-body">
@@ -25,16 +26,7 @@
             </div>
           </div>
 
-          <!-- Success Message -->
-          <div v-else-if="attendanceMarked" class="success-message mb-4">
-            <div class="success-content">
-              <i class="fas fa-check-circle success-icon"></i>
-              <h5 class="success-title">✓ Attendance Marked Successfully!</h5>
-              <p class="success-details">
-                Student attendance has been recorded and saved to the system.
-              </p>
-            </div>
-          </div>
+          <!-- Success message removed - modal closes immediately after submission -->
 
           <!-- Session Details -->
           <div v-else class="mb-4">
@@ -60,7 +52,7 @@
           </div>
 
           <!-- Attendance Status -->
-          <form v-if="!attendanceMarked && !alreadyMarked" @submit.prevent="handleSubmit">
+          <form v-if="!alreadyMarked" @submit.prevent="handleSubmit">
             <div class="mb-4">
               <label class="form-label">
                 Student Attendance Status <span class="text-danger">*</span>
@@ -180,15 +172,15 @@
         </div>
         <div class="modal-footer">
           <button
-            v-if="!attendanceMarked && !alreadyMarked"
+            v-if="!alreadyMarked"
             type="button"
             class="btn btn-secondary"
-            @click="$emit('close')"
+            @click="emit('close')"
           >
             Cancel
           </button>
           <button
-            v-if="!attendanceMarked && !alreadyMarked"
+            v-if="!alreadyMarked"
             type="button"
             class="btn btn-primary"
             @click="handleSubmit"
@@ -201,15 +193,7 @@
             <i class="fas fa-check me-2"></i>
             Mark Attendance
           </button>
-          <button
-            v-if="attendanceMarked && !alreadyMarked"
-            type="button"
-            class="btn btn-success"
-            @click="$emit('close')"
-          >
-            <i class="fas fa-check me-2"></i>
-            Close
-          </button>
+          <!-- Success close button removed - modal closes automatically -->
         </div>
       </div>
     </div>
@@ -241,7 +225,6 @@ export default {
     const proofPhotoPreview = ref("");
     const sessionNotes = ref("");
     const fileInput = ref(null);
-    const attendanceMarked = ref(false);
     const alreadyMarked = ref(false);
 
     // Global request tracking to prevent duplicate requests
@@ -458,13 +441,11 @@ export default {
         const result = await response.json();
 
         showToast("Attendance marked successfully", "success");
-        attendanceMarked.value = true;
 
-        // Close modal after a short delay to show success message
-        setTimeout(() => {
-          emit("attendance-marked", result);
-          emit("close");
-        }, 2000);
+        // Emit the attendance-marked event and close immediately
+        // The parent will handle refresh and reopening
+        emit("attendance-marked", result);
+        emit("close");
       } catch (error) {
         console.error("Error marking attendance:", error);
         showToast("Failed to mark attendance", "error");
@@ -481,7 +462,6 @@ export default {
       proofPhotoPreview,
       sessionNotes,
       fileInput,
-      attendanceMarked,
       alreadyMarked,
       canSubmit,
       formatDate,

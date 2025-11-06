@@ -335,6 +335,18 @@ export default {
           }
         }
 
+        // If tutor cancelled, refresh user data to update penalty points immediately
+        if (isTutor.value) {
+          console.log('🔄 Refreshing user data to update penalty points...');
+          try {
+            await authStore.refreshUserData();
+            console.log('✅ User data refreshed, penalty points updated');
+          } catch (error) {
+            console.error('❌ Error refreshing user data:', error);
+            // Don't fail the cancellation if refresh fails
+          }
+        }
+
         showToast(successMessage, "success");
         emit("cancelled");
       } catch (error) {

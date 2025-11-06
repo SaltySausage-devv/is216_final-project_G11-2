@@ -273,7 +273,7 @@
     <MarkAttendanceModal
       v-if="showMarkAttendanceModal"
       :booking="booking"
-      @close="showMarkAttendanceModal = false"
+      @close="handleMarkAttendanceModalClose"
       @attendance-marked="handleAttendanceMarked"
     />
   </div>
@@ -305,6 +305,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    refreshBookingModal: {
+      type: Function,
+      default: null,
+    },
   },
   emits: ["close", "updated"],
   setup(props, { emit }) {
@@ -330,16 +334,22 @@ export default {
       
       // Don't overwrite if we just made a local update
       if (isLocalUpdate) {
-        isLocalUpdate = false;
         // Merge in any new properties from prop update, but preserve our local changes
         const currentAttendanceStatus = localBooking.attendance_status;
         const currentSessionNotes = localBooking.session_notes;
         const currentStatus = localBooking.status;
+        const currentAttendanceMarkedAt = localBooking.attendance_marked_at;
+        
+        // Check if the new booking status is "completed" - if so, preserve it
+        // This handles the case where parent refreshes with completed status
+        const newStatus = newBooking.status;
+        const shouldPreserveCompleted = (currentStatus === "completed" || newStatus === "completed");
         
         // Update from prop - create new object reference to ensure reactivity
         Object.assign(localBooking, { ...newBooking });
         
         // Restore local changes if they exist (they're more recent)
+        // These take priority over prop updates
         if (currentAttendanceStatus) {
           localBooking.attendance_status = currentAttendanceStatus;
         }
@@ -347,8 +357,25 @@ export default {
           localBooking.session_notes = currentSessionNotes;
         }
         if (currentStatus) {
-          localBooking.status = currentStatus;
+          // If we had completed status, always preserve it
+          // If new prop has completed status and we don't have it locally, use the new one
+          if (shouldPreserveCompleted) {
+            localBooking.status = currentStatus === "completed" ? currentStatus : newStatus;
+          } else {
+            localBooking.status = currentStatus;
+          }
         }
+        if (currentAttendanceMarkedAt) {
+          localBooking.attendance_marked_at = currentAttendanceMarkedAt;
+        }
+        
+        // Reset the flag after preserving local changes
+        // Use setTimeout to ensure the flag resets after Vue processes the update
+        // Increased delay for completion to ensure it's fully processed
+        const delay = shouldPreserveCompleted ? 2000 : 500;
+        setTimeout(() => {
+          isLocalUpdate = false;
+        }, delay); // Delay reset to ensure local updates are fully processed
       } else {
         // Normal prop update - merge all properties
         // Create new object reference to ensure reactivity
@@ -524,10 +551,10 @@ export default {
     function calculateDuration(startTime, endTime) {
       const start = new Date(startTime);
       const end = new Date(endTime);
-      const duration = (end - start) / (1000 * 60 * 60); // Duration in hours
+      const duration = (end - start) / (1000 * 60); // Duration in minutes
 
-      if (duration === 1) return "1 hour";
-      return `${duration} hours`;
+      if (duration === 1) return "1 minute";
+      return `${Math.round(duration)} minutes`;
     }
 
     function getStatusClass(status) {
@@ -648,22 +675,60 @@ export default {
         isLocalUpdate = true;
         
         // Immediately update local booking status to "completed" so UI updates without refresh
+        // Use Object.assign to update all fields at once to ensure reactivity
         if (result.data) {
-          localBooking.status = "completed";
-          // Also update any other fields from the response
-          Object.assign(localBooking, result.data);
+          Object.assign(localBooking, {
+            ...result.data,
+            status: "completed"
+          });
         } else {
           // Fallback: just set status to completed
           localBooking.status = "completed";
         }
+        
+        // Force reactivity by ensuring all properties are updated
+        // This ensures the modal UI updates immediately
+        await nextTick();
 
         showToast("Booking marked as completed", "success");
         
-        // Emit update with status change so parent component updates too
-        emit("updated", { 
+        // Refresh user data to update credits in navbar immediately
+        if (isTutor.value) {
+          console.log('🔄 Refreshing user data to update credits in navbar...');
+          try {
+            await authStore.refreshUserData();
+            console.log('✅ User data refreshed, credits updated in navbar');
+          } catch (error) {
+            console.error('❌ Error refreshing user data:', error);
+            // Don't fail the completion if refresh fails
+          }
+        }
+        
+        // Force Vue to re-evaluate computed properties by accessing them
+        // This ensures all buttons (canReschedule, canCancel, canMarkAttendance) update immediately
+        const _ = isSessionLocked.value;
+        const __ = canReschedule.value;
+        const ___ = canCancel.value;
+        const ____ = canMarkAttendance.value;
+        const _____ = canComplete.value;
+        
+        // Close modal, refresh, then reopen with new data
+        const bookingId = localBooking.id;
+        
+        // Ensure we emit the full booking data with completed status
+        const updatePayload = result.data ? {
+          ...result.data,
+          status: "completed", // Explicitly set status to completed
+        } : {
           status: "completed",
-          ...result.data 
-        });
+          id: localBooking.id,
+        };
+        
+        // Close the modal first
+        emit("close");
+        
+        // Emit update to parent so it can refresh and reopen
+        emit("updated", updatePayload);
       } catch (error) {
         console.error("Error completing booking:", error);
         showToast("Failed to complete booking", "error");
@@ -687,7 +752,8 @@ export default {
 
     function handleCancelled() {
       showCancelModal.value = false;
-      emit("updated");
+      // Close the booking details modal when booking is cancelled
+      emit("close");
     }
 
     function handleRescheduleRequestResponded() {
@@ -695,69 +761,39 @@ export default {
       emit("updated");
     }
 
+    function handleMarkAttendanceModalClose() {
+      // Close the modal immediately - this MUST happen synchronously
+      showMarkAttendanceModal.value = false;
+      
+      // Refresh the booking modal asynchronously after modal closes
+      // Do this in the background, don't wait for it
+      if (props.refreshBookingModal) {
+        // Use setTimeout with minimal delay to ensure modal closes first
+        setTimeout(() => {
+          props.refreshBookingModal().catch(err => {
+            console.error("Error refreshing booking modal:", err);
+          });
+        }, 50);
+      }
+    }
+
     async function handleAttendanceMarked(attendanceData) {
       // Extract attendance_status from the response
-      // The backend returns { message, booking: { attendance_status, ... } }
-      // But if already_marked, it's directly in attendanceData
       const attendanceStatus = attendanceData.booking?.attendance_status || 
                                attendanceData.attendance_status || 
                                attendanceData.attendanceStatus;
       
-      // Mark that we're doing a local update to prevent watch from overwriting
-      isLocalUpdate = true;
+      // Close modal, refresh, then reopen with new data
+      const bookingId = localBooking.id;
       
-      // Immediately update localBooking reactively so the "Mark as Completed" button appears instantly
-      if (attendanceStatus) {
-        // Directly update the reactive object properties
-        // This ensures Vue properly tracks the change
-        localBooking.attendance_status = attendanceStatus;
-        
-        // Also update session_notes if provided
-        const sessionNotes = attendanceData.booking?.session_notes || attendanceData.session_notes;
-        if (sessionNotes) {
-          localBooking.session_notes = sessionNotes;
-        }
-        
-        console.log("✅ Updated localBooking with attendance_status:", attendanceStatus);
-        
-        // Update current time immediately to check if session has ended
-        // This ensures the "Mark as Completed" button appears right away if session has passed
-        currentTime.value = new Date();
-        
-        // Force Vue to re-evaluate computed properties
-        // Use nextTick to ensure reactivity is processed in the current tick
-        await nextTick();
-        
-        // Force a reactivity update by triggering a microtask
-        // This ensures computed properties see the updated values
-        await new Promise(resolve => {
-          // Use requestAnimationFrame to ensure DOM updates are processed
-          requestAnimationFrame(() => {
-            // Update time again to force re-evaluation
-            currentTime.value = new Date();
-            resolve();
-          });
-        });
-        
-        // Wait for next tick to ensure all reactivity is fully processed
-        await nextTick();
-        
-        // Log computed property state for debugging
-        console.log("✅ canComplete value:", canComplete.value);
-        console.log("✅ localBooking.attendance_status:", localBooking.attendance_status);
-        console.log("✅ localBooking.status:", localBooking.status);
-        console.log("✅ isTutor:", isTutor.value);
-        console.log("✅ isPastBooking:", isPastBooking());
-        console.log("✅ currentTime:", currentTime.value);
-        console.log("✅ sessionEndTime:", new Date(localBooking.end || localBooking.end_time));
-      }
+      // Close the modal first
+      emit("close");
       
-      // Emit the attendance data along with the update event after local update
-      // so the parent can update the booking reactively too
-      // The MarkAttendanceModal will close itself after emitting
+      // Emit update to parent so it can refresh and reopen
       emit("updated", { 
         attendance_status: attendanceStatus,
         session_notes: attendanceData.booking?.session_notes || attendanceData.session_notes,
+        attendance_marked_at: attendanceData.booking?.attendance_marked_at,
         ...attendanceData 
       });
     }

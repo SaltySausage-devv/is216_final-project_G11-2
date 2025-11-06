@@ -604,22 +604,21 @@ export default {
     };
 
     const handleNotificationClick = async (notification) => {
-      // For session_completed notifications, navigate to calendar
-      if (notification.type === 'session_completed' && notification.bookingId) {
+      // For session_completed notifications, navigate to messages with the conversation
+      const notificationType = notification.data?.notificationType || notification.notificationType;
+      if (notificationType === 'session_completed' && notification.conversationId) {
         console.log(
-          "🔔 NAVBAR: Clicked session_completed notification, navigating to calendar with bookingId:",
-          notification.bookingId
+          "🔔 NAVBAR: Clicked session_completed notification, navigating to messages with conversationId:",
+          notification.conversationId
         );
 
         // Mark the message as read in the database
-        if (notification.conversationId) {
-          try {
-            console.log(`🔔 NAVBAR: Marking session_completed message as read for conversation: ${notification.conversationId}`);
-            await messagingService.markAsRead(notification.conversationId);
-            console.log(`🔔 NAVBAR: ✅ Session_completed message marked as read`);
-          } catch (error) {
-            console.error(`🔔 NAVBAR: ❌ Error marking session_completed message as read:`, error);
-          }
+        try {
+          console.log(`🔔 NAVBAR: Marking session_completed message as read for conversation: ${notification.conversationId}`);
+          await messagingService.markAsRead(notification.conversationId);
+          console.log(`🔔 NAVBAR: ✅ Session_completed message marked as read`);
+        } catch (error) {
+          console.error(`🔔 NAVBAR: ❌ Error marking session_completed message as read:`, error);
         }
 
         // Remove this notification
@@ -634,8 +633,8 @@ export default {
         const dropdowns = document.querySelectorAll(".dropdown-menu.show");
         dropdowns.forEach((dropdown) => dropdown.classList.remove("show"));
 
-        // Navigate to calendar page
-        router.push(`/calendar`);
+        // Navigate to messages page with the conversation
+        router.push(`/messages?conversation=${notification.conversationId}`);
         return;
       }
 
@@ -705,30 +704,45 @@ export default {
             // Parse notification data to extract conversation info
             const notifData = dbNotif.data || {};
             const conversationId = notifData.conversationId;
+            const notificationType = notifData.notificationType;
 
-            // Only process message notifications (not booking/system notifications that are handled differently)
+            // Process notifications with conversationId (message notifications and session_completed)
             if (conversationId && dbNotif.message) {
-              // Extract sender name and message from format: "Sender Name: message content"
-              // Use indexOf to only split on the first colon (in case message content has colons)
               let senderName = "Someone";
               let messagePreview = dbNotif.message;
+              let title = dbNotif.subject || "Notification";
+              let icon = getIconForNotificationType({ type: 'text', message_type: 'text' });
               
-              if (dbNotif.message.includes(':')) {
-                const colonIndex = dbNotif.message.indexOf(':');
-                senderName = dbNotif.message.substring(0, colonIndex).trim();
-                messagePreview = dbNotif.message.substring(colonIndex + 1).trim();
+              // For session_completed notifications, use the subject as title
+              if (notificationType === 'session_completed') {
+                title = dbNotif.subject || "Session Completed";
+                icon = getIconForNotificationType({ type: 'text', message_type: 'session_completed' });
+                // For session_completed, the message is already formatted nicely
+                messagePreview = dbNotif.message;
+              } else {
+                // For regular messages, extract sender name and message from format: "Sender Name: message content"
+                // Use indexOf to only split on the first colon (in case message content has colons)
+                if (dbNotif.message.includes(':')) {
+                  const colonIndex = dbNotif.message.indexOf(':');
+                  senderName = dbNotif.message.substring(0, colonIndex).trim();
+                  messagePreview = dbNotif.message.substring(colonIndex + 1).trim();
+                  title = `New message from ${senderName.trim()}`;
+                }
               }
 
               const notification = {
                 id: dbNotif.id,
-                icon: getIconForNotificationType({ type: 'text', message_type: 'text' }),
-                title: `New message from ${senderName.trim()}`,
+                icon: icon,
+                title: title,
                 message: messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
                 time: formatTime(dbNotif.created_at),
                 timestamp: dbNotif.created_at,
                 conversationId: conversationId,
-                type: 'text',
+                type: notificationType === 'session_completed' ? 'session_completed' : 'text',
                 unread: !dbNotif.read_at, // Ensure unread is true if read_at is null/undefined
+                data: notifData, // Preserve full data object including notificationType
+                notificationType: notificationType, // Also add at top level for easy access
+                bookingId: notifData.bookingId, // Include bookingId if present
               };
               
               // Remove any status or badgeClass fields that might have been added from activity items
@@ -738,7 +752,7 @@ export default {
               // Add to notifications (prepend to keep most recent first)
               notifications.value = [notification, ...notifications.value];
               existingNotificationIds.add(dbNotif.id);
-              console.log(`🔔 NAVBAR: ✅ Added notification from database: ${dbNotif.id}`);
+              console.log(`🔔 NAVBAR: ✅ Added notification from database: ${dbNotif.id}, type: ${notificationType || 'text'}`);
             }
           });
 
@@ -1302,6 +1316,7 @@ export default {
           // Parse notification data
           const notifData = notificationData.data || {};
           const conversationId = notifData.conversationId;
+          const notificationType = notifData.notificationType;
           
           // Check if this notification is for the current user
           // Only show notification if recipientId matches current user (or if not specified, show it)
@@ -1316,29 +1331,44 @@ export default {
             return;
           }
 
-          // Use senderName directly from notification data (more reliable than parsing message)
-          let senderName = notificationData.senderName || "Someone";
+          // For session_completed notifications, use the subject as title
+          let title = notificationData.subject || "Notification";
           let messagePreview = notificationData.message || "";
+          let icon = getIconForNotificationType({ type: 'text', message_type: 'text' });
           
-          // If message contains sender name (format: "Sender Name: message content"), extract it
-          // But only if senderName wasn't provided directly
-          if (!notificationData.senderName && messagePreview.includes(':')) {
-            const colonIndex = messagePreview.indexOf(':');
-            senderName = messagePreview.substring(0, colonIndex).trim();
-            messagePreview = messagePreview.substring(colonIndex + 1).trim();
+          if (notificationType === 'session_completed') {
+            title = notificationData.subject || "Session Completed";
+            icon = getIconForNotificationType({ type: 'text', message_type: 'session_completed' });
+            // Message is already formatted nicely for session_completed
+          } else {
+            // For regular messages, extract sender name
+            let senderName = notificationData.senderName || "Someone";
+            
+            // If message contains sender name (format: "Sender Name: message content"), extract it
+            // But only if senderName wasn't provided directly
+            if (!notificationData.senderName && messagePreview.includes(':')) {
+              const colonIndex = messagePreview.indexOf(':');
+              senderName = messagePreview.substring(0, colonIndex).trim();
+              messagePreview = messagePreview.substring(colonIndex + 1).trim();
+            }
+            
+            title = `New message from ${senderName}`;
           }
 
           // Create notification object
           const notification = {
             id: notificationData.id,
-            icon: getIconForNotificationType({ type: 'text', message_type: 'text' }),
-            title: `New message from ${senderName}`,
+            icon: icon,
+            title: title,
             message: messagePreview.substring(0, 100) + (messagePreview.length > 100 ? '...' : ''),
             time: formatTime(notificationData.created_at),
             timestamp: notificationData.created_at,
             conversationId: conversationId,
-            type: 'text',
+            type: notificationType === 'session_completed' ? 'session_completed' : 'text',
             unread: !notificationData.read_at, // Ensure unread is true if read_at is null/undefined
+            data: notifData, // Preserve full data object including notificationType
+            notificationType: notificationType, // Also add at top level for easy access
+            bookingId: notifData.bookingId, // Include bookingId if present
           };
           
           // Remove any status or badgeClass fields that might have been added from activity items
@@ -1373,13 +1403,14 @@ export default {
         // Remove notifications from this conversation
         // BUT keep reschedule and session_completed notifications visible - they're important status updates
         const beforeCount = notifications.value.length;
+        const getNotificationType = (n) => n.data?.notificationType || n.notificationType || n.type;
         notifications.value = notifications.value.filter(
           (n) =>
             n.conversationId !== data.conversationId ||
-            (n.type === "reschedule_request" ||
+            (getNotificationType(n) === "reschedule_request" ||
+              getNotificationType(n) === "session_completed" ||
               n.type === "reschedule_accepted" ||
-              n.type === "reschedule_rejected" ||
-              n.type === "session_completed")
+              n.type === "reschedule_rejected")
         );
         const afterCount = notifications.value.length;
         const removedCount = beforeCount - afterCount;

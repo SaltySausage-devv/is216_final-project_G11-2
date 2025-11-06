@@ -1285,6 +1285,29 @@ app.post('/bookings/:bookingId/mark-attendance', verifyToken, async (req, res) =
       throw updateError;
     }
 
+    // Emit booking update event to both tutor and student via messaging service
+    try {
+      const messagingServiceUrl = process.env.MESSAGING_SERVICE_URL || 'http://localhost:3005';
+      const authToken = req.headers.authorization?.split(' ')[1];
+      
+      await axios.post(`${messagingServiceUrl}/messaging/booking-updated`, {
+        bookingId: bookingId,
+        tutorId: booking.tutor_id,
+        studentId: booking.student_id,
+        updateType: 'attendance_marked'
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        timeout: 5000
+      });
+      console.log('✅ Booking update event broadcasted for attendance marking');
+    } catch (error) {
+      console.error('⚠️ Failed to broadcast booking update event:', error.message);
+      // Don't fail the request if event broadcasting fails
+    }
+
     res.json({
       message: 'Attendance marked successfully',
       booking: updatedBooking

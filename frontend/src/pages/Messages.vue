@@ -476,21 +476,13 @@
                               </p>
                             </div>
 
-                            <!-- Session End Button for Students -->
-                            <div
-                              v-if="
-                                authStore.user &&
-                                authStore.user.user_type === 'student' &&
-                                canShowSessionEndModal(message)
-                              "
-                              class="booking-actions mt-3"
-                            >
+                            <div class="booking-actions mt-3">
                               <button
-                                class="btn btn-info btn-sm"
-                                @click="showSessionEndModal(message)"
+                                class="btn btn-outline-primary btn-sm"
+                                @click="viewBookingInCalendar(message)"
                               >
-                                <i class="fas fa-star me-1"></i>
-                                Session Ended - Leave Review
+                                <i class="fas fa-calendar-check me-1"></i>
+                                View in Calendar
                               </button>
                             </div>
                           </div>
@@ -1474,7 +1466,7 @@
           <form @submit.prevent="createBookingOffer">
             <!-- Session Type -->
             <div class="mb-3">
-              <label class="form-label fw-bold">Session Type</label>
+              <label class="form-label fw-bold">Session Type <span class="text-danger">*</span></label>
               <div class="btn-group w-100" role="group">
                 <input
                   type="radio"
@@ -1483,6 +1475,7 @@
                   id="online"
                   v-model="bookingOffer.isOnline"
                   :value="true"
+                  required
                 />
                 <label class="btn btn-outline-primary" for="online">
                   <i class="fas fa-video me-2"></i>Online Session
@@ -1494,6 +1487,7 @@
                   id="onsite"
                   v-model="bookingOffer.isOnline"
                   :value="false"
+                  required
                 />
                 <label class="btn btn-outline-primary" for="onsite">
                   <i class="fas fa-map-marker-alt me-2"></i>On-site Session
@@ -1503,7 +1497,7 @@
 
             <!-- Subject Selection -->
             <div class="mb-3">
-              <label class="form-label fw-bold">Subject</label>
+              <label class="form-label fw-bold">Subject <span class="text-danger">*</span></label>
               <select
                 class="form-select"
                 v-model="bookingOffer.subject"
@@ -1525,7 +1519,7 @@
 
             <!-- Level Selection -->
             <div class="mb-3">
-              <label class="form-label fw-bold">Level</label>
+              <label class="form-label fw-bold">Level <span class="text-danger">*</span></label>
               <select
                 class="form-select"
                 v-model="bookingOffer.level"
@@ -1553,7 +1547,7 @@
 
             <!-- Location (for on-site) -->
             <div v-if="!bookingOffer.isOnline" class="mb-3">
-              <label class="form-label fw-bold">Preferred Location</label>
+              <label class="form-label fw-bold">Preferred Location <span class="text-danger">*</span></label>
               <div class="position-relative">
                 <input
                   type="text"
@@ -1593,7 +1587,7 @@
 
             <!-- Notes -->
             <div class="mb-3">
-              <label class="form-label fw-bold">Additional Notes</label>
+              <label class="form-label fw-bold">Additional Notes <span class="text-muted small">(Recommended)</span></label>
               <textarea
                 class="form-control"
                 v-model="bookingOffer.notes"
@@ -1615,7 +1609,7 @@
             type="button"
             class="btn btn-primary"
             @click="createBookingOffer"
-            :disabled="isCreatingBooking"
+            :disabled="isCreatingBooking || !isBookingOfferFormValid"
           >
             <span v-if="isCreatingBooking" class="spinner me-2"></span>
             <i class="fas fa-paper-plane me-2"></i>
@@ -1879,14 +1873,14 @@
                     class="form-control"
                     v-model.number="bookingProposal.customDuration"
                     placeholder="Enter duration"
-                    min="15"
+                    min="1"
                     max="480"
-                    step="15"
+                    step="1"
                   />
                   <span class="input-group-text">minutes</span>
                 </div>
                 <small class="text-muted"
-                  >Min: 15 minutes, Max: 480 minutes (8 hours)</small
+                  >Min: 1 minute, Max: 480 minutes (8 hours)</small
                 >
               </div>
               <div
@@ -2144,6 +2138,31 @@ export default {
     
     const isTutor = computed(() => authStore.user?.user_type === 'tutor');
     const isStudent = computed(() => authStore.user?.user_type === 'student');
+
+    // Computed property to check if booking offer form is valid
+    const isBookingOfferFormValid = computed(() => {
+      // Session type must be selected (not undefined/null)
+      if (bookingOffer.value.isOnline === undefined || bookingOffer.value.isOnline === null) {
+        return false;
+      }
+      
+      // Subject must be selected
+      if (!bookingOffer.value.subject || bookingOffer.value.subject.trim() === "") {
+        return false;
+      }
+      
+      // Level must be selected
+      if (!bookingOffer.value.level || bookingOffer.value.level.trim() === "") {
+        return false;
+      }
+      
+      // Location is required for on-site sessions
+      if (!bookingOffer.value.isOnline && (!bookingOffer.value.tuteeLocation || bookingOffer.value.tuteeLocation.trim() === "")) {
+        return false;
+      }
+      
+      return true;
+    });
 
     // Get today's date in YYYY-MM-DD format for date input min attribute
     const today = computed(() => {
@@ -3608,6 +3627,21 @@ export default {
     const createBookingOffer = async () => {
       if (!selectedConversation.value) return;
 
+      // Validate required fields using the computed property
+      if (!isBookingOfferFormValid.value) {
+        // Show specific error messages for better UX
+        if (bookingOffer.value.isOnline === undefined || bookingOffer.value.isOnline === null) {
+          showWarning("Required Field", "Please select a session type (Online or On-site)");
+        } else if (!bookingOffer.value.subject || bookingOffer.value.subject.trim() === "") {
+          showWarning("Required Field", "Please select a subject");
+        } else if (!bookingOffer.value.level || bookingOffer.value.level.trim() === "") {
+          showWarning("Required Field", "Please select a level");
+        } else if (!bookingOffer.value.isOnline && (!bookingOffer.value.tuteeLocation || bookingOffer.value.tuteeLocation.trim() === "")) {
+          showWarning("Required Field", "Please enter a location for on-site sessions");
+        }
+        return;
+      }
+
       // Check if user is a student and validate credits
       if (creditService.isStudent()) {
         // For booking offers, we need to check if student has any credits at all
@@ -3686,10 +3720,10 @@ export default {
           ? bookingProposal.value.customDuration
           : bookingProposal.value.duration;
 
-      if (!effectiveDuration || effectiveDuration < 15) {
+      if (!effectiveDuration || effectiveDuration < 1) {
         showWarning(
           "Invalid Duration",
-          "Please select a valid duration (minimum 15 minutes)"
+          "Please select a valid duration (minimum 1 minute)"
         );
         return;
       }
@@ -3883,13 +3917,14 @@ export default {
     // View booking in calendar - opens booking details modal
     const viewBookingInCalendar = (message) => {
       const bookingData = getBookingData(message);
-      if (bookingData && bookingData.bookingId) {
-        // Navigate to calendar with bookingId and reschedule=true to open booking details
+      // Check for bookingId (for reschedule requests) or bookingOfferId (for booking confirmations)
+      const bookingId = bookingData?.bookingId || bookingData?.bookingOfferId;
+      if (bookingId) {
+        // Navigate to calendar with bookingId to open booking details
         router.push({
           path: '/calendar',
           query: {
-            bookingId: bookingData.bookingId,
-            reschedule: 'true'
+            bookingId: bookingId
           }
         });
       } else {
@@ -5924,6 +5959,8 @@ export default {
       // Chat route handling
       handleChatRoute,
       createConversationWithTutor,
+      // Booking offer form validation
+      isBookingOfferFormValid,
     };
   },
   components: {

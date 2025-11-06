@@ -1547,6 +1547,29 @@ app.post('/bookings/:id/complete', verifyToken, async (req, res) => {
       console.error('Error sending completion notification:', notificationError);
     }
 
+    // Emit booking update event to both tutor and student via messaging service
+    try {
+      const messagingServiceUrl = process.env.MESSAGING_SERVICE_URL || 'http://localhost:3005';
+      const authToken = req.headers.authorization?.split(' ')[1];
+      
+      await axios.post(`${messagingServiceUrl}/messaging/booking-updated`, {
+        bookingId: id,
+        tutorId: booking.tutor_id,
+        studentId: booking.student_id,
+        updateType: 'completed'
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        timeout: 5000
+      });
+      console.log('✅ Booking update event broadcasted for completion');
+    } catch (error) {
+      console.error('⚠️ Failed to broadcast booking update event:', error.message);
+      // Don't fail the request if event broadcasting fails
+    }
+
     res.json({ 
       data: updatedBooking,
       creditsTransfered: {

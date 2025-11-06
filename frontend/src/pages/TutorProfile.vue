@@ -487,7 +487,7 @@ export default {
         // Transform reviews data to match the expected format
         reviews.value = data.reviews.map((review, index) => ({
           id: review.id,
-          studentName: `Student ${index + 1}`, // Anonymize reviewer names
+          studentName: `Review ${index + 1}`, // Anonymize reviewer names
           rating: review.rating,
           comment: review.comment || "No comment provided",
           createdAt: review.created_at,

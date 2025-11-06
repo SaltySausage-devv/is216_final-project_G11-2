@@ -194,26 +194,16 @@ const generateChartData = (data, startDate, endDate, period) => {
   }
   
   // Original daily grouping for periods 7 and 30
-  // For earnings data, extend the range to include future dates
-  const hasFutureData = data.some(item => {
-    const itemDate = new Date(item.start_time || item.created_at);
-    return itemDate > new Date();
-  });
+  // Generate dates based on the actual filter range (startDate to endDate)
+  // Do NOT include future dates beyond the filter range
+  const currentDate = new Date(startDate);
+  currentDate.setHours(0, 0, 0, 0);
+  const filterEndDate = new Date(endDate);
+  filterEndDate.setHours(23, 59, 59, 999);
   
-  let startOffset, endOffset;
-  if (hasFutureData) {
-    // Include future dates for earnings
-    startOffset = parseInt(period) - 1;
-    endOffset = 7; // Include 7 days in the future
-  } else {
-    // Normal behavior for past data
-    startOffset = parseInt(period) - 1;
-    endOffset = 0;
-  }
-  
-  for (let i = startOffset; i >= -endOffset; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
+  // Generate all days in the filter range
+  while (currentDate <= filterEndDate) {
+    const date = new Date(currentDate);
     chartLabels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
     
     const dayStart = new Date(date);
@@ -223,8 +213,7 @@ const generateChartData = (data, startDate, endDate, period) => {
     
     const dayData = data.filter(item => {
       const itemDate = new Date(item.start_time || item.created_at);
-      // For earnings, include future dates by checking if the item date matches the current chart date
-      // This allows future confirmed bookings to appear in the chart
+      // Only include items that fall within this specific day
       return itemDate >= dayStart && itemDate <= dayEnd;
     });
     
@@ -254,6 +243,9 @@ const generateChartData = (data, startDate, endDate, period) => {
     // Ensure final values are non-negative
     hoursData.push(Math.max(0, parseFloat(totalHours.toFixed(1))));
     spendingData.push(Math.max(0, parseFloat(totalSpending.toFixed(2))));
+    
+    // Move to next day
+    currentDate.setDate(currentDate.getDate() + 1);
   }
   
   return { 
@@ -698,6 +690,20 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
       sampleAllBooking: allBookings?.[0] 
     });
     
+    // Debug: Check cancelled bookings
+    const allCancelledBookings = allBookings?.filter(b => b.status === 'cancelled') || [];
+    console.log('📊 TUTOR ANALYTICS: Total cancelled bookings found:', allCancelledBookings.length);
+    if (allCancelledBookings.length > 0) {
+      console.log('📊 TUTOR ANALYTICS: Sample cancelled booking:', {
+        id: allCancelledBookings[0].id,
+        status: allCancelledBookings[0].status,
+        cancelled_at: allCancelledBookings[0].cancelled_at,
+        start_time: allCancelledBookings[0].start_time,
+        student_id: allCancelledBookings[0].student_id,
+        hasStudent: !!allCancelledBookings[0].student
+      });
+    }
+    
     // Get all confirmed/completed bookings for earnings (regardless of date)
     // and bookings within date range for other metrics
     const { data: allConfirmedBookings, error: allConfirmedError } = await supabase
@@ -763,11 +769,13 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
     const cancelledBookings = bookings?.filter(b => b.status === 'cancelled').length || 0;
     const pendingBookings = bookings?.filter(b => b.status === 'pending').length || 0;
 
-    // Total Students: Count unique students from ALL bookings (not just date-filtered)
-    // Students who have scheduled a booking with the tutor
-    const totalStudents = new Set(allBookings?.map(b => b.student_id)).size || 0;
+    // Total Students: Count unique students ONLY from bookings where attendance was marked as 'attended'
+    // Cancelled bookings (even with funds released) should NOT count as students taught
+    // Only students from completed sessions count
+    const attendedBookingsForStudents = allBookings?.filter(b => b.attendance_status === 'attended') || [];
+    const totalStudents = new Set(attendedBookingsForStudents.map(b => b.student_id)).size || 0;
     
-    console.log('📊 TUTOR ANALYTICS: Total Students (from all bookings):', totalStudents);
+    console.log('📊 TUTOR ANALYTICS: Total Students (from attended sessions only):', totalStudents);
 
     // Hours This Month: Only from bookings where attendance was marked as 'attended'
     // AND the session start_time is in current month
@@ -814,20 +822,149 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
 
     console.log('📊 TUTOR ANALYTICS: Total Hours This Month (from attended sessions):', totalHours);
 
-    // Earnings: Only from bookings where attendance was marked as 'attended'
-    // Credits are only transferred to tutor when attendance is marked as completed
-    // Only bookings with attendance_status === 'attended' count towards earnings
+    // Earnings: From bookings where attendance was marked as 'attended' AND cancelled bookings where funds were released
+    // For cancelled bookings: funds are released to tutor when student cancels < 24 hours before start
     const attendedBookings = allBookings?.filter(b => b.attendance_status === 'attended') || [];
     console.log('📊 TUTOR ANALYTICS: Attended Bookings (for earnings):', attendedBookings.length);
 
-    const totalEarnings = attendedBookings
+    // Calculate earnings from attended sessions
+    const earningsFromAttended = attendedBookings
       ?.reduce((sum, b) => {
         const amount = parseFloat(b.total_amount) || 0;
         // Ensure earnings is never negative
         return sum + Math.max(0, amount);
       }, 0) || 0;
 
-    console.log('📊 TUTOR ANALYTICS: Total Earnings (from attended sessions):', totalEarnings);
+    // Calculate earnings from cancelled bookings where funds were released to tutor
+    // Funds are released when: student cancels < 24 hours before start_time
+    // According to cancellation logic:
+    // - If tutor cancels: student always gets refunded (no funds to tutor)
+    // - If student cancels < 24 hours: tutor gets 100% funds (no refund to student)
+    // - If student cancels >= 24 hours: student gets refunded (no funds to tutor)
+    // Since we can't determine who cancelled from booking data alone, we use a heuristic:
+    // If cancelled < 24 hours before start, it's likely a student cancellation (funds released)
+    // If cancelled >= 24 hours, it's likely either student or tutor cancellation (no funds released)
+    console.log('📊 TUTOR ANALYTICS: Filtering cancelled bookings for funds released...');
+    const allCancelled = allBookings?.filter(b => b.status === 'cancelled') || [];
+    console.log('📊 TUTOR ANALYTICS: All cancelled bookings:', allCancelled.length);
+    
+    const cancelledBookingsWithFunds = allBookings?.filter(b => {
+      if (b.status !== 'cancelled') {
+        return false;
+      }
+      
+      if (!b.cancelled_at) {
+        console.log(`📊 TUTOR ANALYTICS: Skipping cancelled booking ${b.id} - no cancelled_at timestamp`);
+        return false;
+      }
+      
+      if (!b.start_time) {
+        console.log(`📊 TUTOR ANALYTICS: Skipping cancelled booking ${b.id} - no start_time`);
+        return false;
+      }
+      
+      // Check who cancelled - if tutor cancelled, NO funds are released (student always refunded)
+      // Parse cancelled_by from notes field: "CANCELLED_BY: {user_id}"
+      let cancelledBy = null;
+      if (b.notes && b.notes.includes('CANCELLED_BY:')) {
+        const match = b.notes.match(/CANCELLED_BY:\s*([^\s\n]+)/);
+        if (match && match[1]) {
+          cancelledBy = match[1];
+        }
+      }
+      
+      // If tutor cancelled, skip (no funds released to tutor)
+      if (cancelledBy && String(cancelledBy) === String(b.tutor_id)) {
+        console.log(`📊 TUTOR ANALYTICS: Skipping cancelled booking ${b.id} - tutor cancelled (no funds released)`);
+        return false;
+      }
+      
+      // Check if cancellation was less than 24 hours before start
+      const cancelledAt = new Date(b.cancelled_at);
+      const startTime = new Date(b.start_time);
+      
+      // Check if dates are valid
+      if (isNaN(cancelledAt.getTime())) {
+        console.log(`📊 TUTOR ANALYTICS: Skipping cancelled booking ${b.id} - invalid cancelled_at: ${b.cancelled_at}`);
+        return false;
+      }
+      
+      if (isNaN(startTime.getTime())) {
+        console.log(`📊 TUTOR ANALYTICS: Skipping cancelled booking ${b.id} - invalid start_time: ${b.start_time}`);
+        return false;
+      }
+      
+      const hoursBeforeStart = (startTime - cancelledAt) / (1000 * 60 * 60);
+      
+      console.log(`📊 TUTOR ANALYTICS: Checking cancelled booking ${b.id}:`, {
+        cancelled_at: b.cancelled_at,
+        start_time: b.start_time,
+        hoursBeforeStart: hoursBeforeStart.toFixed(2),
+        cancelledBy: cancelledBy || 'unknown',
+        isTutorCancellation: cancelledBy && String(cancelledBy) === String(b.tutor_id),
+        meetsCriteria: hoursBeforeStart < 24 && hoursBeforeStart > 0 && (!cancelledBy || String(cancelledBy) !== String(b.tutor_id))
+      });
+      
+      // Funds are released ONLY if:
+      // 1. Student cancelled (not tutor)
+      // 2. AND cancelled < 24 hours before start
+      // This matches the cancellation endpoint logic: student cancels < 24h = tutor gets funds
+      return hoursBeforeStart < 24 && hoursBeforeStart > 0 && (!cancelledBy || String(cancelledBy) !== String(b.tutor_id));
+    }) || [];
+
+    console.log('📊 TUTOR ANALYTICS: Cancelled Bookings with Funds Released:', cancelledBookingsWithFunds.length);
+
+    const earningsFromCancelled = cancelledBookingsWithFunds
+      ?.reduce((sum, b) => {
+        const amount = parseFloat(b.total_amount) || 0;
+        // Ensure earnings is never negative
+        return sum + Math.max(0, amount);
+      }, 0) || 0;
+
+    // Detailed logging for cancelled bookings with funds released
+    if (cancelledBookingsWithFunds.length > 0) {
+      console.log('📊 TUTOR ANALYTICS: Detailed <24h Cancellation Log:');
+      console.log('='.repeat(80));
+      cancelledBookingsWithFunds.forEach((b, index) => {
+        const cancelledAt = new Date(b.cancelled_at);
+        const startTime = new Date(b.start_time);
+        const hoursBeforeStart = (startTime - cancelledAt) / (1000 * 60 * 60);
+        const studentName = b.student 
+          ? `${b.student.first_name || ''} ${b.student.last_name || ''}`.trim() 
+          : 'Unknown Student';
+        const amount = parseFloat(b.total_amount) || 0;
+        
+        // Format date for display
+        const cancelledDateStr = cancelledAt.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        console.log(`  [${index + 1}] Cancellation Details:`);
+        console.log(`      Date of Cancellation: ${cancelledDateStr} (${cancelledAt.toISOString()})`);
+        console.log(`      Subject: ${b.subject || 'N/A'}`);
+        console.log(`      Student: ${studentName} (ID: ${b.student_id})`);
+        console.log(`      Duration: 0 hours (cancelled)`);
+        console.log(`      Earnings: $${amount.toFixed(2)}`);
+        console.log(`      Hours Before Start: ${hoursBeforeStart.toFixed(2)} hours`);
+        console.log(`      Booking ID: ${b.id}`);
+        console.log('-'.repeat(80));
+      });
+      console.log('='.repeat(80));
+      console.log(`📊 Total Cancelled Bookings with Funds Released: ${cancelledBookingsWithFunds.length}`);
+      console.log(`📊 Total Earnings from Cancellations: $${earningsFromCancelled.toFixed(2)}`);
+    }
+
+    const totalEarnings = earningsFromAttended + earningsFromCancelled;
+
+    console.log('📊 TUTOR ANALYTICS: Total Earnings (from attended + cancelled with funds):', {
+      fromAttended: earningsFromAttended,
+      fromCancelled: earningsFromCancelled,
+      total: totalEarnings
+    });
     const averageRating = reviews?.length > 0 
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
       : 0;
@@ -879,17 +1016,40 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
       .gte('created_at', prevStartDate.toISOString())
       .lt('created_at', startDate.toISOString());
 
-    const prevEarnings = prevBookings
-      ?.filter(b => b.status === 'completed' || b.status === 'confirmed')
+    // Calculate previous period earnings: include attended sessions + cancelled with funds
+    const prevAttendedBookings = prevBookings?.filter(b => b.attendance_status === 'attended') || [];
+    const prevEarningsFromAttended = prevAttendedBookings
       ?.reduce((sum, b) => {
         const amount = parseFloat(b.total_amount) || 0;
-        // Ensure earnings is never negative
         return sum + Math.max(0, amount);
       }, 0) || 0;
+    
+    // Also include cancelled bookings with funds released from previous period
+    const prevCancelledWithFunds = prevBookings?.filter(b => {
+      if (b.status !== 'cancelled' || !b.cancelled_at || !b.start_time) {
+        return false;
+      }
+      const cancelledAt = new Date(b.cancelled_at);
+      const startTime = new Date(b.start_time);
+      const hoursBeforeStart = (startTime - cancelledAt) / (1000 * 60 * 60);
+      return hoursBeforeStart < 24 && hoursBeforeStart > 0;
+    }) || [];
+    
+    const prevEarningsFromCancelled = prevCancelledWithFunds
+      ?.reduce((sum, b) => {
+        const amount = parseFloat(b.total_amount) || 0;
+        return sum + Math.max(0, amount);
+      }, 0) || 0;
+    
+    const prevEarnings = prevEarningsFromAttended + prevEarningsFromCancelled;
 
     const earningsChange = calculateGrowth(totalEarnings, prevEarnings);
     const bookingsChange = calculateGrowth(totalBookings, prevBookings?.length || 0);
-    const studentsChange = calculateGrowth(totalStudents, new Set(prevBookings?.map(b => b.student_id)).size || 0);
+    
+    // Calculate previous period students: only from attended sessions (not cancelled)
+    const prevAttendedBookingsForStudents = prevBookings?.filter(b => b.attendance_status === 'attended') || [];
+    const prevStudentsCount = new Set(prevAttendedBookingsForStudents.map(b => b.student_id)).size || 0;
+    const studentsChange = calculateGrowth(totalStudents, prevStudentsCount);
 
     // Chart data - use all confirmed bookings for earnings, date-filtered for hours
     console.log('📊 TUTOR ANALYTICS: Generating chart data with:', {
@@ -912,6 +1072,29 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
       
       // Process attended bookings within date range
       attendedBookings?.forEach(booking => {
+        if (!booking.start_time) return;
+        
+        const bookingDate = new Date(booking.start_time);
+        // Only include bookings within the date range
+        if (bookingDate < startDate || bookingDate > endDate) return;
+        
+        const monthKey = `${bookingDate.getFullYear()}-${bookingDate.getMonth()}`;
+        
+        if (!monthMap.has(monthKey)) {
+          monthMap.set(monthKey, {
+            month: bookingDate.getMonth(),
+            year: bookingDate.getFullYear(),
+            earnings: 0
+          });
+        }
+        
+        const monthData = monthMap.get(monthKey);
+        const amount = parseFloat(booking.total_amount) || 0;
+        monthData.earnings += Math.max(0, amount);
+      });
+      
+      // Also process cancelled bookings with funds released (student cancelled < 24h)
+      cancelledBookingsWithFunds?.forEach(booking => {
         if (!booking.start_time) return;
         
         const bookingDate = new Date(booking.start_time);
@@ -962,11 +1145,16 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
       });
     } else {
       // Original daily grouping for periods 7 and 30
-      // Generate last 30 days + 7 future days
-      const daysToGenerate = periodInt === 7 ? 7 : 30;
-      for (let i = daysToGenerate - 1; i >= -7; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
+      // Generate dates based on the actual filter range (startDate to endDate)
+      // Do NOT include future dates beyond the filter range
+      const currentDate = new Date(startDate);
+      currentDate.setHours(0, 0, 0, 0);
+      const filterEndDate = new Date(endDate);
+      filterEndDate.setHours(23, 59, 59, 999);
+      
+      // Generate all days in the filter range
+      while (currentDate <= filterEndDate) {
+        const date = new Date(currentDate);
         earningsLabels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
         
         const dayStart = new Date(date);
@@ -974,9 +1162,9 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
         const dayEnd = new Date(date);
         dayEnd.setHours(23, 59, 59, 999);
         
-        // Chart earnings: Only from bookings where attendance was marked as 'attended'
+        // Chart earnings: From attended sessions + cancelled bookings with funds released
         // This ensures chart data matches the main earnings metric
-        const dayEarnings = attendedBookings
+        const dayEarningsFromAttended = attendedBookings
           ?.filter(booking => {
             if (!booking.start_time) return false;
             const bookingDate = new Date(booking.start_time);
@@ -984,12 +1172,27 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
           })
           ?.reduce((sum, booking) => {
             const amount = parseFloat(booking.total_amount) || 0;
-            // Ensure earnings is never negative
             return sum + Math.max(0, amount);
           }, 0) || 0;
         
+        const dayEarningsFromCancelled = cancelledBookingsWithFunds
+          ?.filter(booking => {
+            if (!booking.start_time) return false;
+            const bookingDate = new Date(booking.start_time);
+            return bookingDate >= dayStart && bookingDate <= dayEnd;
+          })
+          ?.reduce((sum, booking) => {
+            const amount = parseFloat(booking.total_amount) || 0;
+            return sum + Math.max(0, amount);
+          }, 0) || 0;
+        
+        const dayEarnings = dayEarningsFromAttended + dayEarningsFromCancelled;
+        
         // Ensure final earnings value is non-negative
         earningsData.push(Math.max(0, parseFloat(dayEarnings.toFixed(2))));
+        
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
       }
     }
     
@@ -1003,18 +1206,45 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
     
     const { chartData, spendingData, chartLabels } = generateChartData(allConfirmedBookings || [], startDate, endDate, period);
 
-    // Recent activity (only completed/confirmed bookings)
-    const recentActivity = allConfirmedBookings
+    // Recent activity: Include completed/confirmed bookings AND cancelled bookings with funds released
+    // Combine both types and sort by date (cancelled_at for cancelled, created_at for others)
+    const completedConfirmedActivities = allConfirmedBookings
       ?.filter(booking => booking.status === 'completed' || booking.status === 'confirmed')
-      ?.slice(0, 10)
-      .map(booking => ({
+      ?.map(booking => ({
         date: booking.created_at,
         subject: booking.subject || 'General',
         studentName: `${booking.student?.first_name || ''} ${booking.student?.last_name || ''}`.trim() || 'Student',
         duration: formatDuration(booking.start_time, booking.end_time),
         earnings: Math.max(0, parseFloat(booking.total_amount || 0)),
-        status: booking.status
+        status: booking.status,
+        sortDate: new Date(booking.created_at || 0)
       })) || [];
+    
+    // Include cancelled bookings with funds released (student cancelled <24hr)
+    const cancelledActivities = cancelledBookingsWithFunds
+      ?.map(booking => {
+        const cancelledAt = booking.cancelled_at || booking.created_at;
+        const studentName = booking.student 
+          ? `${booking.student.first_name || ''} ${booking.student.last_name || ''}`.trim() 
+          : 'Unknown Student';
+        return {
+          date: cancelledAt,
+          subject: booking.subject || 'General',
+          studentName: studentName,
+          duration: '0 hours (cancelled)',
+          earnings: Math.max(0, parseFloat(booking.total_amount || 0)),
+          status: 'cancelled',
+          sortDate: new Date(cancelledAt || 0)
+        };
+      }) || [];
+    
+    // Combine and sort by date (most recent first)
+    const allActivities = [...completedConfirmedActivities, ...cancelledActivities]
+      .sort((a, b) => b.sortDate.getTime() - a.sortDate.getTime())
+      .slice(0, 10)
+      .map(({ sortDate, ...rest }) => rest); // Remove sortDate before returning
+    
+    const recentActivity = allActivities;
 
     res.json({
       success: true,

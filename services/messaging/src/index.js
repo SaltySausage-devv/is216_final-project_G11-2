@@ -147,6 +147,91 @@ const createMessageNotification = async (senderId, conversationId, messageConten
   }
 };
 
+// Helper function to create notification for booking offer recipient
+const createBookingOfferNotification = async (senderId, conversationId, bookingOffer) => {
+  try {
+    console.log(`🔔 Creating notification for booking offer in conversation ${conversationId} from sender ${senderId}`);
+    
+    // Get conversation to find recipient
+    const { data: conversation, error: convError } = await supabase
+      .from('conversations')
+      .select('participant1_id, participant2_id')
+      .eq('id', conversationId)
+      .maybeSingle();
+
+    if (convError || !conversation) {
+      console.error('❌ Failed to fetch conversation for notification:', convError);
+      return null;
+    }
+
+    // Determine recipient (the other participant)
+    const recipientId = conversation.participant1_id === senderId 
+      ? conversation.participant2_id 
+      : conversation.participant1_id;
+
+    if (!recipientId) {
+      console.error('❌ No recipient found for notification');
+      return null;
+    }
+
+    console.log(`🔔 Recipient ID: ${recipientId}`);
+
+    // Get sender name for notification
+    const { data: sender } = await supabase
+      .from('users')
+      .select('first_name, last_name')
+      .eq('id', senderId)
+      .maybeSingle();
+
+    const senderName = sender 
+      ? `${sender.first_name} ${sender.last_name}`.trim()
+      : 'Someone';
+
+    // Create a descriptive notification message for booking offer
+    const sessionType = bookingOffer.is_online ? 'Online' : 'On-site';
+    const notificationMessage = `${senderName} sent a booking request for ${bookingOffer.subject || 'a session'} (${sessionType})`;
+
+    // Create notification in database
+    const { data: notification, error: notifError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: recipientId,
+        type: 'push',
+        subject: 'Booking Request',
+        message: notificationMessage,
+        data: {
+          conversationId,
+          messageType: 'booking_offer',
+          senderId,
+          bookingOfferId: bookingOffer.id
+        },
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .maybeSingle();
+
+    if (notifError) {
+      console.error('❌ Failed to create notification:', notifError);
+      return null;
+    }
+
+    console.log(`✅ Booking offer notification created for user ${recipientId}, ID: ${notification?.id}`);
+    
+    // Return notification data for socket broadcasting
+    return {
+      notification,
+      recipientId,
+      senderName,
+      messagePreview: notificationMessage
+    };
+  } catch (error) {
+    console.error('❌ Error creating booking offer notification:', error);
+    return null;
+  }
+};
+
 // RabbitMQ removed - using direct Socket.io + Supabase messaging
 
 // Configure multer for file uploads
@@ -449,7 +534,7 @@ const createBookingProposalSchema = Joi.object({
   bookingOfferId: Joi.string().uuid().required(),
   proposedTime: Joi.date().required(),
   proposedEndTime: Joi.date().optional(),
-  duration: Joi.number().min(15).max(480).optional(),
+  duration: Joi.number().min(1).max(480).optional(),
   tutorLocation: Joi.string().allow(null, '').optional(),
   finalLocation: Joi.string().allow(null, '').optional()
 });
@@ -472,12 +557,65 @@ app.get('/messaging/participants', verifyToken, async (req, res) => {
     let participants = [];
     
     if (req.user.userType === 'student') {
-      // Students can only message tutors
-      participants = allUsers?.filter(user => 
+      // Students can only message tutors with 100% profile completion
+      const tutorUsers = allUsers?.filter(user => 
         user.user_type === 'tutor' && user.id !== req.user.userId
       ) || [];
+      
+      // Fetch tutor profiles and filter by completeness
+      const tutorIds = tutorUsers.map(t => t.id);
+      if (tutorIds.length > 0) {
+        const { data: tutorProfiles, error: profilesError } = await supabase
+          .from('tutor_profiles')
+          .select('user_id, bio, headline, teaching_philosophy, subjects, levels, languages, qualifications, experience_years, previous_experience, hourly_rate, location, specialties, preferred_locations')
+          .in('user_id', tutorIds);
+        
+        if (profilesError) {
+          console.error('Error fetching tutor profiles:', profilesError);
+          // Continue without filtering if profile fetch fails
+          participants = tutorUsers;
+        } else {
+          // Calculate completeness for each tutor and filter to 100% only
+          const completeTutorIds = new Set();
+          
+          tutorProfiles.forEach(profile => {
+            let completeness = 0;
+            const pointsPerField = 100 / 13; // 13 fields total
+            
+            // Check each field for completeness
+            if (profile.bio && profile.bio.trim().length > 0) completeness += pointsPerField;
+            if (profile.headline && profile.headline.trim().length > 0) completeness += pointsPerField;
+            if (profile.teaching_philosophy && profile.teaching_philosophy.trim().length > 0) completeness += pointsPerField;
+            if (profile.subjects && profile.subjects.length > 0) completeness += pointsPerField;
+            if (profile.levels && profile.levels.length > 0) completeness += pointsPerField;
+            if (profile.languages && profile.languages.length > 0) completeness += pointsPerField;
+            
+            const validQualifications = profile.qualifications && profile.qualifications.filter(q =>
+              q.degree && q.degree.trim() && q.institution && q.institution.trim() && q.year
+            );
+            if (validQualifications && validQualifications.length > 0) completeness += pointsPerField;
+            
+            if (profile.experience_years && profile.experience_years > 0) completeness += pointsPerField;
+            if (profile.previous_experience && profile.previous_experience.trim().length > 0) completeness += pointsPerField;
+            if (profile.hourly_rate !== null && profile.hourly_rate !== undefined) completeness += pointsPerField;
+            if (profile.location && profile.location.address && profile.location.address.trim().length > 0) completeness += pointsPerField;
+            if (profile.specialties && profile.specialties.length > 0) completeness += pointsPerField;
+            if (profile.preferred_locations && profile.preferred_locations.length > 0) completeness += pointsPerField;
+            
+            const roundedCompleteness = Math.round(completeness);
+            if (roundedCompleteness === 100) {
+              completeTutorIds.add(profile.user_id);
+            }
+          });
+          
+          // Filter to only include tutors with 100% complete profiles
+          participants = tutorUsers.filter(user => completeTutorIds.has(user.id));
+          
+          console.log(`📊 Filtered tutors: ${tutorUsers.length} total, ${participants.length} with 100% completion`);
+        }
+      }
     } else if (req.user.userType === 'tutor') {
-      // Tutors can only message students
+      // Tutors can only message students (no profile completion requirement for students)
       participants = allUsers?.filter(user => 
         user.user_type === 'student' && user.id !== req.user.userId
       ) || [];
@@ -1067,6 +1205,53 @@ app.put('/messaging/conversations/:id/archive', verifyToken, async (req, res) =>
 });
 
 // Get unread message count for a conversation
+// Endpoint to emit booking update events (called by bookings/calendar service)
+app.post('/messaging/booking-updated', verifyToken, async (req, res) => {
+  try {
+    const { bookingId, tutorId, studentId, updateType } = req.body; // updateType: 'attendance_marked' or 'completed'
+    
+    if (!bookingId || !tutorId || !studentId || !updateType) {
+      return res.status(400).json({ error: 'Missing required fields: bookingId, tutorId, studentId, updateType' });
+    }
+    
+    console.log(`📢 Broadcasting booking update event: bookingId=${bookingId}, type=${updateType}`);
+    
+    // Emit event to both tutor and student
+    const tutorSocket = activeConnections.get(tutorId);
+    const studentSocket = activeConnections.get(studentId);
+    
+    const eventData = {
+      bookingId,
+      updateType, // 'attendance_marked' or 'completed'
+      timestamp: new Date().toISOString()
+    };
+    
+    if (tutorSocket) {
+      tutorSocket.emit('booking_updated', eventData);
+      console.log(`✅ Booking update event sent to tutor ${tutorId}`);
+    } else {
+      console.log(`⚠️ Tutor ${tutorId} not connected, cannot send booking update event`);
+    }
+    
+    if (studentSocket) {
+      studentSocket.emit('booking_updated', eventData);
+      console.log(`✅ Booking update event sent to student ${studentId}`);
+    } else {
+      console.log(`⚠️ Student ${studentId} not connected, cannot send booking update event`);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Booking update event broadcasted',
+      tutorSent: !!tutorSocket,
+      studentSent: !!studentSocket
+    });
+  } catch (error) {
+    console.error('Error broadcasting booking update:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.get('/messaging/conversations/:id/unread-count', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
@@ -1211,6 +1396,41 @@ app.post('/messaging/booking-offers', verifyToken, async (req, res) => {
         last_message_content: 'Booking offer sent'
       })
       .eq('id', conversationId);
+
+    // Create notification for recipient and broadcast it (same pattern as regular messages)
+    createBookingOfferNotification(req.user.userId, conversationId, bookingOffer)
+      .then(notifResult => {
+        if (notifResult && notifResult.notification) {
+          const notificationPayload = {
+            id: notifResult.notification.id,
+            type: 'push',
+            subject: 'Booking Request',
+            message: notifResult.notification.message,
+            data: notifResult.notification.data,
+            created_at: notifResult.notification.created_at,
+            read_at: null,
+            senderName: notifResult.senderName,
+            recipientId: notifResult.recipientId // Include recipientId so frontend can filter
+          };
+          
+          // Broadcast to conversation room (like new_message) - works if recipient is in room
+          console.log(`🔔 Broadcasting booking offer notification to conversation room: conversation_${conversationId}`);
+          io.to(`conversation_${conversationId}`).emit('new_notification', notificationPayload);
+          
+          // ALSO send directly to recipient socket if they're connected (fallback for new conversations)
+          // This ensures they get it even if they haven't joined the room yet
+          const recipientSocket = activeConnections.get(notifResult.recipientId);
+          if (recipientSocket) {
+            console.log(`🔔 Also sending booking offer notification directly to recipient ${notifResult.recipientId}`);
+            recipientSocket.emit('new_notification', notificationPayload);
+          }
+          
+          console.log(`✅ Booking offer notification broadcasted, recipient: ${notifResult.recipientId}`);
+        }
+      })
+      .catch(err => {
+        console.error('❌ Booking offer notification creation/broadcast failed:', err);
+      });
 
     res.status(201).json({
       message: 'Booking offer created successfully',
@@ -1525,9 +1745,25 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
     const createdBooking = booking && booking.length > 0 ? booking[0] : null;
 
     // Handle credit transactions when student confirms booking
-    if (bookingOffer.tutee_id === req.user.userId && !existingBooking) {
+    // Deduct credits regardless of whether booking already exists (to handle edge cases)
+    if (bookingOffer.tutee_id === req.user.userId) {
       try {
         console.log('🔄 Processing credit transaction for booking confirmation...');
+        
+        // Check if credits have already been deducted for this booking offer
+        // by checking if the booking already exists and has credits deducted
+        if (existingBooking) {
+          console.log('📋 Booking already exists, checking if credits were already deducted...');
+          // Check if this booking was already confirmed with credits deducted
+          // by verifying the booking status and total_amount
+          if (existingBooking.status === 'confirmed' && existingBooking.total_amount > 0) {
+            console.log('✅ Credits were already deducted for this booking. Skipping credit transaction.');
+            // Credits already deducted, skip to avoid double deduction
+          } else {
+            // Booking exists but credits not deducted yet, proceed with deduction
+            console.log('⚠️ Booking exists but credits not deducted yet. Proceeding with credit deduction...');
+          }
+        }
         
         // Get the actual hourly rate and calculate credits
         const { data: tutorProfiles, error: tutorProfileError } = await supabase
@@ -1563,73 +1799,83 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
           return res.status(404).json({ error: 'Student not found' });
         }
 
-        // Only check credits for students
+        // Only check and deduct credits for students
         if (student.user_type === 'student') {
-          const currentCredits = student.credits || 0;
-          
-          if (currentCredits < creditsUsed) {
-            const shortfall = creditsUsed - currentCredits;
-            console.log(`❌ Insufficient credits: Student has ${currentCredits}, needs ${creditsUsed}, shortfall: ${shortfall}`);
+          // Skip if booking already exists and is confirmed (credits already deducted)
+          if (existingBooking && existingBooking.status === 'confirmed' && existingBooking.total_amount > 0) {
+            console.log('✅ Credits already deducted for existing confirmed booking. Skipping deduction.');
+          } else {
+            const currentCredits = student.credits || 0;
             
-            // Send notification to student about insufficient credits
-            try {
-              await supabase
-                .from('notifications')
-                .insert({
-                  user_id: bookingOffer.tutee_id,
-                  type: 'push',
-                  subject: 'Insufficient Credits',
-                  message: `You need ${shortfall} more credits to confirm this booking. Please top up your credits.`,
-                  data: { 
-                    notificationType: 'insufficient_credits',
-                    bookingOfferId: bookingOfferId,
-                    requiredCredits: creditsUsed,
-                    currentCredits: currentCredits,
-                    shortfall: shortfall
-                  },
-                  status: 'pending',
-                  created_at: new Date().toISOString()
-                });
-              console.log('✅ Credit notification saved to database');
-            } catch (notificationError) {
-              console.error('❌ Error saving insufficient credits notification:', notificationError);
-            }
-            
-            return res.status(400).json({ 
-              error: 'Insufficient credits', 
-              details: {
-                requiredCredits: creditsUsed,
-                currentCredits: currentCredits,
-                shortfall: shortfall
+            if (currentCredits < creditsUsed) {
+              const shortfall = creditsUsed - currentCredits;
+              console.log(`❌ Insufficient credits: Student has ${currentCredits}, needs ${creditsUsed}, shortfall: ${shortfall}`);
+              
+              // Send notification to student about insufficient credits
+              try {
+                await supabase
+                  .from('notifications')
+                  .insert({
+                    user_id: bookingOffer.tutee_id,
+                    type: 'push',
+                    subject: 'Insufficient Credits',
+                    message: `You need ${shortfall} more credits to confirm this booking. Please top up your credits.`,
+                    data: { 
+                      notificationType: 'insufficient_credits',
+                      bookingOfferId: bookingOfferId,
+                      requiredCredits: creditsUsed,
+                      currentCredits: currentCredits,
+                      shortfall: shortfall
+                    },
+                    status: 'pending',
+                    created_at: new Date().toISOString()
+                  });
+                console.log('✅ Credit notification saved to database');
+              } catch (notificationError) {
+                console.error('❌ Error saving insufficient credits notification:', notificationError);
               }
-            });
+              
+              return res.status(400).json({ 
+                error: 'Insufficient credits', 
+                details: {
+                  requiredCredits: creditsUsed,
+                  currentCredits: currentCredits,
+                  shortfall: shortfall
+                }
+              });
+            }
+
+            // NOTE: Credits are deducted from student but NOT transferred to tutor yet
+            // Credits will be held in student account and transferred to tutor only after session completion
+            // This prevents tutors from receiving payment for sessions that don't actually happen
+            const newStudentCredits = Math.max(0, (student.credits || 0) - creditsUsed);
+            console.log(`💸 Reserving ${creditsUsed} credits from student. Old: ${student.credits}, New: ${newStudentCredits}`);
+            
+            const { error: studentUpdateError } = await supabase
+              .from('users')
+              .update({ 
+                credits: newStudentCredits,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', bookingOffer.tutee_id);
+              
+            if (studentUpdateError) {
+              console.error('❌ Error updating student credits:', studentUpdateError);
+              throw studentUpdateError; // Throw error to prevent confirmation if credit update fails
+            } else {
+              console.log('✅ Student credits reserved successfully');
+            }
+
+            console.log(`💰 Credits reserved: ${creditsUsed} credits held until session completion`);
           }
         }
-
-        // NOTE: Credits are deducted from student but NOT transferred to tutor yet
-        // Credits will be held in student account and transferred to tutor only after session completion
-        // This prevents tutors from receiving payment for sessions that don't actually happen
-        const newStudentCredits = Math.max(0, (student.credits || 0) - creditsUsed);
-        console.log(`💸 Reserving ${creditsUsed} credits from student. Old: ${student.credits}, New: ${newStudentCredits}`);
-        
-        const { error: studentUpdateError } = await supabase
-          .from('users')
-          .update({ 
-            credits: newStudentCredits,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', bookingOffer.tutee_id);
-          
-        if (studentUpdateError) {
-          console.error('❌ Error updating student credits:', studentUpdateError);
-        } else {
-          console.log('✅ Student credits reserved successfully');
-        }
-
-        console.log(`💰 Credits reserved: ${creditsUsed} credits held until session completion`);
       } catch (creditError) {
-        console.error('Error processing credit transaction:', creditError);
-        // Don't fail the booking confirmation if credit processing fails
+        console.error('❌ Error processing credit transaction:', creditError);
+        // Fail the booking confirmation if credit processing fails
+        return res.status(500).json({ 
+          error: 'Failed to process credit transaction',
+          details: creditError.message 
+        });
       }
     }
 

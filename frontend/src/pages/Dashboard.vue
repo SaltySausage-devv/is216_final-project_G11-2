@@ -831,25 +831,34 @@ export default {
               existingActivity.title = activity.title;
             }
             
-            // Update status: if either is Read/Completed, mark accordingly
-            // For text messages, booking_offer, booking_proposal, reschedule_request: use "Read"
-            // For booking_confirmation, reschedule_accepted, reschedule_rejected, booking_cancelled, session_completed, credits: use "Completed"
-            const isReadableMessage = (activity.message_type === 'text' || 
-                                      !activity.message_type || 
-                                      activity.message_type === 'booking_offer' || 
-                                      activity.message_type === 'booking_proposal' || 
-                                      activity.message_type === 'reschedule_request');
-            if (activity.status === "Read" || activity.status === "Completed" || existingActivity.status === "Read" || existingActivity.status === "Completed") {
-              existingActivity.status = isReadableMessage ? "Read" : "Completed";
+            // Check if this is a review activity (always should be "Completed")
+            const isReviewActivity = activity.title && activity.title.includes("star review") || 
+                                   existingActivity.title && existingActivity.title.includes("star review");
+            
+            if (isReviewActivity) {
+              // Reviews always show "Completed" status
+              existingActivity.status = "Completed";
               existingActivity.badgeClass = "bg-success";
-              // Update readAt and time display
-              if (activity.readAt) {
-                existingActivity.readAt = activity.readAt;
-                existingActivity.time = activity.time;
-              }
             } else {
-              existingActivity.status = "Unread";
-              existingActivity.badgeClass = "bg-warning";
+              // Update status: if either is Read/Completed, mark accordingly
+              // For text messages, booking_offer, booking_proposal, reschedule_request: use "Read"
+              // For booking_confirmation, reschedule_accepted, reschedule_rejected, booking_cancelled, session_completed, credits: use "Completed"
+              const isReadableMessage = (activity.message_type === 'text' || 
+                                        activity.message_type === 'booking_offer' || 
+                                        activity.message_type === 'booking_proposal' || 
+                                        activity.message_type === 'reschedule_request');
+              if (activity.status === "Read" || activity.status === "Completed" || existingActivity.status === "Read" || existingActivity.status === "Completed") {
+                existingActivity.status = isReadableMessage ? "Read" : "Completed";
+                existingActivity.badgeClass = "bg-success";
+                // Update readAt and time display
+                if (activity.readAt) {
+                  existingActivity.readAt = activity.readAt;
+                  existingActivity.time = activity.time;
+                }
+              } else {
+                existingActivity.status = "Unread";
+                existingActivity.badgeClass = "bg-warning";
+              }
             }
             
             // Keep the original timestamp (message created_at) for sorting
