@@ -268,10 +268,11 @@ export default {
     function calculateDuration(startTime, endTime) {
       const start = new Date(startTime);
       const end = new Date(endTime);
-      const duration = (end - start) / (1000 * 60 * 60); // Duration in hours
+      const durationMs = end - start;
+      const durationMinutes = Math.round(durationMs / (1000 * 60)); // Duration in minutes
 
-      if (duration === 1) return "1 hour";
-      return `${duration} hours`;
+      if (durationMinutes === 1) return "1 minute";
+      return `${durationMinutes} minutes`;
     }
 
     async function handleSubmit() {

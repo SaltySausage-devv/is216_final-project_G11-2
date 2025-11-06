@@ -1055,9 +1055,7 @@
                                   <span
                                     v-if="
                                       getBookingCancellationData(message)
-                                        .refundPolicy.studentRefunded &&
-                                      getBookingCancellationData(message)
-                                        .refundPolicy.isTutorCancelling
+                                        ?.refundPolicy?.studentRefunded
                                     "
                                   >
                                     Student credits have been refunded
