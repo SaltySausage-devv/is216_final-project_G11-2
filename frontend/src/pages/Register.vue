@@ -159,7 +159,7 @@
                     >
                       <span v-if="sendingOTP" class="cyberpunk-spinner me-1"></span>
                       <i v-else class="fas fa-paper-plane me-1"></i>
-                      {{ sendingOTP ? 'Sending...' : 'Send OTP' }}
+                      <span class="otp-btn-text">{{ sendingOTP ? 'Sending...' : 'Send OTP' }}</span>
                     </button>
                     <div v-if="phoneVerified" class="cyberpunk-verified-badge">
                       <i class="fas fa-check-circle"></i> Verified
@@ -1795,6 +1795,73 @@ select.cyberpunk-input option:checked {
 
   .otp-input-container {
     gap: 0.5rem;
+  }
+
+  /* Fix OTP button visibility on narrow viewports */
+  .cyberpunk-input-group {
+    flex-wrap: nowrap;
+    overflow: visible;
+  }
+
+  .cyberpunk-input {
+    min-width: 0;
+    flex: 1 1 auto;
+    max-width: 100%;
+  }
+
+  .cyberpunk-phone-prefix {
+    padding: 0.6rem 0.35rem;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .cyberpunk-otp-btn {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+    min-width: fit-content;
+  }
+
+  .cyberpunk-otp-btn i,
+  .cyberpunk-otp-btn span {
+    margin-right: 0.25rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small screens - further optimize button */
+  .cyberpunk-otp-btn {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  .cyberpunk-otp-btn i {
+    margin-right: 0.25rem !important;
+  }
+
+  .otp-btn-text {
+    display: inline;
+  }
+
+  /* Hide text on very small screens, show only icon */
+  @media (max-width: 360px) {
+    .otp-btn-text {
+      display: none;
+    }
+
+    .cyberpunk-otp-btn i {
+      margin-right: 0 !important;
+    }
+  }
+
+  .cyberpunk-phone-prefix {
+    padding: 0.6rem 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  .cyberpunk-input-icon {
+    padding: 0.6rem 0.6rem;
+    font-size: 0.85rem;
   }
 }
 </style>

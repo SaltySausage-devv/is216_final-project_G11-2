@@ -155,6 +155,8 @@ app.get('/calendar', verifyToken, async (req, res) => {
     console.log('📅 Calendar request:', { userId, userType: req.user.userType, startDate, endDate });
 
     // Get user's bookings with tutor and student details
+    // Note: We don't filter by date range here - we fetch all bookings and let FullCalendar handle date filtering
+    // This ensures all bookings are available for navigation (previous/next month, etc.)
     const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
       .select(`
@@ -212,7 +214,10 @@ app.get('/calendar', verifyToken, async (req, res) => {
     }
 
     // Format bookings for FullCalendar
-    const formattedBookings = (bookings || []).map(booking => ({
+    // Filter out cancelled bookings before formatting
+    const activeBookings = (bookings || []).filter(booking => booking.status !== 'cancelled');
+    
+    const formattedBookings = activeBookings.map(booking => ({
       id: booking.id,
       title: booking.title || 'Tutoring Session',
       start: booking.start_time,
@@ -882,14 +887,25 @@ app.post('/bookings/:id/cancel', verifyToken, async (req, res) => {
 
     console.log(`💰 Credits calculation: ${booking.hourly_rate} rate × ${duration} hours = ${creditsToRefund} credits`);
 
-    // Update booking status to cancelled
+    // Determine who cancelled before updating (needed for earnings calculation)
+    const cancellerId = req.user.userId;
+    const isTutorCancelling = cancellerId === booking.tutor_id;
+    
+    // Store who cancelled in notes field as metadata (for analytics)
+    // Format: "CANCELLED_BY: tutor_id" or "CANCELLED_BY: student_id" at the beginning
+    const cancelledByMetadata = `CANCELLED_BY: ${cancellerId}`;
+    const notesWithMetadata = cancellation_details 
+      ? `${cancelledByMetadata}\n\n${cancellation_details}`
+      : cancelledByMetadata;
+    
+    // Update booking status to cancelled and store who cancelled
     const { data: updatedBooking, error: updateError } = await supabase
       .from('bookings')
       .update({
         status: 'cancelled',
         cancelled_at: new Date().toISOString(),
         cancellation_reason,
-        notes: cancellation_details
+        notes: notesWithMetadata
       })
       .eq('id', id)
       .select()
@@ -900,8 +916,7 @@ app.post('/bookings/:id/cancel', verifyToken, async (req, res) => {
     }
 
     // Determine who cancelled and apply appropriate refund policy
-    const cancellerId = req.user.userId;
-    const isTutorCancelling = cancellerId === booking.tutor_id;
+    // (cancellerId already declared above)
     const isStudentCancelling = cancellerId === booking.student_id;
     
     // If tutor cancels, student always gets refunded regardless of timing
