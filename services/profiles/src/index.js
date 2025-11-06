@@ -525,8 +525,8 @@ app.get('/profiles/search', async (req, res) => {
       throw error;
     }
 
-    // Filter out incomplete tutor profiles (require minimum 70% completeness)
-    // Only show tutors who have completed essential profile information
+    // Filter out incomplete tutor profiles (require 100% completeness)
+    // Only show tutors who have completed all profile information
     let filteredProfiles = profiles;
     
     console.log(`🔍 Total profiles before filtering: ${profiles.length}`);
@@ -534,26 +534,39 @@ app.get('/profiles/search', async (req, res) => {
     // Filter tutor profiles by completeness (only if querying tutor_profiles table)
     if (type === 'tutor' || !type) {
       filteredProfiles = profiles.filter(profile => {
-        // Calculate minimum requirements for 70% profile completeness
-        // Required: bio (50+ chars), headline, subjects, levels, languages, qualifications, experience
-        const hasBio = profile.bio && profile.bio.length > 50;
-        const hasHeadline = profile.headline && profile.headline.trim().length > 0;
-        const hasSubjects = profile.subjects && profile.subjects.length > 0;
-        const hasLevels = profile.levels && profile.levels.length > 0;
-        const hasLanguages = profile.languages && profile.languages.length > 0;
-        const hasQualifications = profile.qualifications && profile.qualifications.length > 0;
-        const hasExperience = profile.experience_years && profile.experience_years > 0;
+        // Calculate profile completeness using the same logic as frontend
+        // All fields are weighted equally (13 fields, each worth ~7.69 points)
+        let completeness = 0;
+        const pointsPerField = 100 / 13; // ~7.69 points per field
+
+        // All fields are weighted equally
+        if (profile.bio && profile.bio.trim().length > 0) completeness += pointsPerField;
+        if (profile.headline && profile.headline.trim().length > 0) completeness += pointsPerField;
+        if (profile.teaching_philosophy && profile.teaching_philosophy.trim().length > 0) completeness += pointsPerField;
+        if (profile.subjects && profile.subjects.length > 0) completeness += pointsPerField;
+        if (profile.levels && profile.levels.length > 0) completeness += pointsPerField;
+        if (profile.languages && profile.languages.length > 0) completeness += pointsPerField;
         
-        // Tutor must meet these minimum requirements to appear in search (71% = 70%+ threshold)
-        const isComplete = hasBio && hasHeadline && hasSubjects && hasLevels && hasLanguages && hasQualifications && hasExperience;
+        const validQualifications = profile.qualifications && profile.qualifications.filter(q => 
+          q.degree && q.degree.trim() && q.institution && q.institution.trim() && q.year
+        );
+        if (validQualifications && validQualifications.length > 0) completeness += pointsPerField;
+        if (profile.experience_years && profile.experience_years > 0) completeness += pointsPerField;
+        if (profile.previous_experience && profile.previous_experience.trim().length > 0) completeness += pointsPerField;
+        if (profile.hourly_rate !== null && profile.hourly_rate !== undefined) completeness += pointsPerField;
+        if (profile.location && profile.location.address && profile.location.address.trim().length > 0) completeness += pointsPerField;
+        if (profile.specialties && profile.specialties.length > 0) completeness += pointsPerField;
+        if (profile.preferred_locations && profile.preferred_locations.length > 0) completeness += pointsPerField;
+
+        const roundedCompleteness = Math.round(completeness);
+        const is100PercentComplete = roundedCompleteness === 100;
         
-        if (!isComplete) {
+        if (!is100PercentComplete) {
           const tutorName = profile.headline || (profile.users ? `${profile.users.first_name} ${profile.users.last_name}` : 'Unknown');
-          console.log(`❌ Filtering out tutor: ${tutorName}`);
-          console.log(`   Requirements: bio(${hasBio}) headline(${hasHeadline}) subjects(${hasSubjects}) levels(${hasLevels}) languages(${hasLanguages}) qualifications(${hasQualifications}) experience(${hasExperience})`);
+          console.log(`❌ Filtering out tutor (${roundedCompleteness}% complete): ${tutorName}`);
         }
         
-        return isComplete;
+        return is100PercentComplete;
       });
     }
 

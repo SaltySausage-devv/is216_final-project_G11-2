@@ -58,11 +58,11 @@
 
       <div class="row">
         <!-- Elegant Profile Warning for Tutors -->
-        <div class="col-12 mb-3" v-if="user?.userType === 'tutor' && tutorCompleteness < 70">
+        <div class="col-12 mb-3" v-if="user?.userType === 'tutor' && tutorCompleteness < 100">
           <div class="elegant-warning d-flex align-items-center justify-content-between p-3">
             <div class="d-flex align-items-center">
               <i class="fas fa-eye-slash me-3"></i>
-              <span><strong>Profile {{ tutorCompleteness }}%</strong> - Complete to 70% to appear in search</span>
+              <span><strong>Profile {{ tutorCompleteness }}%</strong> - Complete to 100% to appear in search</span>
             </div>
             <button v-if="!editMode" @click="editMode = true" class="btn btn-sm btn-light">
               Complete <i class="fas fa-arrow-right ms-1"></i>

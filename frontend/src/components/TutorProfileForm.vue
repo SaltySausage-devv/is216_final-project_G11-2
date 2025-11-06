@@ -14,7 +14,7 @@
           ></div>
         </div>
         <small class="text-muted mt-2 d-block">
-          70% required to appear in search results
+          100% required to appear in search results
         </small>
       </div>
     </div>
@@ -538,33 +538,28 @@ export default {
 
     const profileCompleteness = computed(() => {
       let completeness = 0
+      const pointsPerField = 100 / 13 // 13 required fields, each worth equal points (~7.69)
 
-      // Basic info (25 points)
-      if (tutorProfile.bio && tutorProfile.bio.length > 50) completeness += 16
-      if (tutorProfile.headline) completeness += 5
-      if (tutorProfile.teachingPhilosophy) completeness += 4
-
-      // Teaching details (25 points)
-      if (tutorProfile.subjects.length > 0) completeness += 10
-      if (tutorProfile.levels.length > 0) completeness += 8
-      if (tutorProfile.languages.length > 0) completeness += 7
-
-      // Qualifications & Experience (30 points)
+      // All fields are weighted equally
+      if (tutorProfile.bio && tutorProfile.bio.trim().length > 0) completeness += pointsPerField
+      if (tutorProfile.headline && tutorProfile.headline.trim().length > 0) completeness += pointsPerField
+      if (tutorProfile.teachingPhilosophy && tutorProfile.teachingPhilosophy.trim().length > 0) completeness += pointsPerField
+      if (tutorProfile.subjects.length > 0) completeness += pointsPerField
+      if (tutorProfile.levels.length > 0) completeness += pointsPerField
+      if (tutorProfile.languages.length > 0) completeness += pointsPerField
+      
       const validQualifications = tutorProfile.qualifications.filter(q => 
         q.degree && q.degree.trim() && q.institution && q.institution.trim() && q.year
       )
-      if (validQualifications.length > 0) completeness += 15
-      if (tutorProfile.experienceYears > 0) completeness += 10
-      if (tutorProfile.previousExperience && tutorProfile.previousExperience.trim()) completeness += 5
+      if (validQualifications.length > 0) completeness += pointsPerField
+      if (tutorProfile.experienceYears > 0) completeness += pointsPerField
+      if (tutorProfile.previousExperience && tutorProfile.previousExperience.trim().length > 0) completeness += pointsPerField
+      if (tutorProfile.hourlyRate !== null && tutorProfile.hourlyRate !== undefined) completeness += pointsPerField
+      if (tutorProfile.locationAddress && tutorProfile.locationAddress.trim().length > 0) completeness += pointsPerField
+      if (tutorProfile.specialties.length > 0) completeness += pointsPerField
+      if (tutorProfile.preferredLocations.length > 0) completeness += pointsPerField
 
-      // Rates (10 points) - Allow 0 as valid rate
-      if (tutorProfile.hourlyRate !== null && tutorProfile.hourlyRate !== undefined) completeness += 10
-      
-      // Location & Additional (10 points)
-      if (tutorProfile.locationAddress && tutorProfile.locationAddress.trim()) completeness += 5
-      if (tutorProfile.specialties.length > 0) completeness += 5
-
-      return Math.min(completeness, 100)
+      return Math.min(Math.round(completeness), 100)
     })
 
     // Watch for completeness changes and emit to parent
