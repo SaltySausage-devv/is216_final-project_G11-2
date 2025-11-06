@@ -12,9 +12,9 @@ A comprehensive marketplace platform connecting students with verified tutors an
 - **Reviews & Ratings**: Comprehensive review system
 - **Analytics**: Performance tracking and reporting
 - **Gamification**: Badges, points, and leaderboards
-- **Calendar Integration**: Google Calendar sync
+- **Calendar Integration**: In-app calender sync
 - **Maps Integration**: Google Maps for location services
-- **Notifications**: Email and SMS notifications via Twilio
+- **Notifications**: In-app messenger chat service
 
 ## Tech Stack
 
@@ -220,9 +220,9 @@ The application follows a microservices architecture with 12 independent service
 | Bookings      | 3004 | Booking management              |
 | Messaging     | 3005 | Real-time messaging (Socket.io) |
 | Reviews       | 3006 | Reviews & ratings               |
-| Notifications | 3007 | Email & SMS notifications       |
+| Notifications | 3007 | In-app messenger notifications  |
 | Analytics     | 3008 | Analytics & reporting           |
-| Calendar      | 3011 | Google Calendar integration     |
+| Calendar      | 3011 | In-app Calendar integration     |
 | Maps          | 3012 | Google Maps integration         |
 
 ### Database
