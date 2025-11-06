@@ -189,6 +189,7 @@ export default {
     
     // Real-time message handler for Recent Activity updates
     let dashboardMessageHandler = null;
+    let dashboardMessagesReadHandler = null;
 
     // Helper to format time ago
     // Calculates: current time - timestamp, rounds to 2 decimal places
@@ -544,15 +545,9 @@ export default {
                 badgeClass = "bg-success"; // Changed to green for consistency with other "Completed" statuses
               }
             } else if (message.includes("message") || message.includes("Message") || notification.type === "push") {
-              icon = "fas fa-calendar-alt"; // Use calendar icon instead of envelope
-              title = message.includes("from") ? message : `New message${userType.value === "student" ? " from tutor" : " from student"}`;
-              if (message.read_at != "" || message.read_at != null) {
-                status = "Completed";
-                badgeClass = "bg-success";
-              } else {
-                status = "Unread";
-                badgeClass = "bg-warning";
-              };
+              // Skip message notifications - we'll use actual messages from the messages API instead
+              // This prevents duplicates and ensures we have the correct sender name
+              return; // Skip this notification
             } else if (message.includes("review") || message.includes("Review")) {
               icon = "fas fa-star";
               // Try to extract rating from message
@@ -564,16 +559,31 @@ export default {
             }
 
             // Use the notificationTimestamp already declared above (line 328)
+            // For message notifications, use conversationId + timestamp as ID to deduplicate with messages
+            const activityId = (notificationMessageType === 'text' || notification.type === 'push') && data.conversationId
+              ? `msg_${data.conversationId}_${notificationTimestamp}`
+              : notification.id || `notif_${notificationTimestamp}_${Math.random()}`;
+            
+            // For Completed notifications, use read_at time if available; otherwise use created_at
+            // For Unread notifications, use created_at
+            const notificationReadAt = notification.read_at || null;
+            const notificationDisplayTime = (status === "Completed" && notificationReadAt)
+              ? formatTimeAgo(notificationReadAt)
+              : formatTimeAgo(notificationTimestamp);
+            
             activities.push({
+              id: activityId,
               icon: icon,
               title: title,
-              time: formatTimeAgo(notificationTimestamp),
+              time: notificationDisplayTime,
               status: status,
               badgeClass: badgeClass,
-              timestamp: notificationTimestamp,
+              timestamp: notificationTimestamp, // Always store created_at as timestamp for sorting
+              readAt: notificationReadAt, // Store read_at separately for Completed messages
               // Store booking_offer_id for matching with booking_confirmation
               booking_offer_id: notification.booking_offer_id || data.bookingOfferId || null,
               message_type: notificationMessageType || data.messageType || data.notificationType || null,
+              conversationId: data.conversationId || null, // Store conversationId for deduplication
             });
           });
 
@@ -672,11 +682,10 @@ export default {
               }
             }
             
-            // Check if booking is confirmed - if there's a booking_confirmation message for the same booking_offer_id
-            // We'll check this by looking for a booking_confirmation in the activities array
-            // For now, set as Unread - will be updated if confirmation is found during merge
-            status = "Unread";
-            badgeClass = "bg-warning";
+            // Check if message is read - use Read status instead of Completed
+            const isRead = message.read_at || (message.read_by && Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(userId.value)));
+            status = isRead ? "Read" : "Unread";
+            badgeClass = isRead ? "bg-success" : "bg-warning";
           } else if (messageType === "credit_deducted") {
             // Credits deducted from student when booking is confirmed
             try {
@@ -732,8 +741,10 @@ export default {
                 // User received the reschedule request
                 title = "Reschedule booking received";
               }
-              status = "Unread";
-              badgeClass = "bg-warning";
+              // Check if message is read - use Read status instead of Completed
+              const isRead = message.read_at || (message.read_by && Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(userId.value)));
+              status = isRead ? "Read" : "Unread";
+              badgeClass = isRead ? "bg-success" : "bg-warning";
             }
           } else {
             // Regular text message
@@ -743,7 +754,7 @@ export default {
             }
             icon = "fas fa-calendar-alt"; // Use calendar icon instead of envelope
             const isRead = message.read_at || (message.read_by && Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(userId.value)));
-            status = isRead ? "Completed" : "Unread";
+            status = isRead ? "Read" : "Unread";
             badgeClass = isRead ? "bg-success" : "bg-warning";
           }
           
@@ -758,48 +769,91 @@ export default {
             }
           }
           
+          // Use conversation_id + timestamp as ID for text messages to deduplicate with notifications
+          // For other message types, use message.id
+          const activityId = (messageType === 'text' && message.conversation_id)
+            ? `msg_${message.conversation_id}_${messageTimestamp}`
+            : message.id || `msg_${messageTimestamp}_${Math.random()}`;
+          
+          // For Completed messages, use read_at time if available; otherwise use created_at
+          // For Unread messages, use created_at
+          const displayTime = (status === "Completed" && message.read_at) 
+            ? formatTimeAgo(message.read_at)
+            : formatTimeAgo(messageTimestamp);
+          
           activities.push({
             icon: icon,
             title: title,
-            time: formatTimeAgo(messageTimestamp),
+            time: displayTime,
             status: status,
             badgeClass: badgeClass,
-            timestamp: messageTimestamp,
-            // Use message ID as primary identifier - this ensures proper deduplication
-            // and allows read messages to update their status instead of disappearing
-            id: message.id || `msg_${messageTimestamp}_${Math.random()}`,
+            timestamp: messageTimestamp, // Always store created_at as timestamp for sorting
+            readAt: message.read_at || null, // Store read_at separately for Completed messages
+            // Use consistent ID for deduplication - conversation_id + timestamp for text messages
+            id: activityId,
             // Store booking_offer_id for matching with booking_confirmation
             booking_offer_id: message.booking_offer_id || null,
             // Store bookingId for matching reschedule requests with responses
             booking_id: bookingId,
             message_type: messageType, // Store message type for confirmation matching
+            conversationId: message.conversation_id || null, // Store conversationId for deduplication
           });
         });
 
         // Merge with existing real-time activities to preserve them
-        // Create a map of existing activities by ID for deduplication
-        // Use message ID as primary key for messages, timestamp+title for others
+        // SIMPLE DEDUPLICATION: Use conversationId + timestamp for text messages
         const existingActivityMap = new Map();
         recentActivity.value.forEach((activity) => {
-          // Use message ID if available (more reliable), otherwise use timestamp+title
-          const key = activity.id || `${activity.timestamp}_${activity.title}`;
+          // For text messages: conversationId + created_at timestamp
+          // For others: use id or timestamp+title
+          const key = (activity.conversationId && (activity.message_type === 'text' || !activity.message_type))
+            ? `msg_${activity.conversationId}_${activity.timestamp}`
+            : activity.id || `${activity.timestamp}_${activity.title}`;
           existingActivityMap.set(key, activity);
         });
 
-        // Add new activities from notifications, reviews, and messages if they don't already exist
+        // Add new activities - UPDATE existing instead of creating duplicates
         activities.forEach((activity) => {
-          // Use message ID if available (more reliable), otherwise use timestamp+title
-          const key = activity.id || `${activity.timestamp}_${activity.title}`;
+          // Use same key format for deduplication
+          const key = (activity.conversationId && (activity.message_type === 'text' || !activity.message_type))
+            ? `msg_${activity.conversationId}_${activity.timestamp}`
+            : activity.id || `${activity.timestamp}_${activity.title}`;
+            
           if (!existingActivityMap.has(key)) {
+            // New activity - add it
             existingActivityMap.set(key, activity);
           } else {
-            // If activity exists, update it (in case read status changed)
-            // This ensures read messages don't disappear - they just update to "Completed"
+            // Existing activity - UPDATE it (don't create duplicate)
             const existingActivity = existingActivityMap.get(key);
-            // Update status if the new one has a different status (e.g., unread -> read)
-            if (activity.status !== existingActivity.status) {
-              existingActivityMap.set(key, activity);
+            
+            // Always use the better title (from message.sender, not notification text)
+            if (activity.title && activity.title.length > existingActivity.title.length) {
+              existingActivity.title = activity.title;
             }
+            
+            // Update status: if either is Read/Completed, mark accordingly
+            // For text messages, booking_offer, booking_proposal, reschedule_request: use "Read"
+            // For booking_confirmation, reschedule_accepted, reschedule_rejected, booking_cancelled, session_completed, credits: use "Completed"
+            const isReadableMessage = (activity.message_type === 'text' || 
+                                      !activity.message_type || 
+                                      activity.message_type === 'booking_offer' || 
+                                      activity.message_type === 'booking_proposal' || 
+                                      activity.message_type === 'reschedule_request');
+            if (activity.status === "Read" || activity.status === "Completed" || existingActivity.status === "Read" || existingActivity.status === "Completed") {
+              existingActivity.status = isReadableMessage ? "Read" : "Completed";
+              existingActivity.badgeClass = "bg-success";
+              // Update readAt and time display
+              if (activity.readAt) {
+                existingActivity.readAt = activity.readAt;
+                existingActivity.time = activity.time;
+              }
+            } else {
+              existingActivity.status = "Unread";
+              existingActivity.badgeClass = "bg-warning";
+            }
+            
+            // Keep the original timestamp (message created_at) for sorting
+            // Don't change it - same message, same timestamp
           }
         });
         
@@ -921,11 +975,14 @@ export default {
           });
         }
 
-        // Convert map back to array and sort by timestamp
+        // Convert map back to array and sort by timestamp (most recent first)
         const mergedActivities = Array.from(existingActivityMap.values());
+        
+        // Sort by created_at timestamp (not read_at) - most recent first
         mergedActivities.sort((a, b) => {
-          const timeA = new Date(a.timestamp || 0);
-          const timeB = new Date(b.timestamp || 0);
+          const timeA = new Date(a.timestamp || 0).getTime();
+          const timeB = new Date(b.timestamp || 0).getTime();
+          // Most recent first (descending order)
           return timeB - timeA;
         });
 
@@ -935,6 +992,17 @@ export default {
 
         // Show all activities (container will scroll if more than 5)
         recentActivity.value = limitedActivities;
+        
+        // Debug: Log sorted activities to verify order
+        console.log("📊 DASHBOARD: Sorted activities (most recent first):", 
+          recentActivity.value.map(a => ({
+            title: a.title,
+            time: a.time,
+            status: a.status,
+            timestamp: a.timestamp,
+            created: new Date(a.timestamp).toISOString()
+          }))
+        );
 
         // Debug: Log all booking_offer/proposal activities and their status
         const bookingActivities = recentActivity.value.filter(a => 
@@ -970,12 +1038,51 @@ export default {
       console.log("📊 DASHBOARD: User ID:", userId.value);
       console.log("📊 DASHBOARD: Messaging service connected?", messagingService.isConnected);
 
-      // Remove old handler if it exists to prevent duplicates
+      // Remove old handlers if they exist to prevent duplicates
       if (dashboardMessageHandler) {
         console.log("📊 DASHBOARD: Removing existing message handler");
         messagingService.off("new_message", dashboardMessageHandler);
         dashboardMessageHandler = null;
       }
+      
+      // Setup handler for messages_read events (when messages are marked as read)
+      if (dashboardMessagesReadHandler) {
+        messagingService.off("messages_read", dashboardMessagesReadHandler);
+      }
+      
+      dashboardMessagesReadHandler = (data) => {
+        console.log("📊 DASHBOARD: Messages marked as read:", data);
+        const { conversationId, readBy, readAt } = data;
+        
+        // Only update if the current user marked them as read
+        if (readBy && String(readBy) === String(userId.value)) {
+          // Update all activities in this conversation to "Read" status
+          recentActivity.value.forEach((activity) => {
+            if (activity.conversationId === conversationId) {
+              // Check if this is a readable message type (text, booking_offer, booking_proposal, reschedule_request)
+              const isReadableMessage = (activity.message_type === 'text' || 
+                                        !activity.message_type || 
+                                        activity.message_type === 'booking_offer' || 
+                                        activity.message_type === 'booking_proposal' || 
+                                        activity.message_type === 'reschedule_request');
+              
+              if (isReadableMessage) {
+                // Always update to Read status if messages were marked as read
+                // This handles both Unread -> Read and any stale Read status
+                console.log("📊 DASHBOARD: Updating activity to Read:", activity.title, "from", activity.status);
+                activity.status = "Read";
+                activity.badgeClass = "bg-success";
+                if (readAt) {
+                  activity.readAt = readAt;
+                  activity.time = formatTimeAgo(readAt);
+                }
+              }
+            }
+          });
+        }
+      };
+      
+      messagingService.on("messages_read", dashboardMessagesReadHandler);
 
       // Helper function to create activity item from message
       const createActivityFromMessage = (message) => {
@@ -1026,11 +1133,10 @@ export default {
             }
           }
           
-          // Check if booking is confirmed - if there's a booking_confirmation message for the same booking_offer_id
-          // We'll check this by looking for a booking_confirmation in the activities array
-          // For now, set as Unread - will be updated if confirmation is found during merge
-          status = "Unread";
-          badgeClass = "bg-warning";
+          // Check if message is read - use Read status instead of Completed
+          const isRead = message.read_at || (message.read_by && Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(userId.value)));
+          status = isRead ? "Read" : "Unread";
+          badgeClass = isRead ? "bg-success" : "bg-warning";
         } else if (messageType === "credit_deducted") {
           // Credits deducted from student when booking is confirmed
           try {
@@ -1108,8 +1214,10 @@ export default {
               // User received the reschedule request
               title = "Reschedule booking received";
             }
-            status = "Unread";
-            badgeClass = "bg-warning";
+            // Check if message is read - use Read status instead of Completed
+            const isRead = message.read_at || (message.read_by && Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(userId.value)));
+            status = isRead ? "Read" : "Unread";
+            badgeClass = isRead ? "bg-success" : "bg-warning";
           }
         } else {
           // Regular text message (or any unrecognized type - default to text message)
@@ -1123,7 +1231,7 @@ export default {
           icon = "fas fa-envelope";
           // Check if message is read (use read_at or read_by array)
           const isRead = message.read_at || (message.read_by && message.read_by.includes && Array.isArray(message.read_by) && message.read_by.some(id => String(id) === String(userId.value)));
-          status = isRead ? "Completed" : "Unread";
+          status = isRead ? "Read" : "Unread";
           badgeClass = isRead ? "bg-success" : "bg-warning";
         }
         
@@ -1138,19 +1246,34 @@ export default {
           }
         }
         
+        // Use conversation_id + timestamp as ID for text messages to deduplicate with notifications
+        // For other message types, use message.id
+        const activityId = (messageType === 'text' && message.conversation_id)
+          ? `msg_${message.conversation_id}_${messageTimestamp}`
+          : message.id || `msg_${messageTimestamp}_${Math.random()}`;
+        
+        // For Completed messages, use read_at time if available; otherwise use created_at
+        // For Unread messages, use created_at
+        const displayTime = (status === "Completed" && message.read_at) 
+          ? formatTimeAgo(message.read_at)
+          : formatTimeAgo(messageTimestamp);
+        
         return {
           icon: icon,
           title: title,
-          time: formatTimeAgo(messageTimestamp),
+          time: displayTime,
           status: status,
           badgeClass: badgeClass,
-          timestamp: messageTimestamp,
-          id: message.id || `msg_${Date.now()}`, // Use message ID or generate one
+          timestamp: messageTimestamp, // Always store created_at as timestamp for sorting
+          readAt: message.read_at || null, // Store read_at separately for Completed messages
+          // Use consistent ID for deduplication - conversation_id + timestamp for text messages
+          id: activityId,
           // Store booking_offer_id for matching with booking_confirmation
           booking_offer_id: message.booking_offer_id || null,
           // Store bookingId for matching reschedule requests with responses
           booking_id: bookingId,
           message_type: messageType, // Store message type for confirmation matching
+          conversationId: message.conversation_id || null, // Store conversationId for deduplication
         };
       };
 
@@ -1242,11 +1365,11 @@ export default {
             }
           });
           
-          // Re-sort after updates
+          // Re-sort after updates (most recent first)
           recentActivity.value.sort((a, b) => {
-            const timeA = new Date(a.timestamp || 0);
-            const timeB = new Date(b.timestamp || 0);
-            return timeB - timeA;
+            const timeA = new Date(a.timestamp || 0).getTime();
+            const timeB = new Date(b.timestamp || 0).getTime();
+            return timeB - timeA; // Most recent first (descending)
           });
           
           console.log("📊 DASHBOARD: ✅ Finished checking reschedule requests");
@@ -1266,59 +1389,66 @@ export default {
           const activityItem = createActivityFromMessage(message);
           console.log("📊 DASHBOARD: Created activity item:", activityItem);
           
-          // Check if this activity already exists (prevent duplicates)
-          // Use message ID as primary identifier for proper deduplication
+          // SIMPLE DEDUPLICATION: Use conversationId + timestamp
+          const key = (activityItem.conversationId && (activityItem.message_type === 'text' || !activityItem.message_type))
+            ? `msg_${activityItem.conversationId}_${activityItem.timestamp}`
+            : activityItem.id || `${activityItem.timestamp}_${activityItem.title}`;
+          
           const existingIndex = recentActivity.value.findIndex(
             (a) => {
-              // If both have message IDs, match by ID (most reliable)
-              if (activityItem.id && a.id && activityItem.id === a.id) {
-                return true;
-              }
-              // Fallback to timestamp+title for non-message activities
-              return a.timestamp === activityItem.timestamp && a.title === activityItem.title;
+              const aKey = (a.conversationId && (a.message_type === 'text' || !a.message_type))
+                ? `msg_${a.conversationId}_${a.timestamp}`
+                : a.id || `${a.timestamp}_${a.title}`;
+              return aKey === key;
             }
           );
           
           if (existingIndex === -1) {
-            console.log("📊 DASHBOARD: Adding new activity item directly:", activityItem);
-            // Add to beginning of array (most recent first)
-            recentActivity.value = [activityItem, ...recentActivity.value];
+            // New message - add it
+            console.log("📊 DASHBOARD: Adding new message:", activityItem.title, activityItem.status);
+            recentActivity.value.push(activityItem);
+          } else {
+            // Existing message - UPDATE it (don't create duplicate)
+            const existingActivity = recentActivity.value[existingIndex];
+            console.log("📊 DASHBOARD: Updating existing message:", existingActivity.title, existingActivity.status, "->", activityItem.status);
             
-            // Sort by timestamp to ensure correct order
-            recentActivity.value.sort((a, b) => {
-              const timeA = new Date(a.timestamp || 0);
-              const timeB = new Date(b.timestamp || 0);
-              return timeB - timeA;
-            });
-            
-            // Limit to reasonable number of items (keep last 30 to show more activities)
-            // Increased from 20 to 30 to accommodate multiple messages and read messages
-            if (recentActivity.value.length > 30) {
-              recentActivity.value = recentActivity.value.slice(0, 30);
+            // Always use the better title (from message.sender with full name)
+            if (activityItem.title && activityItem.title.length > existingActivity.title.length) {
+              existingActivity.title = activityItem.title;
             }
             
-            console.log("📊 DASHBOARD: ✅ Activity updated in real-time, new count:", recentActivity.value.length);
-            console.log("📊 DASHBOARD: Activity title:", activityItem.title);
-            console.log("📊 DASHBOARD: Activity status:", activityItem.status);
-            } else {
-              // Activity already exists - update it if status changed (e.g., unread -> read)
-              // This ensures read messages update their status instead of disappearing
-              const existingActivity = recentActivity.value[existingIndex];
-              if (existingActivity.status !== activityItem.status) {
-                console.log("📊 DASHBOARD: Updating existing activity status:", existingActivity.status, "->", activityItem.status);
-                // Update the existing activity
-                recentActivity.value[existingIndex] = activityItem;
-                // Re-sort to maintain correct order
-                recentActivity.value.sort((a, b) => {
-                  const timeA = new Date(a.timestamp || 0);
-                  const timeB = new Date(b.timestamp || 0);
-                  return timeB - timeA;
-                });
-                console.log("📊 DASHBOARD: ✅ Activity status updated in real-time");
-              } else {
-                console.log("📊 DASHBOARD: Activity already exists with same status, skipping duplicate");
+            // Update status: Unread -> Read when read
+            // For text messages, booking_offer, booking_proposal, reschedule_request: use "Read"
+            // For booking_confirmation, reschedule_accepted, reschedule_rejected, booking_cancelled, session_completed, credits: use "Completed"
+            const isReadableMessage = (activityItem.message_type === 'text' || 
+                                      !activityItem.message_type || 
+                                      activityItem.message_type === 'booking_offer' || 
+                                      activityItem.message_type === 'booking_proposal' || 
+                                      activityItem.message_type === 'reschedule_request');
+            if (activityItem.status === "Read" || activityItem.status === "Completed" || existingActivity.status === "Read" || existingActivity.status === "Completed") {
+              existingActivity.status = isReadableMessage ? "Read" : "Completed";
+              existingActivity.badgeClass = "bg-success";
+              if (activityItem.readAt) {
+                existingActivity.readAt = activityItem.readAt;
+                existingActivity.time = activityItem.time; // Show read time
               }
+            } else {
+              existingActivity.status = "Unread";
+              existingActivity.badgeClass = "bg-warning";
             }
+          }
+          
+          // Always sort by created_at timestamp (most recent first)
+          recentActivity.value.sort((a, b) => {
+            const timeA = new Date(a.timestamp || 0).getTime();
+            const timeB = new Date(b.timestamp || 0).getTime();
+            return timeB - timeA; // Most recent first
+          });
+          
+          // Limit to 30 items
+          if (recentActivity.value.length > 30) {
+            recentActivity.value = recentActivity.value.slice(0, 30);
+          }
             
             // After adding/updating activity, check if this is a booking_confirmation
             // If so, mark related booking_offer/proposal as "Completed"
@@ -1368,9 +1498,9 @@ export default {
               
               // Re-sort after updates
               recentActivity.value.sort((a, b) => {
-                const timeA = new Date(a.timestamp || 0);
-                const timeB = new Date(b.timestamp || 0);
-                return timeB - timeA;
+                const timeA = new Date(a.timestamp || 0).getTime();
+                const timeB = new Date(b.timestamp || 0).getTime();
+                return timeB - timeA; // Most recent first (descending)
               });
               
               console.log("📊 DASHBOARD: ✅ Finished checking booking_offer/proposal");
@@ -1675,6 +1805,10 @@ export default {
             messagingService.off("new_message", dashboardMessageHandler);
             dashboardMessageHandler = null;
           }
+          if (dashboardMessagesReadHandler) {
+            messagingService.off("messages_read", dashboardMessagesReadHandler);
+            dashboardMessagesReadHandler = null;
+          }
         }
       }
     );
@@ -1698,6 +1832,10 @@ export default {
       if (dashboardMessageHandler) {
         messagingService.off("new_message", dashboardMessageHandler);
         dashboardMessageHandler = null;
+      }
+      if (dashboardMessagesReadHandler) {
+        messagingService.off("messages_read", dashboardMessagesReadHandler);
+        dashboardMessagesReadHandler = null;
       }
     });
 

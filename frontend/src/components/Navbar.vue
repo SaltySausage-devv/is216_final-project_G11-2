@@ -454,8 +454,16 @@ export default {
               }
               // Update icon based on notification type (fixes old mail icons)
               n.icon = getIconForNotificationType(n);
+              
+              // Remove any status or badgeClass fields that might have been added from activity items
+              delete n.status;
+              delete n.badgeClass;
+              
               return n;
             });
+          
+          // Save cleaned notifications back to localStorage to remove status fields permanently
+          saveNotificationsToStorage();
           
           console.log(
             "🔔 NAVBAR: ✅ Loaded",
@@ -699,9 +707,17 @@ export default {
             const conversationId = notifData.conversationId;
 
             // Only process message notifications (not booking/system notifications that are handled differently)
-            if (conversationId && dbNotif.message && dbNotif.message.includes(':')) {
-              const [senderName, ...messageParts] = dbNotif.message.split(':');
-              const messagePreview = messageParts.join(':').trim();
+            if (conversationId && dbNotif.message) {
+              // Extract sender name and message from format: "Sender Name: message content"
+              // Use indexOf to only split on the first colon (in case message content has colons)
+              let senderName = "Someone";
+              let messagePreview = dbNotif.message;
+              
+              if (dbNotif.message.includes(':')) {
+                const colonIndex = dbNotif.message.indexOf(':');
+                senderName = dbNotif.message.substring(0, colonIndex).trim();
+                messagePreview = dbNotif.message.substring(colonIndex + 1).trim();
+              }
 
               const notification = {
                 id: dbNotif.id,
@@ -1300,14 +1316,16 @@ export default {
             return;
           }
 
-          // Extract sender name from message (format: "Sender Name: message content")
+          // Use senderName directly from notification data (more reliable than parsing message)
           let senderName = notificationData.senderName || "Someone";
           let messagePreview = notificationData.message || "";
           
-          if (messagePreview.includes(':')) {
-            const parts = messagePreview.split(':');
-            senderName = parts[0].trim();
-            messagePreview = parts.slice(1).join(':').trim();
+          // If message contains sender name (format: "Sender Name: message content"), extract it
+          // But only if senderName wasn't provided directly
+          if (!notificationData.senderName && messagePreview.includes(':')) {
+            const colonIndex = messagePreview.indexOf(':');
+            senderName = messagePreview.substring(0, colonIndex).trim();
+            messagePreview = messagePreview.substring(colonIndex + 1).trim();
           }
 
           // Create notification object

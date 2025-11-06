@@ -24,3 +24,5 @@ END $$;
 -- Optional: Add comment to document the column
 COMMENT ON COLUMN public.booking_offers.level IS 'Education level for the booking (e.g., Primary, Secondary, JC, Polytechnic, University, Other)';
 
+
+
