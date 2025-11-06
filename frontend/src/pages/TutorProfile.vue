@@ -1068,5 +1068,19 @@ export default {
     width: 100px !important;
     height: 100px !important;
   }
+
+  /* Improve spacing between Subjects and Levels on mobile */
+  /* Target the first column in rows within detail cards (Subjects column) */
+  .cyberpunk-detail-card .row .col-md-6:first-child {
+    margin-bottom: 2rem !important;
+  }
+
+  .cyberpunk-section-title {
+    margin-bottom: 1rem !important;
+  }
+
+  .cyberpunk-tags {
+    margin-bottom: 0.5rem;
+  }
 }
 </style>

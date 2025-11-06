@@ -2308,6 +2308,19 @@ export default {
       try {
         console.log("🔄 Handling chat route for tutor:", tutorId);
 
+        // Ensure auth is initialized before proceeding
+        if (!authStore.user || !authStore.isAuthenticated) {
+          console.log("⏳ Waiting for auth to initialize...");
+          // Wait a bit for auth to initialize
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          if (!authStore.user || !authStore.isAuthenticated) {
+            console.error("❌ Auth not initialized, cannot proceed");
+            showError("Error", "Please wait for authentication to complete");
+            return;
+          }
+        }
+
         // Load conversations first
         await loadConversations();
 
@@ -2327,7 +2340,22 @@ export default {
         await createConversationWithTutor(tutorId);
       } catch (error) {
         console.error("❌ Error handling chat route:", error);
-        showError("Error", "Failed to start conversation with tutor");
+        // Only show error if it's not a navigation/initialization error
+        if (error.message && !error.message.includes('initialization') && !error.message.includes('Cannot access')) {
+          showError("Error", `Failed to start conversation: ${error.message}`);
+        } else {
+          // For initialization errors, silently retry after a delay
+          const tutorIdToRetry = tutorId; // Capture tutorId for retry
+          console.log("🔄 Retrying chat route after initialization delay...");
+          setTimeout(async () => {
+            try {
+              await handleChatRoute(tutorIdToRetry);
+            } catch (retryError) {
+              console.error("❌ Retry failed:", retryError);
+              showError("Error", "Failed to start conversation. Please try again.");
+            }
+          }, 1000);
+        }
       }
     };
 
@@ -2390,10 +2418,12 @@ export default {
         });
         if (tutorId && authStore.user && authStore.isAuthenticated) {
           console.log("🔗 Chat route detected with tutor ID:", tutorId);
+          // Add a small delay to ensure all dependencies are initialized
+          await new Promise(resolve => setTimeout(resolve, 100));
           await handleChatRoute(tutorId);
         }
       },
-      { immediate: true }
+      { immediate: false } // Changed to false to prevent premature execution
     );
 
     // Validate date and time together when both are provided
@@ -5145,11 +5175,13 @@ export default {
 
       // Check if we're on a chat route with a specific tutor ID
       const tutorIdFromRoute = route.params.id;
-      if (tutorIdFromRoute) {
+      if (tutorIdFromRoute && authStore.user && authStore.isAuthenticated) {
         console.log(
           "🔗 Messages: Chat route detected on mount with tutor ID:",
           tutorIdFromRoute
         );
+        // Add a small delay to ensure all dependencies are initialized
+        await new Promise(resolve => setTimeout(resolve, 200));
         await handleChatRoute(tutorIdFromRoute);
       }
 
