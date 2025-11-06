@@ -522,11 +522,18 @@ export const useAuthStore = defineStore('auth', () => {
                 session.value = currentSession
 
                 // Fetch user profile
-                const { data: profile } = await supabase
+                const { data: profile, error: profileError } = await supabase
                     .from('users')
                     .select('*')
                     .eq('id', currentSession.user.id)
                     .single()
+
+                if (profileError) {
+                    console.error('Failed to fetch user profile:', profileError);
+                    // Logout user if profile fetch fails
+                    await logout();
+                    return;
+                }
 
                 if (profile) {
                     // If user is a tutor, fetch penalty points from tutor_profiles

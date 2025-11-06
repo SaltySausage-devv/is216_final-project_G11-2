@@ -318,6 +318,11 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
       `)
       .eq('student_id', studentId);
 
+    if (allBookingsError) {
+      console.error('📊 ANALYTICS: All bookings error:', allBookingsError);
+      throw allBookingsError;
+    }
+
     // Get date-filtered bookings for KPIs and charts
     const { data: bookings, error: bookingsError } = await supabase
       .from('bookings')
@@ -341,29 +346,44 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
 
     // Get student reviews - fetch ALL reviews (not date-filtered) to match with allBookings
     // This ensures ratings show correctly for bookings regardless of when the review was created
-    const { data: allReviews } = await supabase
+    const { data: allReviews, error: allReviewsError } = await supabase
       .from('reviews')
       .select('*')
       .eq('student_id', studentId);
 
+    if (allReviewsError) {
+      console.error('📊 ANALYTICS: All reviews error:', allReviewsError);
+      throw allReviewsError;
+    }
+
     // Get date-filtered reviews for totalReviews metric (to match the selected period)
-    const { data: reviews } = await supabase
+    const { data: reviews, error: reviewsError } = await supabase
       .from('reviews')
       .select('*')
       .eq('student_id', studentId)
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
 
+    if (reviewsError) {
+      console.error('📊 ANALYTICS: Reviews error:', reviewsError);
+      throw reviewsError;
+    }
+
     console.log('📊 ANALYTICS: Found all reviews (for ratings):', allReviews?.length || 0);
     console.log('📊 ANALYTICS: Found date-filtered reviews (for metrics):', reviews?.length || 0);
 
     // Get student messages
-    const { data: messages } = await supabase
+    const { data: messages, error: messagesError } = await supabase
       .from('messages')
       .select('*')
       .eq('sender_id', studentId)
       .gte('created_at', startDate.toISOString())
       .lte('created_at', endDate.toISOString());
+
+    if (messagesError) {
+      console.error('📊 ANALYTICS: Messages error:', messagesError);
+      throw messagesError;
+    }
 
     console.log('📊 ANALYTICS: Found messages:', messages?.length || 0);
 
@@ -766,9 +786,13 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
       `)
       .eq('tutor_id', tutorId);
     
+    if (allBookingsError) {
+      console.error('📊 TUTOR ANALYTICS: All bookings error:', allBookingsError);
+      throw allBookingsError;
+    }
+    
     console.log('📊 TUTOR ANALYTICS: All bookings for tutor:', { 
       allBookingsCount: allBookings?.length || 0, 
-      allBookingsError,
       sampleAllBooking: allBookings?.[0] 
     });
     
@@ -800,9 +824,13 @@ app.get('/analytics/tutor/:tutorId', verifyToken, async (req, res) => {
       .eq('tutor_id', tutorId)
       .in('status', ['confirmed', 'completed']);
     
+    if (allConfirmedError) {
+      console.error('📊 TUTOR ANALYTICS: All confirmed bookings error:', allConfirmedError);
+      throw allConfirmedError;
+    }
+    
     console.log('📊 TUTOR ANALYTICS: All confirmed bookings:', { 
       allConfirmedCount: allConfirmedBookings?.length || 0, 
-      allConfirmedError,
       sampleConfirmed: allConfirmedBookings?.[0] 
     });
     

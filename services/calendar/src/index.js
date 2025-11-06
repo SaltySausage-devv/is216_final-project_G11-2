@@ -97,16 +97,21 @@ const verifyToken = async (req, res, next) => {
     }
 
     // Get user profile from database
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .select('*')
       .eq('id', user.id)
       .single();
 
+    if (profileError || !userProfile) {
+      console.error('❌ User profile not found:', profileError);
+      return res.status(403).json({ error: 'User profile not found' });
+    }
+
     req.user = {
       userId: user.id,
       email: user.email,
-      userType: userProfile?.user_type || 'student'
+      userType: userProfile.user_type
     };
 
     next();

@@ -48,10 +48,16 @@ const supabase = createClient(
 );
 
 // Initialize Supabase client with service role key for storage operations
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+let supabaseAdmin = null;
+if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  supabaseAdmin = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+  console.log('✅ Supabase admin client initialized');
+} else {
+  console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not found - admin operations will fail');
+}
 
 // Initialize DOMPurify for XSS protection
 // DOMPurify is now imported directly from isomorphic-dompurify
@@ -1075,6 +1081,13 @@ app.post('/messaging/conversations/:id/upload', verifyToken, upload.single('file
       });
     }
 
+    if (!uploadData || !uploadData.path) {
+      console.error('Upload succeeded but no data returned from storage');
+      return res.status(500).json({ 
+        error: 'Upload failed - no data returned from storage'
+      });
+    }
+
     // Get public URL for the uploaded image
     const { data: publicUrlData } = userSupabase.storage
       .from('message-files')
@@ -1814,6 +1827,32 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       // Use the first updated offer if multiple were updated
       confirmedOffer = updatedOffers && updatedOffers.length > 0 ? updatedOffers[0] : bookingOffer;
       console.log('✅ BOOKING CONFIRMATION: Updated booking offer(s):', updatedOffers?.length || 0);
+    }
+
+    // Check for duplicate bookings at this time slot before creating
+    // This prevents double-booking if the same offer is confirmed twice or different offers have the same time
+    const { data: existingBookingAtTime, error: duplicateCheckError } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('tutor_id', bookingOffer.tutor_id)
+      .eq('start_time', bookingOffer.proposed_time)
+      .in('status', ['confirmed', 'pending'])
+      .maybeSingle();
+
+    if (duplicateCheckError) {
+      console.error('❌ BOOKING CONFIRMATION: Error checking for duplicate bookings:', duplicateCheckError);
+      return res.status(500).json({ 
+        error: 'Failed to verify booking availability',
+        details: duplicateCheckError.message 
+      });
+    }
+
+    if (existingBookingAtTime) {
+      console.log('❌ BOOKING CONFIRMATION: Time slot already booked:', existingBookingAtTime);
+      return res.status(400).json({ 
+        error: 'Time slot is already booked',
+        details: 'Another booking exists at this time for this tutor'
+      });
     }
 
     // Create booking record in bookings table (only after credit check passes)

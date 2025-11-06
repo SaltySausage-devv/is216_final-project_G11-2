@@ -1124,6 +1124,10 @@ app.post('/booking-confirmations', verifyToken, async (req, res) => {
 
     if (bookingError) {
       console.error('Failed to create final booking:', bookingError);
+      return res.status(500).json({ 
+        error: 'Failed to create booking',
+        details: bookingError.message 
+      });
     }
 
     // Deduct credits from student but NOT transfer to tutor yet
