@@ -2058,6 +2058,15 @@
       @close="showRescheduleInsufficientCreditsModal = false"
     />
 
+    <!-- Booking Insufficient Credits Modal -->
+    <BookingInsufficientCreditsModal
+      v-if="showBookingInsufficientCreditsModal"
+      :required-credits="bookingCreditsDetails.requiredCredits"
+      :current-credits="bookingCreditsDetails.currentCredits"
+      :shortfall="bookingCreditsDetails.shortfall"
+      @close="showBookingInsufficientCreditsModal = false"
+    />
+
     <!-- Toast Notifications REMOVED - User requested no popups -->
 
     <!-- Booking Request Success Popup -->
@@ -2122,6 +2131,7 @@ import { messagingApi } from "../services/messaging";
 import { useAlertModal } from "../composables/useAlertModal.js";
 import SessionEndModal from "../components/calendar/SessionEndModal.vue";
 import RescheduleInsufficientCreditsModal from "../components/calendar/RescheduleInsufficientCreditsModal.vue";
+import BookingInsufficientCreditsModal from "../components/calendar/BookingInsufficientCreditsModal.vue";
 // ToastNotifications REMOVED - User requested no popups
 
 export default {
@@ -3642,14 +3652,9 @@ export default {
         return;
       }
 
-      // Check if user is a student and validate credits
-      if (creditService.isStudent()) {
-        // For booking offers, we need to check if student has any credits at all
-        // since we don't know the exact cost until the tutor proposes
-        if (!creditService.hasAnyCredits()) {
-          return; // Stop execution if no credits - toast notification is shown by creditService
-        }
-      }
+      // Note: No credit check needed for booking requests
+      // Students can send booking requests even with 0 credits
+      // Credits are only required when accepting/confirming a booking proposal
 
       isCreatingBooking.value = true;
       try {
@@ -4478,14 +4483,9 @@ export default {
       const bookingData = getBookingData(message);
       if (!bookingData) return;
 
-      // Check if user is a student and validate credits before confirming
-      if (creditService.isStudent()) {
-        const creditsNeeded = bookingData.creditsAmount || 0;
-
-        if (!creditService.hasSufficientCredits(creditsNeeded, "booking")) {
-          return; // Stop execution if insufficient credits
-        }
-      }
+      // Note: Credit validation is handled by the backend
+      // The backend will return an error with details if insufficient credits
+      // We'll show the modal when that error is received
 
       isConfirmingBooking.value = true;
       try {
@@ -4520,11 +4520,13 @@ export default {
           ) {
             const { requiredCredits, currentCredits, shortfall } =
               errorData.details;
-            creditService.showInsufficientCreditsNotification(
-              requiredCredits,
-              currentCredits,
-              "booking"
-            );
+            // Show insufficient credits modal
+            showBookingInsufficientCreditsModal.value = true;
+            bookingCreditsDetails.value = {
+              requiredCredits: requiredCredits,
+              currentCredits: currentCredits,
+              shortfall: shortfall
+            };
             return;
           }
 
@@ -5322,10 +5324,16 @@ export default {
     // Session end functionality
     const sessionEndModal = ref(false);
     const showRescheduleInsufficientCreditsModal = ref(false);
+    const showBookingInsufficientCreditsModal = ref(false);
     const rescheduleCreditsDetails = ref({
       newCredits: 0,
       currentCredits: 0,
       originalCredits: 0,
+      shortfall: 0
+    });
+    const bookingCreditsDetails = ref({
+      requiredCredits: 0,
+      currentCredits: 0,
       shortfall: 0
     });
     const selectedBookingForSessionEnd = ref(null);
@@ -5965,7 +5973,8 @@ export default {
   },
   components: {
     SessionEndModal,
-    RescheduleInsufficientCreditsModal,
+      RescheduleInsufficientCreditsModal,
+      BookingInsufficientCreditsModal,
   },
 };
 </script>

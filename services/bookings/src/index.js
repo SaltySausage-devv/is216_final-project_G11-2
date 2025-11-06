@@ -997,22 +997,7 @@ app.post('/booking-confirmations', verifyToken, async (req, res) => {
       return res.status(403).json({ error: 'Only tutees can confirm booking offers' });
     }
 
-    // Update booking offer status to confirmed
-    const { data: confirmedOffer, error: updateError } = await supabase
-      .from('booking_offers')
-      .update({
-        status: 'confirmed',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', bookingOfferId)
-      .select()
-      .single();
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    // Get tutor's actual hourly rate
+    // Get tutor's actual hourly rate FIRST (before updating status)
     const { data: tutorProfile, error: tutorProfileError } = await supabase
       .from('tutor_profiles')
       .select('hourly_rate')
@@ -1083,6 +1068,21 @@ app.post('/booking-confirmations', verifyToken, async (req, res) => {
           }
         });
       }
+    }
+
+    // Only update booking offer status AFTER credit check passes
+    const { data: confirmedOffer, error: updateError } = await supabase
+      .from('booking_offers')
+      .update({
+        status: 'confirmed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', bookingOfferId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
     }
 
     // Get tutor's primary subject for the booking (fallback if booking offer doesn't have subject)

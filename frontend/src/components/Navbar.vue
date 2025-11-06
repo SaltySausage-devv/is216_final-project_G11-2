@@ -177,6 +177,19 @@
             <CreditsIcon />
           </li>
 
+          <li class="nav-item" v-if="!isAuthenticated">
+            <router-link to="/login" class="nav-link" @click="closeNavbar">
+              <i class="fas fa-sign-in-alt me-1"></i>
+              Login
+            </router-link>
+          </li>
+          <li class="nav-item" v-if="!isAuthenticated">
+            <router-link to="/register" class="nav-link" @click="closeNavbar">
+              <i class="fas fa-user-plus me-1"></i>
+              Sign Up
+            </router-link>
+          </li>
+
           <!-- Penalty Points (Tutors Only) - Desktop only (mobile shows in top bar) -->
           <li
             class="nav-item d-none d-lg-block"

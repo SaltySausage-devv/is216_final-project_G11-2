@@ -1680,29 +1680,7 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
       throw bookingCheckError;
     }
 
-    let confirmedOffer = bookingOffer;
-    if (!alreadyConfirmed) {
-      // Update all booking offers with this ID to handle potential duplicates
-      const { data: updatedOffers, error: updateError } = await supabase
-        .from('booking_offers')
-        .update({
-          status: 'confirmed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', bookingOfferId)
-        .select();
-
-      if (updateError) {
-        console.error('❌ BOOKING CONFIRMATION: Error updating booking offer:', updateError);
-        throw updateError;
-      }
-
-      // Use the first updated offer if multiple were updated
-      confirmedOffer = updatedOffers && updatedOffers.length > 0 ? updatedOffers[0] : bookingOffer;
-      console.log('✅ BOOKING CONFIRMATION: Updated booking offer(s):', updatedOffers?.length || 0);
-    }
-
-    // Get tutor's actual hourly rate
+    // Get tutor's actual hourly rate FIRST (before updating status)
     const { data: tutorProfiles, error: tutorProfileError } = await supabase
       .from('tutor_profiles')
       .select('hourly_rate')
@@ -1745,7 +1723,100 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
     const rawLevel = bookingOffer.level || 'Secondary';
     const bookingLevel = validLevels.includes(rawLevel) ? rawLevel : 'Secondary'; // Default to Secondary if invalid
 
-    // Create booking record in bookings table
+    // CRITICAL: Check credits BEFORE updating booking offer status or creating booking
+    // Only check credits for students confirming bookings
+    if (bookingOffer.tutee_id === req.user.userId) {
+      // Check if credits have already been deducted for this booking offer
+      // by checking if the booking already exists and has credits deducted
+      if (existingBooking && existingBooking.status === 'confirmed' && existingBooking.total_amount > 0) {
+        console.log('✅ Credits already deducted for existing confirmed booking. Skipping credit check.');
+      } else {
+        // Check if student has sufficient credits before proceeding
+        const { data: student, error: studentError } = await supabase
+          .from('users')
+          .select('credits, user_type')
+          .eq('id', bookingOffer.tutee_id)
+          .maybeSingle();
+
+        if (studentError) {
+          console.error('❌ BOOKING CONFIRMATION: Error fetching student data:', studentError);
+          return res.status(500).json({ error: 'Failed to verify student credits' });
+        }
+
+        if (!student) {
+          console.error('❌ BOOKING CONFIRMATION: Student not found');
+          return res.status(404).json({ error: 'Student not found' });
+        }
+
+        // Only check credits for students
+        if (student.user_type === 'student') {
+          const currentCredits = student.credits || 0;
+          
+          if (currentCredits < finalTotalAmount) {
+            const shortfall = finalTotalAmount - currentCredits;
+            console.log(`❌ BOOKING CONFIRMATION: Insufficient credits: Student has ${currentCredits}, needs ${finalTotalAmount}, shortfall: ${shortfall}`);
+            
+            // Send notification to student about insufficient credits
+            try {
+              await supabase
+                .from('notifications')
+                .insert({
+                  user_id: bookingOffer.tutee_id,
+                  type: 'push',
+                  subject: 'Insufficient Credits',
+                  message: `You need ${shortfall} more credits to confirm this booking. Please top up your credits.`,
+                  data: { 
+                    notificationType: 'insufficient_credits',
+                    bookingOfferId: bookingOfferId,
+                    requiredCredits: finalTotalAmount,
+                    currentCredits: currentCredits,
+                    shortfall: shortfall
+                  },
+                  status: 'pending',
+                  created_at: new Date().toISOString()
+                });
+              console.log('✅ BOOKING CONFIRMATION: Credit notification saved to database');
+            } catch (notificationError) {
+              console.error('❌ BOOKING CONFIRMATION: Error saving insufficient credits notification:', notificationError);
+            }
+            
+            return res.status(400).json({ 
+              error: 'Insufficient credits', 
+              details: {
+                requiredCredits: finalTotalAmount,
+                currentCredits: currentCredits,
+                shortfall: shortfall
+              }
+            });
+          }
+        }
+      }
+    }
+
+    // Only update booking offer status AFTER credit check passes
+    let confirmedOffer = bookingOffer;
+    if (!alreadyConfirmed) {
+      // Update all booking offers with this ID to handle potential duplicates
+      const { data: updatedOffers, error: updateError } = await supabase
+        .from('booking_offers')
+        .update({
+          status: 'confirmed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', bookingOfferId)
+        .select();
+
+      if (updateError) {
+        console.error('❌ BOOKING CONFIRMATION: Error updating booking offer:', updateError);
+        throw updateError;
+      }
+
+      // Use the first updated offer if multiple were updated
+      confirmedOffer = updatedOffers && updatedOffers.length > 0 ? updatedOffers[0] : bookingOffer;
+      console.log('✅ BOOKING CONFIRMATION: Updated booking offer(s):', updatedOffers?.length || 0);
+    }
+
+    // Create booking record in bookings table (only after credit check passes)
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .insert({
@@ -1777,111 +1848,32 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
     const createdBooking = booking && booking.length > 0 ? booking[0] : null;
 
     // Handle credit transactions when student confirms booking
-    // Deduct credits regardless of whether booking already exists (to handle edge cases)
+    // Deduct credits (only if not already deducted)
     if (bookingOffer.tutee_id === req.user.userId) {
       try {
         console.log('🔄 Processing credit transaction for booking confirmation...');
         
-        // Check if credits have already been deducted for this booking offer
-        // by checking if the booking already exists and has credits deducted
-        if (existingBooking) {
-          console.log('📋 Booking already exists, checking if credits were already deducted...');
-          // Check if this booking was already confirmed with credits deducted
-          // by verifying the booking status and total_amount
-          if (existingBooking.status === 'confirmed' && existingBooking.total_amount > 0) {
-            console.log('✅ Credits were already deducted for this booking. Skipping credit transaction.');
-            // Credits already deducted, skip to avoid double deduction
-          } else {
-            // Booking exists but credits not deducted yet, proceed with deduction
-            console.log('⚠️ Booking exists but credits not deducted yet. Proceeding with credit deduction...');
-          }
-        }
-        
-        // Get the actual hourly rate and calculate credits
-        const { data: tutorProfiles, error: tutorProfileError } = await supabase
-          .from('tutor_profiles')
-          .select('hourly_rate')
-          .eq('user_id', bookingOffer.tutor_id);
+        // Skip if booking already exists and is confirmed (credits already deducted)
+        if (existingBooking && existingBooking.status === 'confirmed' && existingBooking.total_amount > 0) {
+          console.log('✅ Credits already deducted for existing confirmed booking. Skipping deduction.');
+        } else {
+          // Get student data again to get latest credits
+          const { data: student, error: studentError } = await supabase
+            .from('users')
+            .select('credits, user_type')
+            .eq('id', bookingOffer.tutee_id)
+            .maybeSingle();
 
-        // Use the first tutor profile if multiple are found
-        const tutorProfile = tutorProfiles && tutorProfiles.length > 0 ? tutorProfiles[0] : null;
-
-        console.log('📊 Tutor profile data:', { tutorProfile, tutorProfileError });
-
-        const hourlyRate = tutorProfile?.hourly_rate || 10; // Use 10 as fallback instead of 0
-        const sessionDuration = bookingOffer.duration || 60; // in minutes
-        const creditsUsed = hourlyRate * sessionDuration / 60;
-        
-        console.log('💰 Credit calculation:', { hourlyRate, sessionDuration, creditsUsed });
-
-        // Check if student has sufficient credits before proceeding
-        const { data: student, error: studentError } = await supabase
-          .from('users')
-          .select('credits, user_type')
-          .eq('id', bookingOffer.tutee_id)
-          .maybeSingle();
-
-        if (studentError) {
-          console.error('❌ BOOKING CONFIRMATION: Error fetching student data:', studentError);
-          return res.status(500).json({ error: 'Failed to verify student credits' });
-        }
-
-        if (!student) {
-          console.error('❌ BOOKING CONFIRMATION: Student not found');
-          return res.status(404).json({ error: 'Student not found' });
-        }
-
-        // Only check and deduct credits for students
-        if (student.user_type === 'student') {
-          // Skip if booking already exists and is confirmed (credits already deducted)
-          if (existingBooking && existingBooking.status === 'confirmed' && existingBooking.total_amount > 0) {
-            console.log('✅ Credits already deducted for existing confirmed booking. Skipping deduction.');
-          } else {
-            const currentCredits = student.credits || 0;
-            
-            if (currentCredits < creditsUsed) {
-              const shortfall = creditsUsed - currentCredits;
-              console.log(`❌ Insufficient credits: Student has ${currentCredits}, needs ${creditsUsed}, shortfall: ${shortfall}`);
-              
-              // Send notification to student about insufficient credits
-              try {
-                await supabase
-                  .from('notifications')
-                  .insert({
-                    user_id: bookingOffer.tutee_id,
-                    type: 'push',
-                    subject: 'Insufficient Credits',
-                    message: `You need ${shortfall} more credits to confirm this booking. Please top up your credits.`,
-                    data: { 
-                      notificationType: 'insufficient_credits',
-                      bookingOfferId: bookingOfferId,
-                      requiredCredits: creditsUsed,
-                      currentCredits: currentCredits,
-                      shortfall: shortfall
-                    },
-                    status: 'pending',
-                    created_at: new Date().toISOString()
-                  });
-                console.log('✅ Credit notification saved to database');
-              } catch (notificationError) {
-                console.error('❌ Error saving insufficient credits notification:', notificationError);
-              }
-              
-              return res.status(400).json({ 
-                error: 'Insufficient credits', 
-                details: {
-                  requiredCredits: creditsUsed,
-                  currentCredits: currentCredits,
-                  shortfall: shortfall
-                }
-              });
-            }
+          if (studentError || !student) {
+            console.error('❌ BOOKING CONFIRMATION: Error fetching student data for deduction:', studentError);
+            // Don't fail the whole operation, just log the error
+          } else if (student.user_type === 'student') {
 
             // NOTE: Credits are deducted from student but NOT transferred to tutor yet
             // Credits will be held in student account and transferred to tutor only after session completion
             // This prevents tutors from receiving payment for sessions that don't actually happen
-            const newStudentCredits = Math.max(0, (student.credits || 0) - creditsUsed);
-            console.log(`💸 Reserving ${creditsUsed} credits from student. Old: ${student.credits}, New: ${newStudentCredits}`);
+            const newStudentCredits = Math.max(0, (student.credits || 0) - finalTotalAmount);
+            console.log(`💸 Reserving ${finalTotalAmount} credits from student. Old: ${student.credits}, New: ${newStudentCredits}`);
             
             const { error: studentUpdateError } = await supabase
               .from('users')
@@ -1898,7 +1890,7 @@ app.post('/messaging/booking-confirmations', verifyToken, async (req, res) => {
               console.log('✅ Student credits reserved successfully');
             }
 
-            console.log(`💰 Credits reserved: ${creditsUsed} credits held until session completion`);
+            console.log(`💰 Credits reserved: ${finalTotalAmount} credits held until session completion`);
           }
         }
       } catch (creditError) {
