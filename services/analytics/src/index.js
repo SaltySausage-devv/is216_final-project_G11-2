@@ -478,19 +478,76 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
     console.log('📊 Total Hours This Month (from attended sessions in current month):', totalHours);
 
     // Total Spent: total amount from bookings where attendance was marked as 'attended'
-    // Credits are only deducted when attendance is marked as completed
-    // Only bookings with attendance_status === 'attended' count towards total spent
+    // AND cancelled bookings where student cancelled < 24 hours (no refund, credits count as spent)
     const attendedBookings = allBookings?.filter(b => b.attendance_status === 'attended') || [];
     console.log('📊 Attended Bookings (for total spent - credits deducted):', attendedBookings.length);
 
-    const totalSpent = attendedBookings
+    // Filter cancelled bookings where student cancelled < 24 hours (no refund)
+    console.log('📊 STUDENT ANALYTICS: Filtering cancelled bookings for spending calculation...');
+    const cancelledBookingsWithNoRefund = allBookings?.filter(b => {
+      if (b.status !== 'cancelled') {
+        return false;
+      }
+      
+      if (!b.cancelled_at || !b.start_time) {
+        return false;
+      }
+      
+      // Check who cancelled - if tutor cancelled, student gets refunded (don't count as spent)
+      // Parse cancelled_by from notes field: "CANCELLED_BY: {user_id}"
+      let cancelledBy = null;
+      if (b.notes && b.notes.includes('CANCELLED_BY:')) {
+        const match = b.notes.match(/CANCELLED_BY:\s*([^\s\n]+)/);
+        if (match && match[1]) {
+          cancelledBy = match[1];
+        }
+      }
+      
+      // If tutor cancelled, skip (student gets refunded, so credits don't count as spent)
+      if (cancelledBy && String(cancelledBy) === String(b.tutor_id)) {
+        console.log(`📊 STUDENT ANALYTICS: Skipping cancelled booking ${b.id} - tutor cancelled (student refunded)`);
+        return false;
+      }
+      
+      // Check if cancellation was less than 24 hours before start
+      const cancelledAt = new Date(b.cancelled_at);
+      const startTime = new Date(b.start_time);
+      
+      if (isNaN(cancelledAt.getTime()) || isNaN(startTime.getTime())) {
+        return false;
+      }
+      
+      const hoursBeforeStart = (startTime - cancelledAt) / (1000 * 60 * 60);
+      
+      // Credits count as spent ONLY if:
+      // 1. Student cancelled (not tutor)
+      // 2. AND cancelled < 24 hours before start (no refund)
+      return hoursBeforeStart < 24 && hoursBeforeStart > 0 && (!cancelledBy || String(cancelledBy) === String(b.student_id));
+    }) || [];
+
+    console.log('📊 STUDENT ANALYTICS: Cancelled Bookings with No Refund (credits count as spent):', cancelledBookingsWithNoRefund.length);
+
+    // Calculate spending from attended sessions
+    const spendingFromAttended = attendedBookings
       ?.reduce((sum, b) => {
         const amount = parseFloat(b.total_amount) || 0;
-        // Ensure spending is never negative
         return sum + Math.max(0, amount);
       }, 0) || 0;
 
-    console.log('📊 Total Spent (credits deducted from attended sessions):', totalSpent);
+    // Calculate spending from cancelled bookings (no refund)
+    const spendingFromCancelled = cancelledBookingsWithNoRefund
+      ?.reduce((sum, b) => {
+        const amount = parseFloat(b.total_amount) || 0;
+        return sum + Math.max(0, amount);
+      }, 0) || 0;
+
+    const totalSpent = spendingFromAttended + spendingFromCancelled;
+
+    console.log('📊 Total Spent (from attended sessions + cancelled <24h):', {
+      fromAttended: spendingFromAttended,
+      fromCancelled: spendingFromCancelled,
+      total: totalSpent
+    });
     const tutorsWorkedWith = new Set(
       allBookings
         ?.filter(b => b.status === 'completed' || b.status === 'confirmed')
@@ -560,11 +617,24 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
     // Chart data
     const { chartData, spendingData, chartLabels } = generateChartData(bookings || [], startDate, endDate, period);
 
-    // Recent activity with ratings (only completed/confirmed bookings)
+    // Recent activity with ratings (completed/confirmed bookings + cancelled bookings)
     // Sort by created_at descending to get the most recent bookings first
     const sortedBookings = [...(allBookings || [])]
-      .filter(booking => booking.status === 'completed' || booking.status === 'confirmed')
-      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      .filter(booking => 
+        booking.status === 'completed' || 
+        booking.status === 'confirmed' || 
+        booking.status === 'cancelled'
+      )
+      .sort((a, b) => {
+        // Use cancelled_at for cancelled bookings, created_at for others
+        const dateA = a.status === 'cancelled' && a.cancelled_at 
+          ? new Date(a.cancelled_at) 
+          : new Date(a.created_at || 0);
+        const dateB = b.status === 'cancelled' && b.cancelled_at 
+          ? new Date(b.cancelled_at) 
+          : new Date(b.created_at || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
     
     console.log('📊 ANALYTICS: Sorted bookings for recentActivity:', {
       totalBookings: sortedBookings.length,
@@ -606,11 +676,20 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
           });
         }
         
+        // For cancelled bookings, use cancelled_at as date and show duration as 0
+        const activityDate = booking.status === 'cancelled' && booking.cancelled_at
+          ? booking.cancelled_at
+          : booking.created_at;
+        
+        const activityDuration = booking.status === 'cancelled'
+          ? '0 hours (cancelled)'
+          : formatDuration(booking.start_time, booking.end_time);
+        
         return {
-          date: booking.created_at,
+          date: activityDate,
           subject: booking.subject || 'General',
           tutorName: `${booking.tutor?.first_name || ''} ${booking.tutor?.last_name || ''}`.trim() || 'Tutor',
-          duration: formatDuration(booking.start_time, booking.end_time),
+          duration: activityDuration,
           cost: parseFloat(booking.total_amount || 0),
           rating: rating,
           status: booking.status
