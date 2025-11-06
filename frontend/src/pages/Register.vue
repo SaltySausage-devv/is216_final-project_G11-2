@@ -133,7 +133,7 @@
                 </div>
 
                 <div class="mb-3">
-                  <label for="phone" class="cyberpunk-label">Singapore Phone Number (Optional)</label>
+                  <label for="phone" class="cyberpunk-label">Singapore Phone Number <span class="text-danger">*</span></label>
                   <div class="cyberpunk-input-group">
                     <div class="cyberpunk-input-icon">
                       <i class="fas fa-phone"></i>
@@ -149,6 +149,7 @@
                       maxlength="8"
                       :disabled="phoneVerified"
                       @input="validatePhone"
+                      required
                     />
                     <button
                       v-if="!phoneVerified && !otpSent"
@@ -822,8 +823,9 @@ export default {
     }
 
     const closeOTPModal = () => {
-      // Allow closing only if not in the middle of verification
-      if (!verifyingOTP.value) {
+      // Prevent closing the modal - phone verification is required
+      if (!verifyingOTP.value && !phoneVerified.value) {
+        errors.value.phone = 'Phone verification is required. Please complete the OTP verification.'
         errors.value.otp = 'Please verify your phone number to continue'
       }
     }
@@ -849,14 +851,20 @@ export default {
         errors.value.userType = 'Please select your role'
       }
 
-      // Phone validation (optional)
-      if (form.phone && !validatePhoneNumber(form.phone)) {
-        errors.value.phone = 'Please enter a valid Singapore phone number'
+      // Phone validation (required)
+      if (!form.phone || !form.phone.trim()) {
+        errors.value.phone = 'Phone number is required'
+        return false
       }
 
-      // OTP verification check (only if phone is provided)
-      if (form.phone && !phoneVerified.value) {
-        errors.value.phone = 'Please verify your phone number'
+      if (!validatePhoneNumber(form.phone)) {
+        errors.value.phone = 'Please enter a valid Singapore phone number'
+        return false
+      }
+
+      // OTP verification check (required)
+      if (!phoneVerified.value) {
+        errors.value.phone = 'Please verify your phone number with OTP'
         return false
       }
 
