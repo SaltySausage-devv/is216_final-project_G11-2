@@ -60,7 +60,7 @@
                 />
                 <small v-if="!meetsMinimumDuration && newStartTime && newEndTime" class="text-danger d-block mt-1">
                   <i class="fas fa-exclamation-triangle me-1"></i>
-                  Minimum duration is 15 minutes
+                  Minimum duration is 1 minute
                 </small>
               </div>
             </div>
@@ -363,7 +363,7 @@ export default {
       return selectedDate <= now;
     });
 
-    // Check if duration meets minimum 15 minutes
+    // Check if duration meets minimum 1 minute
     const meetsMinimumDuration = computed(() => {
       if (!newStartTime.value || !newEndTime.value) return false;
       
@@ -371,7 +371,7 @@ export default {
       const end = new Date(`2000-01-01T${newEndTime.value}`);
       const durationMinutes = (end - start) / (1000 * 60);
       
-      return durationMinutes >= 15;
+      return durationMinutes >= 1;
     });
 
     const isValidTimeRange = computed(() => {
@@ -416,7 +416,7 @@ export default {
       const diffMs = endTime - startTime;
       const diffHours = diffMs / (1000 * 60 * 60);
 
-      return parseFloat(Math.max(0, diffHours).toFixed(2));
+      return Math.max(0, diffHours); // Keep precise for calculation, don't round
     });
 
     // Calculate credits based on hourly rate and duration
@@ -424,8 +424,16 @@ export default {
       if (!tutorHourlyRate.value || !sessionDurationInHours.value)
         return "0.00";
 
-      const total = tutorHourlyRate.value * sessionDurationInHours.value;
-      // Always format to 2 decimal places (e.g., 3.18, 3.00, 0.50)
+      // Calculate credits directly from milliseconds to avoid rounding errors
+      if (!newStartTime.value || !newEndTime.value) return "0.00";
+      
+      const startTime = new Date(`2000-01-01T${newStartTime.value}`);
+      const endTime = new Date(`2000-01-01T${newEndTime.value}`);
+      const diffMs = endTime - startTime;
+      const diffHours = diffMs / (1000 * 60 * 60); // Precise hours calculation
+      const total = tutorHourlyRate.value * diffHours;
+      
+      // Round final credit value to 2 decimal places
       return parseFloat(total.toFixed(2)).toFixed(2);
     });
 
@@ -745,7 +753,7 @@ export default {
 
         // Validate minimum duration
         if (!meetsMinimumDuration.value) {
-          showToast("Session duration must be at least 15 minutes.", "error");
+          showToast("Session duration must be at least 1 minute.", "error");
           loading.value = false;
           return;
         }

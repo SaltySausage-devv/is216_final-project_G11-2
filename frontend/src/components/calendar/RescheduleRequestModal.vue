@@ -374,12 +374,19 @@ export default {
 
     // Calculate credits based on hourly rate and duration
     const calculatedCredits = computed(() => {
-      if (tutorHourlyRate.value > 0 && sessionDurationInHours.value > 0) {
-        const total = tutorHourlyRate.value * sessionDurationInHours.value;
-        // Always format to 2 decimal places (e.g., 213.17, 3.00, 0.50)
-        return parseFloat(total.toFixed(2)).toFixed(2);
+      if (!props.booking.pending_reschedule_start_time || !props.booking.pending_reschedule_end_time || tutorHourlyRate.value <= 0) {
+        return "0.00";
       }
-      return "0.00";
+      
+      // Calculate credits directly from milliseconds to avoid rounding errors
+      const start = new Date(props.booking.pending_reschedule_start_time);
+      const end = new Date(props.booking.pending_reschedule_end_time);
+      const durationMs = end.getTime() - start.getTime();
+      const durationHours = durationMs / (1000 * 60 * 60); // Precise hours calculation
+      const total = tutorHourlyRate.value * durationHours;
+      
+      // Round final credit value to 2 decimal places
+      return parseFloat(total.toFixed(2)).toFixed(2);
     });
 
     // Calculate current session duration in minutes (for display)
