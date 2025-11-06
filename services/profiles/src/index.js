@@ -492,7 +492,9 @@ app.get('/profiles/search', async (req, res) => {
         users:user_id (
           first_name,
           last_name,
-          email
+          email,
+          phone,
+          date_of_birth
         )
       `);
 
@@ -535,11 +537,16 @@ app.get('/profiles/search', async (req, res) => {
     if (type === 'tutor' || !type) {
       filteredProfiles = profiles.filter(profile => {
         // Calculate profile completeness using the same logic as frontend
-        // All fields are weighted equally (13 fields, each worth ~7.69 points)
+        // All fields are weighted equally (16 fields: 13 tutor profile + 3 user info, each worth ~6.25 points)
         let completeness = 0;
-        const pointsPerField = 100 / 13; // ~7.69 points per field
+        const pointsPerField = 100 / 16; // ~6.25 points per field
 
-        // All fields are weighted equally
+        // Personal Information fields (3)
+        if (profile.users && profile.users.first_name && profile.users.first_name.trim().length > 0) completeness += pointsPerField;
+        if (profile.users && profile.users.last_name && profile.users.last_name.trim().length > 0) completeness += pointsPerField;
+        if (profile.users && profile.users.date_of_birth) completeness += pointsPerField;
+
+        // Professional Information fields (13)
         if (profile.bio && profile.bio.trim().length > 0) completeness += pointsPerField;
         if (profile.headline && profile.headline.trim().length > 0) completeness += pointsPerField;
         if (profile.teaching_philosophy && profile.teaching_philosophy.trim().length > 0) completeness += pointsPerField;

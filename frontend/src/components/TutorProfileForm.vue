@@ -28,6 +28,46 @@
         </h6>
       </div>
       <div class="card-body p-4">
+        <!-- Personal Information -->
+        <div class="row mb-4">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">First Name</label>
+            <input
+              type="text"
+              v-model="userInfo.firstName"
+              class="form-control"
+              :disabled="!editMode"
+              placeholder="Enter your first name"
+            />
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Last Name</label>
+            <input
+              type="text"
+              v-model="userInfo.lastName"
+              class="form-control"
+              :disabled="!editMode"
+              placeholder="Enter your last name"
+            />
+          </div>
+        </div>
+
+        <div class="row mb-4">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Date of Birth</label>
+            <input
+              type="date"
+              v-model="userInfo.dateOfBirth"
+              class="form-control"
+              :disabled="!editMode"
+              :max="new Date().toISOString().split('T')[0]"
+            />
+          </div>
+        </div>
+
+        <hr class="my-4" />
+
+        <!-- Professional Information -->
         <div class="mb-3">
           <label class="form-label">Professional Headline</label>
           <input
@@ -517,6 +557,12 @@ export default {
       'Botanic Gardens'
     ]
 
+    const userInfo = reactive({
+      firstName: '',
+      lastName: '',
+      dateOfBirth: ''
+    })
+
     const tutorProfile = reactive({
       headline: '',
       bio: '',
@@ -538,9 +584,14 @@ export default {
 
     const profileCompleteness = computed(() => {
       let completeness = 0
-      const pointsPerField = 100 / 13 // 13 required fields, each worth equal points (~7.69)
+      const pointsPerField = 100 / 16 // 16 required fields: 13 tutor profile fields + 3 user info fields
 
-      // All fields are weighted equally
+      // Personal Information fields (3)
+      if (userInfo.firstName && userInfo.firstName.trim().length > 0) completeness += pointsPerField
+      if (userInfo.lastName && userInfo.lastName.trim().length > 0) completeness += pointsPerField
+      if (userInfo.dateOfBirth && userInfo.dateOfBirth.trim().length > 0) completeness += pointsPerField
+
+      // Professional Information fields (13)
       if (tutorProfile.bio && tutorProfile.bio.trim().length > 0) completeness += pointsPerField
       if (tutorProfile.headline && tutorProfile.headline.trim().length > 0) completeness += pointsPerField
       if (tutorProfile.teachingPhilosophy && tutorProfile.teachingPhilosophy.trim().length > 0) completeness += pointsPerField
@@ -619,6 +670,15 @@ export default {
     
     const loadTutorProfile = async () => {
       try {
+        // Load user information from auth store
+        if (authStore.user) {
+          Object.assign(userInfo, {
+            firstName: authStore.user.first_name || '',
+            lastName: authStore.user.last_name || '',
+            dateOfBirth: authStore.user.date_of_birth ? authStore.user.date_of_birth.split('T')[0] : ''
+          })
+        }
+
         const token = authStore.token
         const response = await api.get(`/profiles/tutor/${props.userId}`)
 
@@ -670,6 +730,17 @@ export default {
       try {
         const token = authStore.token
 
+        // Save user information first
+        // Note: authStore.updateProfile expects camelCase (firstName, lastName, dateOfBirth)
+        const userPayload = {
+          firstName: userInfo.firstName,
+          lastName: userInfo.lastName,
+          dateOfBirth: userInfo.dateOfBirth || null
+        }
+
+        await authStore.updateProfile(userPayload)
+
+        // Save tutor profile
         const payload = {
           headline: tutorProfile.headline,
           bio: tutorProfile.bio,
@@ -711,6 +782,7 @@ export default {
     })
 
     return {
+      userInfo,
       tutorProfile,
       isSaving,
       availableSubjects,

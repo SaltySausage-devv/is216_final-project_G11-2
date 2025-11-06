@@ -578,11 +578,31 @@ app.get('/messaging/participants', verifyToken, async (req, res) => {
           // Calculate completeness for each tutor and filter to 100% only
           const completeTutorIds = new Set();
           
+          // Fetch user info for completeness calculation
+          const { data: tutorUserData, error: usersError } = await supabase
+            .from('users')
+            .select('id, first_name, last_name, date_of_birth')
+            .in('id', tutorIds);
+          
+          const userMap = new Map();
+          if (tutorUserData && !usersError) {
+            tutorUserData.forEach(user => {
+              userMap.set(user.id, user);
+            });
+          }
+          
           tutorProfiles.forEach(profile => {
             let completeness = 0;
-            const pointsPerField = 100 / 13; // 13 fields total
+            const pointsPerField = 100 / 16; // 16 fields: 13 tutor profile + 3 user info
             
-            // Check each field for completeness
+            const user = userMap.get(profile.user_id);
+            
+            // Personal Information fields (3)
+            if (user && user.first_name && user.first_name.trim().length > 0) completeness += pointsPerField;
+            if (user && user.last_name && user.last_name.trim().length > 0) completeness += pointsPerField;
+            if (user && user.date_of_birth) completeness += pointsPerField;
+            
+            // Professional Information fields (13)
             if (profile.bio && profile.bio.trim().length > 0) completeness += pointsPerField;
             if (profile.headline && profile.headline.trim().length > 0) completeness += pointsPerField;
             if (profile.teaching_philosophy && profile.teaching_philosophy.trim().length > 0) completeness += pointsPerField;
