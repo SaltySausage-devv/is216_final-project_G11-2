@@ -160,7 +160,7 @@
                       >
                     </div>
                     <small class="d-block mt-1" style="color: rgba(255, 255, 255, 0.8);">
-                      {{ currentDurationInHours }} hours
+                      {{ currentDurationInMinutes }} {{ currentDurationInMinutes === 1 ? 'minute' : 'minutes' }}
                     </small>
                   </div>
                 </div>
@@ -187,9 +187,9 @@
                         :class="creditChangeIcon"
                       ></i>
                     </div>
-                    <small class="d-block mt-1" style="color: rgba(255, 255, 255, 0.8);">
-                      {{ sessionDurationInHours }} hours
-                    </small>
+                      <small class="d-block mt-1" style="color: rgba(255, 255, 255, 0.8);">
+                        {{ proposedDurationInMinutes }} {{ proposedDurationInMinutes === 1 ? 'minute' : 'minutes' }}
+                      </small>
                     <div v-if="creditDifference !== 0" class="mt-2">
                       <small :class="creditChangeTextClass" style="font-weight: 700; font-size: 0.95em;">
                         <strong>{{ creditChangeText }}</strong>
@@ -342,7 +342,22 @@ export default {
       }
     });
 
-    // Calculate session duration in hours
+    // Calculate proposed session duration in minutes (for display)
+    const proposedDurationInMinutes = computed(() => {
+      if (
+        !props.booking.pending_reschedule_start_time ||
+        !props.booking.pending_reschedule_end_time
+      ) {
+        return 0;
+      }
+      const start = new Date(props.booking.pending_reschedule_start_time);
+      const end = new Date(props.booking.pending_reschedule_end_time);
+      const durationMs = end.getTime() - start.getTime();
+      const minutes = durationMs / (1000 * 60); // Convert to minutes
+      return Math.round(minutes); // Round to nearest minute
+    });
+
+    // Calculate session duration in hours (for credit calculation)
     const sessionDurationInHours = computed(() => {
       if (
         !props.booking.pending_reschedule_start_time ||
@@ -354,7 +369,7 @@ export default {
       const end = new Date(props.booking.pending_reschedule_end_time);
       const durationMs = end.getTime() - start.getTime();
       const hours = durationMs / (1000 * 60 * 60); // Convert to hours
-      return parseFloat(hours.toFixed(2)); // Round to 2 decimal places
+      return hours; // Keep precise for calculation
     });
 
     // Calculate credits based on hourly rate and duration
@@ -367,7 +382,19 @@ export default {
       return "0.00";
     });
 
-    // Calculate current session duration in hours
+    // Calculate current session duration in minutes (for display)
+    const currentDurationInMinutes = computed(() => {
+      if (!props.booking.start_time || !props.booking.end_time) {
+        return 0;
+      }
+      const start = new Date(props.booking.start_time);
+      const end = new Date(props.booking.end_time);
+      const durationMs = end.getTime() - start.getTime();
+      const minutes = durationMs / (1000 * 60); // Convert to minutes
+      return Math.round(minutes); // Round to nearest minute
+    });
+
+    // Calculate current session duration in hours (for credit calculation)
     const currentDurationInHours = computed(() => {
       if (!props.booking.start_time || !props.booking.end_time) {
         return 0;
@@ -376,17 +403,22 @@ export default {
       const end = new Date(props.booking.end_time);
       const durationMs = end.getTime() - start.getTime();
       const hours = durationMs / (1000 * 60 * 60); // Convert to hours
-      return parseFloat(hours.toFixed(2)); // Round to 2 decimal places
+      return hours; // Keep precise for calculation
     });
 
     // Calculate current session credits
     const currentCredits = computed(() => {
-      if (tutorHourlyRate.value > 0 && currentDurationInHours.value > 0) {
-        const total = tutorHourlyRate.value * currentDurationInHours.value;
-        // Always format to 2 decimal places (e.g., 213.17, 3.00, 0.50)
-        return parseFloat(total.toFixed(2)).toFixed(2);
+      if (!props.booking.start_time || !props.booking.end_time || tutorHourlyRate.value <= 0) {
+        return "0.00";
       }
-      return "0.00";
+      // Calculate credits directly from milliseconds to avoid rounding errors
+      const start = new Date(props.booking.start_time);
+      const end = new Date(props.booking.end_time);
+      const durationMs = end.getTime() - start.getTime();
+      const durationHours = durationMs / (1000 * 60 * 60); // Precise hours calculation
+      const total = tutorHourlyRate.value * durationHours;
+      // Round final credit value to 2 decimal places
+      return parseFloat(total.toFixed(2)).toFixed(2);
     });
 
     // Calculate credit difference
@@ -783,8 +815,10 @@ export default {
       requesterName,
       tutorHourlyRate,
       loadingCredits,
+      proposedDurationInMinutes,
       sessionDurationInHours,
       calculatedCredits,
+      currentDurationInMinutes,
       currentDurationInHours,
       currentCredits,
       creditDifference,

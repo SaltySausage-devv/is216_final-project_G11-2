@@ -161,7 +161,7 @@
                         >
                       </div>
                       <small class="d-block mt-1" style="color: rgba(255, 255, 255, 0.8);">
-                        {{ currentDurationInHours }} hours
+                        {{ currentDurationInMinutes }} {{ currentDurationInMinutes === 1 ? 'minute' : 'minutes' }}
                       </small>
                     </div>
                   </div>
@@ -192,7 +192,7 @@
                         ></i>
                       </div>
                       <small class="d-block mt-1" style="color: rgba(255, 255, 255, 0.8);">
-                        {{ sessionDurationInHours }} hours
+                        {{ proposedDurationInMinutes }} {{ proposedDurationInMinutes === 1 ? 'minute' : 'minutes' }}
                       </small>
                       <div v-if="creditDifference !== 0" class="mt-2">
                         <small :class="creditChangeTextClass" style="font-weight: 700; font-size: 0.95em;">
@@ -396,6 +396,18 @@ export default {
     });
 
     // Calculate session duration in hours
+    // Calculate proposed session duration in minutes (for display)
+    const proposedDurationInMinutes = computed(() => {
+      if (!newStartTime.value || !newEndTime.value) return 0;
+
+      const startTime = new Date(`2000-01-01T${newStartTime.value}`);
+      const endTime = new Date(`2000-01-01T${newEndTime.value}`);
+      const diffMs = endTime - startTime;
+      const minutes = diffMs / (1000 * 60); // Convert to minutes
+      return Math.round(minutes); // Round to nearest minute
+    });
+
+    // Calculate session duration in hours (for credit calculation)
     const sessionDurationInHours = computed(() => {
       if (!newStartTime.value || !newEndTime.value) return 0;
 
@@ -417,7 +429,19 @@ export default {
       return parseFloat(total.toFixed(2)).toFixed(2);
     });
 
-    // Calculate current session duration in hours
+    // Calculate current session duration in minutes (for display)
+    const currentDurationInMinutes = computed(() => {
+      if (!props.booking.start_time || !props.booking.end_time) {
+        return 0;
+      }
+      const start = new Date(props.booking.start_time);
+      const end = new Date(props.booking.end_time);
+      const durationMs = end.getTime() - start.getTime();
+      const minutes = durationMs / (1000 * 60); // Convert to minutes
+      return Math.round(minutes); // Round to nearest minute
+    });
+
+    // Calculate current session duration in hours (for credit calculation)
     const currentDurationInHours = computed(() => {
       if (!props.booking.start_time || !props.booking.end_time) {
         return 0;
@@ -426,18 +450,22 @@ export default {
       const end = new Date(props.booking.end_time);
       const durationMs = end.getTime() - start.getTime();
       const hours = durationMs / (1000 * 60 * 60); // Convert to hours
-      return parseFloat(hours.toFixed(2)); // Round to 2 decimal places
+      return hours; // Keep precise for calculation
     });
 
     // Calculate current session credits
     const currentCredits = computed(() => {
-      const hours = parseFloat(currentDurationInHours.value);
-      if (tutorHourlyRate.value > 0 && hours > 0) {
-        const total = tutorHourlyRate.value * hours;
-        // Always format to 2 decimal places (e.g., 3.18, 3.00, 0.50)
-        return parseFloat(total.toFixed(2)).toFixed(2);
+      if (!props.booking.start_time || !props.booking.end_time || tutorHourlyRate.value <= 0) {
+        return "0.00";
       }
-      return "0.00";
+      // Calculate credits directly from milliseconds to avoid rounding errors
+      const start = new Date(props.booking.start_time);
+      const end = new Date(props.booking.end_time);
+      const durationMs = end.getTime() - start.getTime();
+      const durationHours = durationMs / (1000 * 60 * 60); // Precise hours calculation
+      const total = tutorHourlyRate.value * durationHours;
+      // Round final credit value to 2 decimal places
+      return parseFloat(total.toFixed(2)).toFixed(2);
     });
 
     // Calculate credit difference
@@ -832,8 +860,10 @@ export default {
       selectedLocationIndex,
       tutorHourlyRate,
       loadingTutorRate,
+      proposedDurationInMinutes,
       sessionDurationInHours,
       calculatedCredits,
+      currentDurationInMinutes,
       currentDurationInHours,
       currentCredits,
       creditDifference,

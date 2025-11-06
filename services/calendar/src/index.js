@@ -1649,16 +1649,16 @@ app.post('/bookings/:id/reschedule/accept', verifyToken, async (req, res) => {
         const currentStart = new Date(booking.start_time);
         const currentEnd = new Date(booking.end_time);
         const currentDurationHours = (currentEnd.getTime() - currentStart.getTime()) / (1000 * 60 * 60);
-        const currentCredits = hourlyRate * currentDurationHours;
+        const currentCredits = parseFloat((hourlyRate * currentDurationHours).toFixed(2));
 
         // Calculate new session duration (in hours)
         const newStart = new Date(booking.pending_reschedule_start_time);
         const newEnd = new Date(booking.pending_reschedule_end_time);
         const newDurationHours = (newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60);
-        const newCredits = hourlyRate * newDurationHours;
+        const newCredits = parseFloat((hourlyRate * newDurationHours).toFixed(2));
 
-        // Calculate credit difference
-        const creditDifference = newCredits - currentCredits;
+        // Calculate credit difference (rounded to 2 decimal places)
+        const creditDifference = parseFloat((newCredits - currentCredits).toFixed(2));
 
         console.log('💰 Credit calculation:', {
           hourlyRate,
@@ -1685,10 +1685,10 @@ app.post('/bookings/:id/reschedule/accept', verifyToken, async (req, res) => {
 
           // Only check credits for students
           if (studentData.user_type === 'student') {
-            const currentStudentCredits = studentData.credits || 0;
+            const currentStudentCredits = parseFloat((studentData.credits || 0).toFixed(2));
             
             if (currentStudentCredits < creditDifference) {
-              const shortfall = creditDifference - currentStudentCredits;
+              const shortfall = parseFloat((creditDifference - currentStudentCredits).toFixed(2));
               console.log(`❌ Insufficient credits for reschedule: Student has ${currentStudentCredits}, needs ${creditDifference}, shortfall: ${shortfall}`);
               
               return res.status(400).json({ 
@@ -1696,8 +1696,8 @@ app.post('/bookings/:id/reschedule/accept', verifyToken, async (req, res) => {
                 details: {
                   requiredCredits: creditDifference,
                   currentCredits: currentStudentCredits,
-                  originalCredits: currentCredits, // Credits from previous session (will be refunded)
-                  newCredits: newCredits, // New total cost
+                  originalCredits: currentCredits, // Credits from previous session (will be refunded) - rounded to 2 decimals
+                  newCredits: newCredits, // New total cost - rounded to 2 decimals
                   shortfall: shortfall,
                   message: `You need ${shortfall} more credits to accept this reschedule. Please top up your credits.`
                 }
@@ -1715,7 +1715,7 @@ app.post('/bookings/:id/reschedule/accept', verifyToken, async (req, res) => {
 
     // If we get here, credit validation passed - now update the booking
     const newDurationHours = (new Date(booking.pending_reschedule_end_time) - new Date(booking.pending_reschedule_start_time)) / (1000 * 60 * 60);
-    const newTotalAmount = hourlyRate * newDurationHours;
+    const newTotalAmount = parseFloat((hourlyRate * newDurationHours).toFixed(2));
 
     console.log(`💰 Updating booking rates after reschedule: ${hourlyRate} credits/hour × ${newDurationHours} hours = ${newTotalAmount} credits`);
 
@@ -1784,16 +1784,16 @@ app.post('/bookings/:id/reschedule/accept', verifyToken, async (req, res) => {
         const currentStart = new Date(booking.start_time);
         const currentEnd = new Date(booking.end_time);
         const currentDurationHours = (currentEnd.getTime() - currentStart.getTime()) / (1000 * 60 * 60);
-        const currentCredits = hourlyRate * currentDurationHours;
+        const currentCredits = parseFloat((hourlyRate * currentDurationHours).toFixed(2));
 
         // Calculate new session duration (in hours)
         const newStart = new Date(booking.pending_reschedule_start_time);
         const newEnd = new Date(booking.pending_reschedule_end_time);
         const newDurationHours = (newEnd.getTime() - newStart.getTime()) / (1000 * 60 * 60);
-        const newCredits = hourlyRate * newDurationHours;
+        const newCredits = parseFloat((hourlyRate * newDurationHours).toFixed(2));
 
-        // Calculate credit difference
-        const creditDifference = newCredits - currentCredits;
+        // Calculate credit difference (rounded to 2 decimal places)
+        const creditDifference = parseFloat((newCredits - currentCredits).toFixed(2));
 
         console.log('💰 Credit calculation:', {
           hourlyRate,
@@ -1820,10 +1820,10 @@ app.post('/bookings/:id/reschedule/accept', verifyToken, async (req, res) => {
 
           // Only check credits for students
           if (studentData.user_type === 'student') {
-            const currentStudentCredits = studentData.credits || 0;
+            const currentStudentCredits = parseFloat((studentData.credits || 0).toFixed(2));
             
             if (currentStudentCredits < creditDifference) {
-              const shortfall = creditDifference - currentStudentCredits;
+              const shortfall = parseFloat((creditDifference - currentStudentCredits).toFixed(2));
               console.log(`❌ Insufficient credits for reschedule: Student has ${currentStudentCredits}, needs ${creditDifference}, shortfall: ${shortfall}`);
               
               return res.status(400).json({ 
@@ -1831,8 +1831,8 @@ app.post('/bookings/:id/reschedule/accept', verifyToken, async (req, res) => {
                 details: {
                   requiredCredits: creditDifference,
                   currentCredits: currentStudentCredits,
-                  originalCredits: currentCredits, // Credits from previous session (will be refunded)
-                  newCredits: newCredits, // New total cost
+                  originalCredits: currentCredits, // Credits from previous session (will be refunded) - rounded to 2 decimals
+                  newCredits: newCredits, // New total cost - rounded to 2 decimals
                   shortfall: shortfall,
                   message: `You need ${shortfall} more credits to accept this reschedule. Please top up your credits.`
                 }
