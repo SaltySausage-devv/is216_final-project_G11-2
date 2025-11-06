@@ -11,7 +11,6 @@ A comprehensive marketplace platform connecting students with verified tutors an
 - **Messaging**: Real-time chat with Socket.io
 - **Reviews & Ratings**: Comprehensive review system
 - **Analytics**: Performance tracking and reporting
-- **Gamification**: Badges, points, and leaderboards
 - **Calendar Integration**: In-app calender sync
 - **Maps Integration**: Google Maps for location services
 - **Notifications**: In-app messenger chat service
@@ -39,14 +38,14 @@ A comprehensive marketplace platform connecting students with verified tutors an
 
 - Supabase (Database)
 - Railway (Deployment)
-- Google APIs (Calendar, Maps)
+- Google APIs (Maps)
 
 ## Prerequisites
 
 - Node.js 18.0.0 or higher
 - npm 9.0.0 or higher
 - Supabase account
-- (Optional) Google Cloud Platform account for Calendar/Maps APIs
+- (Optional) Google Cloud Platform account for Maps APIs
 - (Optional) Twilio account for SMS notifications
 
 ## Installation
@@ -131,7 +130,6 @@ ploject/
 │   ├── reviews/          # Reviews and ratings
 │   ├── notifications/    # Notifications service
 │   ├── analytics/        # Analytics service
-│   ├── gamification/     # Gamification service
 │   ├── earnings/         # Earnings tracking
 │   ├── calendar/         # Calendar integration
 │   └── maps/             # Maps integration
