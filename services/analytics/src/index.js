@@ -617,14 +617,17 @@ app.get('/analytics/student/:studentId', verifyToken, async (req, res) => {
     // Chart data
     const { chartData, spendingData, chartLabels } = generateChartData(bookings || [], startDate, endDate, period);
 
-    // Recent activity with ratings (completed/confirmed bookings + cancelled bookings)
-    // Sort by created_at descending to get the most recent bookings first
-    const sortedBookings = [...(allBookings || [])]
-      .filter(booking => 
-        booking.status === 'completed' || 
-        booking.status === 'confirmed' || 
-        booking.status === 'cancelled'
-      )
+    // Recent activity with ratings (completed/confirmed bookings + cancelled bookings where student cancelled < 24h)
+    // Only include cancelled bookings where student cancelled < 24 hours (no refund, credits count as spent)
+    // This matches tutor analytics behavior where only cancelled bookings with funds released are shown
+    const completedConfirmedBookings = allBookings
+      ?.filter(booking => booking.status === 'completed' || booking.status === 'confirmed') || [];
+    
+    // Use the same cancelledBookingsWithNoRefund filter we created for spending calculation
+    const cancelledBookingsForActivity = cancelledBookingsWithNoRefund || [];
+    
+    // Combine and sort by date (most recent first)
+    const sortedBookings = [...completedConfirmedBookings, ...cancelledBookingsForActivity]
       .sort((a, b) => {
         // Use cancelled_at for cancelled bookings, created_at for others
         const dateA = a.status === 'cancelled' && a.cancelled_at 
